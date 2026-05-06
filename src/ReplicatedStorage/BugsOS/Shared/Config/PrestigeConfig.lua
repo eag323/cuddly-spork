@@ -1,12 +1,14 @@
 --!strict
 
---[[
-	PrestigeConfig: shared static configuration placeholder.
-	TODO: Populate balancing values and IDs from design docs.
-]]
-
 local PrestigeConfig = {
-	-- TODO: Add config fields.
+	Levels = {
+		{
+			id = "prestige_1",
+			level = 1,
+			requiredLifetimeFood = 50_000_000,
+			multiplier = 1.1,
+		},
+	},
 }
 
 return PrestigeConfig
