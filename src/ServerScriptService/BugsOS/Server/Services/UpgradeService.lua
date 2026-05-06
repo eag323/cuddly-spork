@@ -68,19 +68,19 @@ local function onUpgradeBuyClickTool(player: Player, payload: any)
 
 	local playerData = ProfileService.GetPlayerData(player)
 	if not playerData then
-		warn(string.format("[UpgradeService] Rejected Upgrade_BuyClickTool for %s (%s): no player data", player.Name, toolId))
+		warn(string.format("[UpgradeService] Rejected Upgrade_BuyClickTool for %s (%s): missing profile", player.Name, toolId))
 		return
 	end
 
 	local toolConfig = toolConfigById[toolId]
 	if not toolConfig then
-		warn(string.format("[UpgradeService] Rejected Upgrade_BuyClickTool for %s: unknown tool id %s", player.Name, toolId))
+		warn(string.format("[UpgradeService] Rejected Upgrade_BuyClickTool for %s: invalid tool id (%s)", player.Name, toolId))
 		return
 	end
 
 	local currentLevel = getClickToolLevel(playerData, toolId)
 	if currentLevel >= toolConfig.maxLevel then
-		warn(string.format("[UpgradeService] Rejected Upgrade_BuyClickTool for %s (%s): already at max level (%d)", player.Name, toolId, currentLevel))
+		warn(string.format("[UpgradeService] Rejected Upgrade_BuyClickTool for %s (%s): max level reached (%d)", player.Name, toolId, currentLevel))
 		return
 	end
 
@@ -89,7 +89,7 @@ local function onUpgradeBuyClickTool(player: Player, payload: any)
 	if not CurrencyService.CanAfford(player, "Coins", cost) then
 		local coins = CurrencyService.GetBalance(player, "Coins")
 		warn(string.format(
-			"[UpgradeService] Rejected Upgrade_BuyClickTool for %s (%s): cannot afford cost=%d, coins=%d",
+			"[UpgradeService] Rejected Upgrade_BuyClickTool for %s (%s): insufficient Coins (cost=%d, coins=%d)",
 			player.Name,
 			toolId,
 			cost,
