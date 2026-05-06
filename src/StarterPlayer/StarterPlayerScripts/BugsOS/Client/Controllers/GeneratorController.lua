@@ -1,18 +1,23 @@
 --!strict
 
---[[
-	GeneratorController: client controller scaffold.
-	TODO: Implement input, UI orchestration, and remote calls.
-]]
+local FoodHarvestersApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("FoodHarvestersApp"))
 
 local GeneratorController = {}
 
-function GeneratorController.Init(): ()
-	-- TODO: Bind dependencies and signals.
+local context: { [string]: any }
+
+function GeneratorController.Init(initContext): ()
+	context = initContext
 end
 
-function GeneratorController.Start(): ()
-	-- TODO: Connect UI and begin controller lifecycle.
+function GeneratorController.Upgrade(slotIndex: number): ()
+	context.Remotes.GeneratorUpgrade:FireServer({ SlotIndex = slotIndex })
 end
+
+function GeneratorController.Refresh(): ()
+	FoodHarvestersApp.Refresh(context)
+end
+
+function GeneratorController.Start(): () end
 
 return GeneratorController

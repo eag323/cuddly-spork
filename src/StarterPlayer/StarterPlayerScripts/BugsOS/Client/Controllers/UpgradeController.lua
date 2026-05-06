@@ -1,18 +1,23 @@
 --!strict
 
---[[
-	UpgradeController: client controller scaffold.
-	TODO: Implement input, UI orchestration, and remote calls.
-]]
+local UpgradesApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("UpgradesApp"))
 
 local UpgradeController = {}
 
-function UpgradeController.Init(): ()
-	-- TODO: Bind dependencies and signals.
+local context: { [string]: any }
+
+function UpgradeController.Init(initContext): ()
+	context = initContext
 end
 
-function UpgradeController.Start(): ()
-	-- TODO: Connect UI and begin controller lifecycle.
+function UpgradeController.BuyTool(toolId: string): ()
+	context.Remotes.UpgradeBuyClickTool:FireServer({ ToolId = toolId })
 end
+
+function UpgradeController.Refresh(): ()
+	UpgradesApp.Refresh(context)
+end
+
+function UpgradeController.Start(): () end
 
 return UpgradeController
