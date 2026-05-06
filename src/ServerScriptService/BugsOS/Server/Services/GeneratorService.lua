@@ -25,6 +25,7 @@ type GeneratorConfigEntry = {
 	classId: string,
 	baseFoodPerSec: number?,
 	baseUpgradeCost: number?,
+	maxLevel: number?,
 }
 
 local GeneratorService = {}
@@ -155,33 +156,39 @@ end
 
 local function onGeneratorEquip(player: Player, payload: any): ()
 	if type(payload) ~= "table" then
+		warn(string.format("[GeneratorService] Rejected Generator_Equip from %s: malformed payload", player.Name))
 		return
 	end
 
 	local slotIndex = payload.SlotIndex
 	local generatorId = payload.GeneratorId
 	if type(slotIndex) ~= "number" or type(generatorId) ~= "string" then
+		warn(string.format("[GeneratorService] Rejected Generator_Equip from %s: invalid slot or generator id", player.Name))
 		return
 	end
 
 	slotIndex = math.floor(slotIndex)
 	if slotIndex < 1 or slotIndex > MAX_EQUIPPABLE_SNACK_GENERATORS then
+		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: invalid slot (%d)", player.Name, slotIndex))
 		return
 	end
 
 	local generatorDef = snackGeneratorById[generatorId]
 	if not generatorDef then
+		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: invalid generator id (%s)", player.Name, tostring(generatorId)))
 		return
 	end
 
 	local playerData = getPlayerData(player)
 	if not playerData then
+		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: missing profile", player.Name))
 		return
 	end
 
 	ensureGeneratorDataShape(playerData)
 	local slotsUnlocked = playerData.Generators.SlotsUnlocked
 	if type(slotsUnlocked) ~= "number" or slotIndex > slotsUnlocked then
+		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: invalid slot (%d)", player.Name, slotIndex))
 		return
 	end
 
@@ -197,41 +204,60 @@ end
 
 local function onGeneratorUpgrade(player: Player, payload: any): ()
 	if type(payload) ~= "table" then
+		warn(string.format("[GeneratorService] Rejected Generator_Upgrade from %s: malformed payload", player.Name))
 		return
 	end
 
 	local slotIndex = payload.SlotIndex
 	if type(slotIndex) ~= "number" then
+		warn(string.format("[GeneratorService] Rejected Generator_Upgrade from %s: invalid slot", player.Name))
 		return
 	end
 
 	slotIndex = math.floor(slotIndex)
 	if slotIndex < 1 or slotIndex > MAX_EQUIPPABLE_SNACK_GENERATORS then
+		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: invalid slot (%d)", player.Name, slotIndex))
 		return
 	end
 
 	local playerData = getPlayerData(player)
 	if not playerData then
+		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: missing profile", player.Name))
 		return
 	end
 
 	ensureGeneratorDataShape(playerData)
 	local slotsUnlocked = playerData.Generators.SlotsUnlocked
 	if type(slotsUnlocked) ~= "number" or slotIndex > slotsUnlocked then
+		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: invalid slot (%d)", player.Name, slotIndex))
 		return
 	end
 
 	local slotData = playerData.Generators.Equipped[slotIndex]
 	if type(slotData) ~= "table" then
+		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: empty generator slot (%d)", player.Name, slotIndex))
+		return
+	end
+
+
+	local generatorId = slotData.GeneratorId
+	local generatorDef = if type(generatorId) == "string" then snackGeneratorById[generatorId] else nil
+	local currentLevel = sanitizeLevel(slotData.Level)
+	local maxLevel = if generatorDef then generatorDef.maxLevel else nil
+	if type(maxLevel) == "number" and currentLevel >= maxLevel then
+		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: max level reached (%d)", player.Name, currentLevel))
 		return
 	end
 
 	local upgradeCost = computeUpgradeCost(slotData)
 	if upgradeCost <= 0 or upgradeCost == math.huge then
+		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: invalid generator id in slot (%d)", player.Name, slotIndex))
 		return
 	end
 
 	if not CurrencyService.RemoveCurrency(player, "Coins", upgradeCost) then
+		local coins = CurrencyService.GetBalance(player, "Coins")
+		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: insufficient Coins (cost=%d, coins=%d)", player.Name, upgradeCost, coins))
 		return
 	end
 
