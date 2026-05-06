@@ -1,0 +1,18 @@
+--!strict
+
+--[[
+	ProfileService: server service scaffold.
+	TODO: Implement service responsibilities from docs/PROJECT_MAP.md.
+]]
+
+local ProfileService = {}
+
+function ProfileService.Init(): ()
+	-- TODO: Wire dependencies, remotes, and state access.
+end
+
+function ProfileService.Start(): ()
+	-- TODO: Start runtime listeners and loops.
+end
+
+return ProfileService
