@@ -1,12 +1,11 @@
 --!strict
 
---[[
-	MarketplaceConfig: shared static configuration placeholder.
-	TODO: Populate balancing values and IDs from design docs.
-]]
-
 local MarketplaceConfig = {
-	-- TODO: Add config fields.
+	MarketPrice = {
+		min = 0.5,
+		max = 3.0,
+		updateIntervalSeconds = 60,
+	},
 }
 
 return MarketplaceConfig

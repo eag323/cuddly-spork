@@ -1,12 +1,23 @@
 --!strict
 
---[[
-	GeneratorConfig: shared static configuration placeholder.
-	TODO: Populate balancing values and IDs from design docs.
-]]
-
 local GeneratorConfig = {
-	-- TODO: Add config fields.
+	Generators = {
+		{
+			id = "plain_cracker",
+			displayName = "Plain Cracker",
+			classId = "snack",
+		},
+		{
+			id = "potato_chip",
+			displayName = "Potato Chip",
+			classId = "snack",
+		},
+		{
+			id = "cookie_crumb",
+			displayName = "Cookie Crumb",
+			classId = "snack",
+		},
+	},
 }
 
 return GeneratorConfig
