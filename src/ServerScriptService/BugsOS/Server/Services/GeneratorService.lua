@@ -61,8 +61,8 @@ local function patchFood(player: Player, food: number): ()
 	ProfileService.PatchPlayerState(player, { "Currencies", "Food" }, food)
 end
 
-local function patchGeneratorSlot(player: Player, slotIndex: number, slotValue: any): ()
-	ProfileService.PatchPlayerState(player, { "Generators", "Equipped", tostring(slotIndex) }, slotValue)
+local function patchGenerators(player: Player, generatorsData: any): ()
+	ProfileService.PatchPlayerState(player, { "Generators" }, generatorsData)
 end
 
 local function ensureGeneratorDataShape(playerData: PlayerData): ()
@@ -192,7 +192,7 @@ local function onGeneratorEquip(player: Player, payload: any): ()
 	}
 
 	playerData.Generators.Equipped[slotIndex] = newSlotData
-	patchGeneratorSlot(player, slotIndex, newSlotData)
+	patchGenerators(player, playerData.Generators)
 end
 
 local function onGeneratorUpgrade(player: Player, payload: any): ()
@@ -216,6 +216,11 @@ local function onGeneratorUpgrade(player: Player, payload: any): ()
 	end
 
 	ensureGeneratorDataShape(playerData)
+	local slotsUnlocked = playerData.Generators.SlotsUnlocked
+	if type(slotsUnlocked) ~= "number" or slotIndex > slotsUnlocked then
+		return
+	end
+
 	local slotData = playerData.Generators.Equipped[slotIndex]
 	if type(slotData) ~= "table" then
 		return
@@ -231,7 +236,7 @@ local function onGeneratorUpgrade(player: Player, payload: any): ()
 	end
 
 	slotData.Level = sanitizeLevel(slotData.Level) + 1
-	patchGeneratorSlot(player, slotIndex, slotData)
+	patchGenerators(player, playerData.Generators)
 end
 
 local function buildGeneratorLookups(): ()
@@ -265,11 +270,7 @@ local function runPassiveFoodLoop(): ()
 				if playerData then
 					ensureGeneratorDataShape(playerData)
 
-					local totalFoodPerSecond = 0
-					for slotIndex = 1, MAX_EQUIPPABLE_SNACK_GENERATORS do
-						local slotData = playerData.Generators.Equipped[slotIndex]
-						totalFoodPerSecond += computeGeneratorFoodPerSecond(playerData, slotData)
-					end
+					local totalFoodPerSecond = GeneratorService.CalculateTotalFoodPerSecond(player)
 
 					if totalFoodPerSecond > 0 and CurrencyService.AddFood(player, totalFoodPerSecond) then
 						patchFood(player, playerData.Currencies.Food)
@@ -278,6 +279,24 @@ local function runPassiveFoodLoop(): ()
 			end
 		end
 	end)
+end
+
+
+function GeneratorService.CalculateTotalFoodPerSecond(player: Player): number
+	local playerData = getPlayerData(player)
+	if not playerData then
+		return 0
+	end
+
+	ensureGeneratorDataShape(playerData)
+
+	local totalFoodPerSecond = 0
+	for slotIndex = 1, MAX_EQUIPPABLE_SNACK_GENERATORS do
+		local slotData = playerData.Generators.Equipped[slotIndex]
+		totalFoodPerSecond += computeGeneratorFoodPerSecond(playerData, slotData)
+	end
+
+	return totalFoodPerSecond
 end
 
 function GeneratorService.Init(): ()
