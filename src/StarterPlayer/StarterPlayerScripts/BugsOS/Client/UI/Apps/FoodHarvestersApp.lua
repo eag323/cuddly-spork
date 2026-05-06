@@ -2,6 +2,15 @@
 
 local FoodHarvestersApp = {}
 local root: Frame?
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GeneratorConfig = require(
+	ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("GeneratorConfig")
+)
+
+local generatorById = {}
+for _, generator in ipairs(GeneratorConfig.Generators) do
+	generatorById[generator.id] = generator
+end
 
 function FoodHarvestersApp.Refresh(context): ()
 	if not root then return end
@@ -11,10 +20,15 @@ function FoodHarvestersApp.Refresh(context): ()
 	end
 	for i = 1, 3 do
 		local label = root:FindFirstChild("SlotLabel" .. i) :: TextLabel
+		local upgrade = root:FindFirstChild("SlotUpgrade" .. i) :: TextButton
 		local entry = equipped and equipped[i]
+		local generator = entry and generatorById[entry.GeneratorId] or nil
+		local name = generator and generator.displayName or "Empty Slot"
 		local level = entry and entry.Level or 0
-		local fps = level * 1.5
-		label.Text = string.format("Slot %d | Level %d | Food/sec %.1f", i, level, fps)
+		local baseFoodPerSec = generator and generator.baseFoodPerSec or 0
+		local estimatedFoodPerSec = baseFoodPerSec * level
+		label.Text = string.format("Slot %d | %s | Level %d | Food/sec %.1f", i, name, level, estimatedFoodPerSec)
+		upgrade.Visible = entry ~= nil
 	end
 end
 
@@ -45,6 +59,7 @@ function FoodHarvestersApp.Mount(target: Instance, context): ()
 		label.Parent = root
 
 		local upgrade = Instance.new("TextButton")
+		upgrade.Name = "SlotUpgrade" .. i
 		upgrade.Size = UDim2.new(0.28, 0, 0, 30)
 		upgrade.Position = UDim2.new(0.68, 0, 0, 42 + ((i - 1) * 70))
 		upgrade.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
@@ -54,6 +69,25 @@ function FoodHarvestersApp.Mount(target: Instance, context): ()
 		upgrade.Activated:Connect(function()
 			context.Controllers.Generator.Upgrade(i)
 		end)
+
+		local generatorButtons = {
+			{ id = "plain_cracker", label = "Equip Plain Cracker" },
+			{ id = "potato_chip", label = "Equip Potato Chip" },
+			{ id = "cookie_crumb", label = "Equip Cookie Crumb" },
+		}
+		for buttonIndex, info in ipairs(generatorButtons) do
+			local equip = Instance.new("TextButton")
+			equip.Size = UDim2.new(0.28, 0, 0, 22)
+			equip.Position = UDim2.new(0.68, 0, 0, 74 + ((i - 1) * 70) + ((buttonIndex - 1) * 24))
+			equip.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+			equip.TextColor3 = Color3.new(1, 1, 1)
+			equip.Text = info.label
+			equip.TextSize = 12
+			equip.Parent = root
+			equip.Activated:Connect(function()
+				context.Controllers.Generator.Equip(i, info.id)
+			end)
+		end
 	end
 
 	FoodHarvestersApp.Refresh(context)
