@@ -3,6 +3,8 @@
 local FoodHarvestersApp = {}
 local root: Frame?
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 local GeneratorConfig = require(
 	ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("GeneratorConfig")
 )
@@ -10,6 +12,49 @@ local GeneratorConfig = require(
 local generatorById = {}
 for _, generator in ipairs(GeneratorConfig.Generators) do
 	generatorById[generator.id] = generator
+end
+
+local function getFeedbackAnchor(context): (Instance?, UDim2)
+	if root then
+		return root, UDim2.new(1, -28, 0, 32)
+	end
+
+	if context.UI and context.UI.AppsLayer then
+		return context.UI.AppsLayer, UDim2.fromScale(0.56, 0.12)
+	end
+
+	return nil, UDim2.fromScale(0.56, 0.12)
+end
+
+function FoodHarvestersApp.ShowPassiveIncomeFeedback(context, foodPerSecond: number): ()
+	local anchorParent, position = getFeedbackAnchor(context)
+	if not anchorParent then
+		return
+	end
+
+	local popup = Instance.new("TextLabel")
+	popup.Name = "PassiveFoodIncomeFeedback"
+	popup.AnchorPoint = Vector2.new(1, 0)
+	popup.Size = UDim2.fromOffset(170, 26)
+	popup.Position = position
+	popup.BackgroundTransparency = 1
+	popup.Font = Enum.Font.GothamBold
+	popup.TextSize = 18
+	popup.TextColor3 = Color3.fromRGB(152, 255, 168)
+	popup.TextStrokeTransparency = 0.35
+	popup.TextXAlignment = Enum.TextXAlignment.Right
+	popup.Text = string.format("+%.1f Food/sec", foodPerSecond)
+	popup.ZIndex = 8
+	popup.Parent = anchorParent
+
+	local tweenInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(popup, tweenInfo, {
+		Position = popup.Position - UDim2.fromOffset(0, 24),
+		TextTransparency = 1,
+		TextStrokeTransparency = 1,
+	}):Play()
+
+	Debris:AddItem(popup, 0.55)
 end
 
 function FoodHarvestersApp.Refresh(context): ()
