@@ -75,6 +75,7 @@ function DesktopController.Start(): ()
 	backgroundScale.Parent = desktopBackground
 
 	desktopBackground.Activated:Connect(function()
+		context.State.LastClickAt = os.clock()
 		context.Remotes.ClickRequest:FireServer()
 
 		local pressTween = TweenService:Create(backgroundScale, TweenInfo.new(BACKGROUND_PRESS_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
