@@ -1,14 +1,71 @@
 --!strict
 
---[[
-	RemoteNames: central remote identifiers placeholder.
-	TODO: Define RemoteEvent and RemoteFunction name constants.
-]]
-
 export type RemoteNameMap = { [string]: string }
 
 local RemoteNames: RemoteNameMap = {
-	-- TODO: Add canonical remote names.
+	-- Client to Server
+	Click_Request = "Click_Request",
+	Market_SellFood = "Market_SellFood",
+	Upgrade_BuyClickTool = "Upgrade_BuyClickTool",
+	Generator_Equip = "Generator_Equip",
+	Generator_Upgrade = "Generator_Upgrade",
+	Generator_InsertCore = "Generator_InsertCore",
+	Generator_RemoveCore = "Generator_RemoveCore",
+	Prestige_Request = "Prestige_Request",
+	Bug_AttemptCatch = "Bug_AttemptCatch",
+	Bug_Equip = "Bug_Equip",
+	Bug_Unequip = "Bug_Unequip",
+	Bug_Lock = "Bug_Lock",
+	Bug_Favorite = "Bug_Favorite",
+	Bug_Sacrifice = "Bug_Sacrifice",
+	Bug_ApplyModifier = "Bug_ApplyModifier",
+	Bug_RerollSecondaries = "Bug_RerollSecondaries",
+	Treasure_Equip = "Treasure_Equip",
+	Treasure_Unequip = "Treasure_Unequip",
+	Treasure_Sacrifice = "Treasure_Sacrifice",
+	Expedition_Start = "Expedition_Start",
+	Expedition_Claim = "Expedition_Claim",
+	Expedition_InstantFinish = "Expedition_InstantFinish",
+	Core_Reroll = "Core_Reroll",
+	Core_Upgrade = "Core_Upgrade",
+	Core_Craft = "Core_Craft",
+	Core_Sacrifice = "Core_Sacrifice",
+	Marketplace_ListItem = "Marketplace_ListItem",
+	Marketplace_BuyListing = "Marketplace_BuyListing",
+	Marketplace_CancelListing = "Marketplace_CancelListing",
+	Guild_Create = "Guild_Create",
+	Guild_Join = "Guild_Join",
+	Guild_Leave = "Guild_Leave",
+	Guild_Kick = "Guild_Kick",
+	Guild_Promote = "Guild_Promote",
+	Guild_Demote = "Guild_Demote",
+	Guild_SendChat = "Guild_SendChat",
+	Guild_ContributeResearch = "Guild_ContributeResearch",
+	Guild_ClaimQuestReward = "Guild_ClaimQuestReward",
+	Achievement_Claim = "Achievement_Claim",
+	Tournament_ClaimReward = "Tournament_ClaimReward",
+	Cosmetic_Equip = "Cosmetic_Equip",
+	Loadout_Save = "Loadout_Save",
+	Loadout_Apply = "Loadout_Apply",
+	MysteryCache_Claim = "MysteryCache_Claim",
+	ServerEvent_TriggerDevProduct = "ServerEvent_TriggerDevProduct",
+
+	-- Server to Client
+	State_Patch = "State_Patch",
+	State_FullSync = "State_FullSync",
+	Currency_Updated = "Currency_Updated",
+	Notification_Push = "Notification_Push",
+	Bug_Spawned = "Bug_Spawned",
+	Bug_Captured = "Bug_Captured",
+	Bug_Escaped = "Bug_Escaped",
+	Market_PriceUpdated = "Market_PriceUpdated",
+	Leaderboard_Updated = "Leaderboard_Updated",
+	Guild_Updated = "Guild_Updated",
+	GuildChat_Message = "GuildChat_Message",
+	Tournament_Updated = "Tournament_Updated",
+	Achievement_Unlocked = "Achievement_Unlocked",
+	ServerEvent_Started = "ServerEvent_Started",
+	MysteryCache_Spawned = "MysteryCache_Spawned",
 }
 
 return RemoteNames
