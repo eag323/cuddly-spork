@@ -14,6 +14,13 @@ function GeneratorController.Upgrade(slotIndex: number): ()
 	context.Remotes.GeneratorUpgrade:FireServer({ SlotIndex = slotIndex })
 end
 
+function GeneratorController.Equip(slotIndex: number, generatorId: string): ()
+	context.Remotes.GeneratorEquip:FireServer({
+		SlotIndex = slotIndex,
+		GeneratorId = generatorId,
+	})
+end
+
 function GeneratorController.Refresh(): ()
 	FoodHarvestersApp.Refresh(context)
 end

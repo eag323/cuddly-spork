@@ -33,6 +33,7 @@ local context = {
 		MarketPriceUpdated = RemotesFolder:WaitForChild(RemoteNames.Market_PriceUpdated) :: RemoteEvent,
 		UpgradeBuyClickTool = RemotesFolder:WaitForChild(RemoteNames.Upgrade_BuyClickTool) :: RemoteEvent,
 		GeneratorUpgrade = RemotesFolder:WaitForChild(RemoteNames.Generator_Upgrade) :: RemoteEvent,
+		GeneratorEquip = RemotesFolder:WaitForChild(RemoteNames.Generator_Equip) :: RemoteEvent,
 	},
 	Controllers = {},
 }
