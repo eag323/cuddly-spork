@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BugConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("BugConfig"))
 local BugInventoryService = require(script.Parent:WaitForChild("BugInventoryService"))
+local BugdexService = require(script.Parent:WaitForChild("BugdexService"))
 local EconomyConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("EconomyConfig"))
 local BuffService = require(script.Parent:WaitForChild("BuffService"))
 local RemoteNames = require(ReplicatedStorage.BugsOS.Shared.Remotes.RemoteNames)
@@ -155,6 +156,7 @@ function BugSpawnService.Start()
 			local createdBug = nil
 			local ok, err = pcall(function()
 				createdBug = BugInventoryService.CreateBug(player, st.SpeciesId, st.Rarity)
+				BugdexService.RecordCatch(player, st.SpeciesId)
 			end)
 			if not ok then
 				warn(string.format("[BugSpawnService] Failed to create captured bug for %s: %s", player.Name, tostring(err)))
