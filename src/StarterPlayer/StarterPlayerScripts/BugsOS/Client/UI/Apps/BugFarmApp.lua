@@ -7,8 +7,7 @@ local Window = require(script.Parent.Parent:WaitForChild("Components"):WaitForCh
 local BugFarmApp = {}
 local windowRef
 local root
-local connA
-local connB
+local stateChangedConn
 local equippedFrame
 local equippedRowsFrame
 local invLabel
@@ -83,6 +82,7 @@ local function refresh(context)
 			invLabel.Position = UDim2.fromOffset(4, invScroll.Position.Y.Offset - 24)
 		end
 	end)
+	print("[BugsOS] BugFarmApp refreshed")
 end
 
 function BugFarmApp.Mount(target: Instance, context): ()
@@ -95,14 +95,20 @@ function BugFarmApp.Mount(target: Instance, context): ()
 	eql=Instance.new("UIListLayout"); eql.Padding=UDim.new(0,5); eql.Parent=equippedRowsFrame
 	invLabel=Instance.new("TextLabel"); invLabel.Size=UDim2.new(1,-8,0,24); invLabel.Position=UDim2.fromOffset(4,320); invLabel.BackgroundTransparency=1; invLabel.Text="Bug Inventory"; invLabel.TextXAlignment=Enum.TextXAlignment.Left; invLabel.TextColor3=Color3.new(1,1,1); invLabel.Parent=root
 	invScroll = Instance.new("ScrollingFrame"); invScroll.Size=UDim2.new(1,-8,1,-350); invScroll.Position=UDim2.fromOffset(4,344); invScroll.BackgroundColor3=Color3.fromRGB(28,28,34); invScroll.BorderSizePixel=0; invScroll.ScrollBarThickness=8; invScroll.Parent=root
-	connA = context.Remotes.StatePatch.OnClientEvent:Connect(function() refresh(context) end)
-	connB = context.Remotes.StateFullSync.OnClientEvent:Connect(function() refresh(context) end)
+	if stateChangedConn then
+		stateChangedConn:Disconnect()
+		stateChangedConn = nil
+	end
+	if context.Events and context.Events.StateChanged then
+		stateChangedConn = context.Events.StateChanged.Event:Connect(function()
+			refresh(context)
+		end)
+	end
 	refresh(context)
 end
 
 function BugFarmApp.Unmount(): ()
-	if connA then connA:Disconnect(); connA=nil end
-	if connB then connB:Disconnect(); connB=nil end
+	if stateChangedConn then stateChangedConn:Disconnect(); stateChangedConn=nil end
 	if windowRef then windowRef.Destroy() end
 	windowRef=nil; root=nil; equippedFrame=nil; equippedRowsFrame=nil; invLabel=nil; invScroll=nil; eql=nil
 end

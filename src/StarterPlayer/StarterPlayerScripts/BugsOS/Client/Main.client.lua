@@ -70,7 +70,9 @@ for key, remoteName in pairs(requiredRemoteNames) do
 	remotes[key] = remote
 end
 
-local context = { State = { PlayerData = nil, Market = { Price = 1, History = { 1 } } }, UI = {}, Remotes = remotes, Controllers = {} }
+local context = { State = { PlayerData = nil, Market = { Price = 1, History = { 1 } } }, UI = {}, Remotes = remotes, Controllers = {}, Events = {} }
+
+context.Events.StateChanged = Instance.new("BindableEvent")
 
 context.Controllers.Window = WindowController
 context.Controllers.CurrencyHUD = CurrencyHUDController
