@@ -3,6 +3,7 @@
 local MarketApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("MarketApp"))
 local UpgradesApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("UpgradesApp"))
 local FoodHarvestersApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("FoodHarvestersApp"))
+local PrestigeApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("PrestigeApp"))
 
 local WindowController = {}
 
@@ -13,6 +14,7 @@ local APP_DEFS = {
 	{ id = "Market", title = "Market.exe", app = MarketApp },
 	{ id = "Upgrades", title = "Upgrades.exe", app = UpgradesApp },
 	{ id = "FoodHarvesters", title = "Food Harvesters.exe", app = FoodHarvestersApp },
+	{ id = "Prestige", title = "Prestige.exe", app = PrestigeApp },
 }
 
 function WindowController.Init(initContext): ()

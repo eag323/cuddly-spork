@@ -13,6 +13,7 @@ local serviceOrder = {
 	"MarketService",
 	"UpgradeService",
 	"GeneratorService",
+	"PrestigeService",
 	"ClickService",
 }
 
