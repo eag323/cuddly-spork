@@ -1,82 +1,18 @@
 --!strict
-
 local MarketApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("MarketApp"))
 local UpgradesApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("UpgradesApp"))
 local FoodHarvestersApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("FoodHarvestersApp"))
 local PrestigeApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("PrestigeApp"))
-
-local WindowController = {}
-
-local context: { [string]: any }
-local openApps: { [string]: boolean } = {}
-
-local APP_DEFS = {
-	{ id = "Market", title = "Market.exe", app = MarketApp },
-	{ id = "Upgrades", title = "Upgrades.exe", app = UpgradesApp },
-	{ id = "FoodHarvesters", title = "Food Harvesters.exe", app = FoodHarvestersApp },
-	{ id = "Prestige", title = "Prestige.exe", app = PrestigeApp },
-}
-
-function WindowController.Init(initContext): ()
-	context = initContext
+local WindowController, context, openApps = {}, nil, {}
+local APP_DEFS={{id='Market',title='Market.exe',app=MarketApp},{id='Upgrades',title='Upgrades.exe',app=UpgradesApp},{id='FoodHarvesters',title='Food Harvesters.exe',app=FoodHarvestersApp},{id='Prestige',title='Prestige.exe',app=PrestigeApp}}
+function WindowController.Init(c) context=c end
+function WindowController.Open(id) if openApps[id] then return end for _,d in APP_DEFS do if d.id==id then d.app.Mount(context.UI.AppsLayer,context); openApps[id]=true; return end end end
+function WindowController.Close(id) for _,d in APP_DEFS do if d.id==id then d.app.Unmount(); openApps[id]=nil; return end end end
+function WindowController.Start()
+ local holder=Instance.new('ScrollingFrame'); holder.Name='TaskbarButtons'; holder.Size=UDim2.new(1,-16,1,-10); holder.Position=UDim2.fromOffset(8,5); holder.BackgroundTransparency=1; holder.BorderSizePixel=0; holder.ScrollBarThickness=6; holder.ScrollingDirection=Enum.ScrollingDirection.X; holder.Parent=context.UI.Taskbar
+ local layout=Instance.new('UIListLayout'); layout.FillDirection=Enum.FillDirection.Horizontal; layout.Padding=UDim.new(0,8); layout.Parent=holder
+ local pad=Instance.new('UIPadding'); pad.PaddingLeft=UDim.new(0,2); pad.Parent=holder
+ layout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function() holder.CanvasSize=UDim2.fromOffset(layout.AbsoluteContentSize.X+12,0) end)
+ for _,d in APP_DEFS do local b=Instance.new('TextButton'); b.Name=d.id..'Button'; b.Size=UDim2.fromOffset(180,40); b.BackgroundColor3=Color3.fromRGB(52,52,52); b.TextColor3=Color3.new(1,1,1); b.TextSize=14; b.Text=d.title; b.Parent=holder; b.Activated:Connect(function() if openApps[d.id] then WindowController.Close(d.id) else WindowController.Open(d.id) end end) end
 end
-
-function WindowController.Open(appId: string): ()
-	if openApps[appId] then
-		return
-	end
-
-	for _, appDef in APP_DEFS do
-		if appDef.id == appId then
-			appDef.app.Mount(context.UI.AppsLayer, context)
-			openApps[appId] = true
-			return
-		end
-	end
-end
-
-function WindowController.Close(appId: string): ()
-	for _, appDef in APP_DEFS do
-		if appDef.id == appId then
-			appDef.app.Unmount()
-			openApps[appId] = nil
-			return
-		end
-	end
-end
-
-function WindowController.Start(): ()
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.Padding = UDim.new(0, 8)
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-	layout.VerticalAlignment = Enum.VerticalAlignment.Center
-	layout.Parent = context.UI.Taskbar
-
-	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 8)
-	pad.PaddingTop = UDim.new(0, 6)
-	pad.PaddingBottom = UDim.new(0, 6)
-	pad.Parent = context.UI.Taskbar
-
-	for _, appDef in APP_DEFS do
-		local button = Instance.new("TextButton")
-		button.Name = appDef.id .. "Button"
-		button.Size = UDim2.fromOffset(150, 34)
-		button.BackgroundColor3 = Color3.fromRGB(52, 52, 52)
-		button.TextColor3 = Color3.new(1, 1, 1)
-		button.TextSize = 14
-		button.Text = appDef.title
-		button.Parent = context.UI.Taskbar
-
-		button.Activated:Connect(function()
-			if openApps[appDef.id] then
-				WindowController.Close(appDef.id)
-			else
-				WindowController.Open(appDef.id)
-			end
-		end)
-	end
-end
-
 return WindowController

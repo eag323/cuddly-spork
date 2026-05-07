@@ -6,6 +6,8 @@ local Players = game:GetService("Players")
 
 local contextRef = nil
 local notificationsRoot: Frame? = nil
+local activeCards = {}
+local lastShownByKey = {}
 
 local TYPE_COLORS = {
 	Info = Color3.fromRGB(60, 130, 220),
@@ -35,7 +37,7 @@ local function ensureRootGui(): Frame
 		root.Name = "NotificationsRoot"
 		root.BackgroundTransparency = 1
 		root.Size = UDim2.fromOffset(320, 320)
-		root.Position = UDim2.new(1, -340, 0, 20)
+		root.Position = UDim2.new(1, -340, 0, 24)
 		root.Parent = screenGui
 
 		local listLayout = Instance.new("UIListLayout")
@@ -51,6 +53,12 @@ local function ensureRootGui(): Frame
 end
 
 local function showNotification(message: string, notificationType: string): ()
+	local key = notificationType .. "::" .. message
+	local now = os.clock()
+	if lastShownByKey[key] and (now - lastShownByKey[key]) <= 0.75 then
+		return
+	end
+	lastShownByKey[key] = now
 	local root = ensureRootGui()
 	local card = Instance.new("TextLabel")
 	card.BackgroundColor3 = TYPE_COLORS[notificationType] or TYPE_COLORS.Info
@@ -62,7 +70,13 @@ local function showNotification(message: string, notificationType: string): ()
 	card.TextSize = 14
 	card.TextXAlignment = Enum.TextXAlignment.Left
 	card.Text = "  " .. message
+	card.LayoutOrder = -(math.floor(now * 1000))
 	card.Parent = root
+	table.insert(activeCards, card)
+	while #activeCards > 4 do
+		local oldest = table.remove(activeCards, 1)
+		if oldest and oldest.Parent then oldest:Destroy() end
+	end
 
 	task.delay(3, function()
 		if not card.Parent then
@@ -74,6 +88,7 @@ local function showNotification(message: string, notificationType: string): ()
 		})
 		tween:Play()
 		tween.Completed:Wait()
+		for i, c in ipairs(activeCards) do if c == card then table.remove(activeCards, i) break end end
 		card:Destroy()
 	end)
 end
