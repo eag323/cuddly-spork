@@ -9,6 +9,7 @@ local ConfigFolder = SharedFolder:WaitForChild("Config")
 local RemotesFolder = SharedFolder:WaitForChild("Remotes")
 
 local GeneratorConfig = require(ConfigFolder:WaitForChild("GeneratorConfig"))
+local EconomyConfig = require(ConfigFolder:WaitForChild("EconomyConfig"))
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
 
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -39,6 +40,7 @@ local DEFAULT_BASE_UPGRADE_COST = 10
 
 local generatorEquipRemote: RemoteEvent? = nil
 local generatorUpgradeRemote: RemoteEvent? = nil
+local notificationPushRemote: RemoteEvent? = nil
 local snackGeneratorById: { [string]: GeneratorConfigEntry } = {}
 local passiveLoopRunning = false
 
@@ -53,6 +55,18 @@ local function getOrCreateRemoteEvent(remoteName: string): RemoteEvent
 	remoteEvent.Parent = RemotesFolder
 
 	return remoteEvent
+end
+
+
+local function pushNotification(player: Player, message: string, notificationType: string): ()
+	if not notificationPushRemote then
+		return
+	end
+
+	notificationPushRemote:FireClient(player, {
+		Message = message,
+		Type = notificationType,
+	})
 end
 
 local function getPlayerData(player: Player): PlayerData?
@@ -117,7 +131,13 @@ local function computeGeneratorFoodPerSecond(player: Player, slotData: any): num
 	local baseFoodPerSec = generatorDef.baseFoodPerSec or DEFAULT_BASE_FOOD_PER_SEC
 	local prestigeMultiplier = PrestigeService.GetPrestigeMultiplier(player)
 
-	return baseFoodPerSec * (level ^ 1.55) * prestigeMultiplier
+		local foodPerSecond = baseFoodPerSec * (level ^ 1.55) * prestigeMultiplier
+	if EconomyConfig.DEV_MODE then
+		-- DEVELOPMENT ONLY: Must be disabled before real release.
+		foodPerSecond *= EconomyConfig.DEV_GENERATOR_MULTIPLIER
+	end
+
+	return foodPerSecond
 end
 
 local function computeUpgradeCost(slotData: any): number
@@ -144,6 +164,7 @@ end
 local function onGeneratorEquip(player: Player, payload: any): ()
 	if type(payload) ~= "table" then
 		warn(string.format("[GeneratorService] Rejected Generator_Equip from %s: malformed payload", player.Name))
+		pushNotification(player, "Could not equip generator: invalid request.", "Warning")
 		return
 	end
 
@@ -151,18 +172,21 @@ local function onGeneratorEquip(player: Player, payload: any): ()
 	local generatorId = payload.GeneratorId
 	if type(slotIndex) ~= "number" or type(generatorId) ~= "string" then
 		warn(string.format("[GeneratorService] Rejected Generator_Equip from %s: invalid slot or generator id", player.Name))
+		pushNotification(player, "Could not equip generator: invalid slot or generator.", "Warning")
 		return
 	end
 
 	slotIndex = math.floor(slotIndex)
 	if slotIndex < 1 or slotIndex > MAX_EQUIPPABLE_SNACK_GENERATORS then
 		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: invalid slot (%d)", player.Name, slotIndex))
+		pushNotification(player, "Could not equip generator: invalid slot.", "Warning")
 		return
 	end
 
 	local generatorDef = snackGeneratorById[generatorId]
 	if not generatorDef then
 		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: invalid generator id (%s)", player.Name, tostring(generatorId)))
+		pushNotification(player, "Could not equip generator: unknown generator.", "Warning")
 		return
 	end
 
@@ -176,6 +200,7 @@ local function onGeneratorEquip(player: Player, payload: any): ()
 	local slotsUnlocked = playerData.Generators.SlotsUnlocked
 	if type(slotsUnlocked) ~= "number" or slotIndex > slotsUnlocked then
 		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: invalid slot (%d)", player.Name, slotIndex))
+		pushNotification(player, "Could not equip generator: slot locked.", "Warning")
 		return
 	end
 
@@ -187,23 +212,27 @@ local function onGeneratorEquip(player: Player, payload: any): ()
 
 	playerData.Generators.Equipped[slotIndex] = newSlotData
 	patchGenerators(player, playerData.Generators)
+	pushNotification(player, "Generator equipped.", "Success")
 end
 
 local function onGeneratorUpgrade(player: Player, payload: any): ()
 	if type(payload) ~= "table" then
 		warn(string.format("[GeneratorService] Rejected Generator_Upgrade from %s: malformed payload", player.Name))
+		pushNotification(player, "Could not upgrade generator: invalid request.", "Warning")
 		return
 	end
 
 	local slotIndex = payload.SlotIndex
 	if type(slotIndex) ~= "number" then
 		warn(string.format("[GeneratorService] Rejected Generator_Upgrade from %s: invalid slot", player.Name))
+		pushNotification(player, "Could not upgrade generator: invalid slot.", "Warning")
 		return
 	end
 
 	slotIndex = math.floor(slotIndex)
 	if slotIndex < 1 or slotIndex > MAX_EQUIPPABLE_SNACK_GENERATORS then
 		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: invalid slot (%d)", player.Name, slotIndex))
+		pushNotification(player, "Could not upgrade generator: invalid slot.", "Warning")
 		return
 	end
 
@@ -223,6 +252,7 @@ local function onGeneratorUpgrade(player: Player, payload: any): ()
 	local slotData = playerData.Generators.Equipped[slotIndex]
 	if type(slotData) ~= "table" then
 		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: empty generator slot (%d)", player.Name, slotIndex))
+		pushNotification(player, "Could not upgrade generator: slot is empty.", "Warning")
 		return
 	end
 
@@ -233,6 +263,7 @@ local function onGeneratorUpgrade(player: Player, payload: any): ()
 	local maxLevel = if generatorDef then generatorDef.maxLevel else nil
 	if type(maxLevel) == "number" and currentLevel >= maxLevel then
 		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: max level reached (%d)", player.Name, currentLevel))
+		pushNotification(player, "Generator is already max level.", "Warning")
 		return
 	end
 
@@ -245,11 +276,13 @@ local function onGeneratorUpgrade(player: Player, payload: any): ()
 	if not CurrencyService.RemoveCurrency(player, "Coins", upgradeCost) then
 		local coins = CurrencyService.GetBalance(player, "Coins")
 		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: insufficient Coins (cost=%d, coins=%d)", player.Name, upgradeCost, coins))
+		pushNotification(player, "Not enough coins to upgrade generator.", "Warning")
 		return
 	end
 
 	slotData.Level = sanitizeLevel(slotData.Level) + 1
 	patchGenerators(player, playerData.Generators)
+	pushNotification(player, "Generator upgraded.", "Success")
 end
 
 local function buildGeneratorLookups(): ()
@@ -316,6 +349,7 @@ function GeneratorService.Init(): ()
 	buildGeneratorLookups()
 	generatorEquipRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Equip or "Generator_Equip")
 	generatorUpgradeRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Upgrade or "Generator_Upgrade")
+	notificationPushRemote = getOrCreateRemoteEvent(RemoteNames.Notification_Push or "Notification_Push")
 end
 
 function GeneratorService.Start(): ()
