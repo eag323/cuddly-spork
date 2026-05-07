@@ -1,6 +1,8 @@
 --!strict
 
+local ServerScriptService = game:GetService("ServerScriptService")
 local ProfileService = require(script.Parent:WaitForChild("ProfileService"))
+local StatsService = require(ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Server"):WaitForChild("Services"):WaitForChild("StatsService"))
 
 local BugdexService = {}
 
@@ -11,19 +13,15 @@ local function ensureBugdexState(playerData)
 end
 
 function BugdexService.RecordCatch(player: Player, speciesId: string): ()
-	if type(speciesId) ~= "string" or speciesId == "" then
-		return
-	end
-
+	if type(speciesId) ~= "string" or speciesId == "" then return end
 	local playerData = ProfileService.GetPlayerData(player)
-	if not playerData then
-		return
-	end
-
+	if not playerData then return end
 	local bugdex = ensureBugdexState(playerData)
 	local currentCount = tonumber(bugdex.TotalCaughtBySpecies[speciesId]) or 0
 	bugdex.TotalCaughtBySpecies[speciesId] = currentCount + 1
-
+	if currentCount == 0 then
+		StatsService.Increment(player, "UniqueBugsDiscovered", 1)
+	end
 	ProfileService.PatchPlayerState(player, { "Bugdex" }, bugdex)
 end
 

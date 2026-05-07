@@ -12,6 +12,7 @@ local BugdexApp = {}
 local windowRef
 local root
 local summaryLabel
+local milestoneLabel
 local listFrame
 local stateChangedConn
 
@@ -106,6 +107,8 @@ local function refresh(context)
 		end
 	end
 
+	local toNext = math.max(300 - discovered, 0)
+	milestoneLabel.Text = string.format("Next collection milestone: %s bugs left", NumberUtil.FormatNumber(toNext))
 	summaryLabel.Text = string.format(
 		"Discovered %s / %s    Total Caught %s",
 		NumberUtil.FormatNumber(discovered),
@@ -148,10 +151,19 @@ function BugdexApp.Mount(target: Instance, context): ()
 	summaryLabel.TextSize = 18
 	summaryLabel.Text = "Discovered 0 / 0    Total Caught 0"
 	summaryLabel.Parent = root
+	milestoneLabel = Instance.new("TextLabel")
+	milestoneLabel.Size = UDim2.new(1, -16, 0, 22)
+	milestoneLabel.Position = UDim2.fromOffset(8, 34)
+	milestoneLabel.BackgroundTransparency = 1
+	milestoneLabel.TextXAlignment = Enum.TextXAlignment.Left
+	milestoneLabel.TextColor3 = Color3.fromRGB(180, 210, 255)
+	milestoneLabel.TextSize = 14
+	milestoneLabel.Text = "Next collection milestone: 300 bugs"
+	milestoneLabel.Parent = root
 
 	listFrame = Instance.new("ScrollingFrame")
-	listFrame.Size = UDim2.new(1, -16, 1, -50)
-	listFrame.Position = UDim2.fromOffset(8, 42)
+	listFrame.Size = UDim2.new(1, -16, 1, -70)
+	listFrame.Position = UDim2.fromOffset(8, 62)
 	listFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
 	listFrame.BorderSizePixel = 0
 	listFrame.ScrollBarThickness = 8
@@ -185,6 +197,7 @@ function BugdexApp.Unmount(): ()
 	windowRef = nil
 	root = nil
 	summaryLabel = nil
+	milestoneLabel = nil
 	listFrame = nil
 end
 

@@ -19,6 +19,7 @@ local CurrencyService = require(ServicesFolder:WaitForChild("CurrencyService"))
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 local PrestigeService = require(ServicesFolder:WaitForChild("PrestigeService"))
 local BuffService = require(ServicesFolder:WaitForChild("BuffService"))
+local StatsService = require(ServicesFolder:WaitForChild("StatsService"))
 
 type PlayerData = { [string]: any }
 
@@ -120,6 +121,8 @@ local function onClickRequest(player: Player): ()
 	end
 
 	CurrencyService.AddFood(player, foodPerClick)
+	StatsService.Increment(player, "TotalClicks", 1)
+	StatsService.Increment(player, "TotalFoodEarned", foodPerClick)
 
 	if clickResultRemote then
 		clickResultRemote:FireClient(player, {
