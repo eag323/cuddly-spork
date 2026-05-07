@@ -66,6 +66,9 @@ function BugFarmService.Start(): ()
 		local slotIndex = payload.SlotIndex
 		if type(slotIndex) ~= "number" then notify(player, "Invalid bug unequip action.", "Warning") return end
 		d.Bugs = d.Bugs or { Inventory = {}, Equipped = {}, SlotsUnlocked = 5 }
+		local slotsUnlocked = tonumber(d.Bugs.SlotsUnlocked) or 5
+		if slotIndex < 1 or slotIndex > slotsUnlocked then notify(player, "Invalid slot index.", "Warning") return end
+		if d.Bugs.Equipped == nil then d.Bugs.Equipped = {} end
 		d.Bugs.Equipped[slotIndex] = nil
 		ProfileService.PatchPlayerState(player, { "Bugs" }, d.Bugs)
 		notify(player, "Bug unequipped.", "Success")
