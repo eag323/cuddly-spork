@@ -11,6 +11,8 @@ local EconomyConfig = {
 	DEV_MARKET_MULTIPLIER = 1,
 	-- DEVELOPMENT ONLY: Force bug spawn interval for minigame balancing.
 	DEV_FORCE_BUG_SPAWN_INTERVAL = 8,
+	-- DEVELOPMENT ONLY: Enables verbose buff and Food/sec debug logs.
+	DEV_DEBUG_BUFFS = false,
 }
 
 return EconomyConfig

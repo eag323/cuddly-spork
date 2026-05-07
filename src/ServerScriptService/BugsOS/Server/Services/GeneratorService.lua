@@ -341,10 +341,12 @@ function GeneratorService.CalculateTotalFoodPerSecond(player: Player): number
 		totalFoodPerSecond += computeGeneratorFoodPerSecond(slotData)
 	end
 
-		local prestigeMultiplier = PrestigeService.GetPrestigeMultiplier(player)
+	local prestigeMultiplier = PrestigeService.GetPrestigeMultiplier(player)
 	local buffs = BuffService.GetPlayerBuffs(player)
 	totalFoodPerSecond *= prestigeMultiplier * (1 + buffs.AllFood) * (1 + buffs.FoodPerSec)
-	print(string.format("[GeneratorService] Food/sec with buffs for %s: %.3f", player.Name, totalFoodPerSecond))
+	if EconomyConfig.DEV_DEBUG_BUFFS then
+		print(string.format("[GeneratorService] Food/sec with buffs for %s: %.3f", player.Name, totalFoodPerSecond))
+	end
 	return totalFoodPerSecond
 end
 

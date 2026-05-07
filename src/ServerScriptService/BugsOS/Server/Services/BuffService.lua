@@ -1,7 +1,10 @@
 --!strict
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local ConfigFolder = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config")
 local ServicesFolder = ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Server"):WaitForChild("Services")
+local EconomyConfig = require(ConfigFolder:WaitForChild("EconomyConfig"))
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 
 local BuffService = {}
@@ -101,7 +104,9 @@ function BuffService.GetPlayerBuffs(player: Player): BuffTotals
 		end
 	end
 
-	print(string.format("[BuffService] Player buffs calculated for %s", player.Name), buffs)
+	if EconomyConfig.DEV_DEBUG_BUFFS then
+		print(string.format("[BuffService] Player buffs calculated for %s", player.Name), buffs)
+	end
 	return buffs
 end
 
