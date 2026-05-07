@@ -158,9 +158,10 @@ function DesktopController.Start(): ()
 	taskbar.Name = "Taskbar"
 	taskbar.AnchorPoint = Vector2.new(0.5, 1)
 	taskbar.Position = UDim2.fromScale(0.5, 1)
-	taskbar.Size = UDim2.new(1, 0, 0, 54)
-	taskbar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-	taskbar.BorderSizePixel = 0
+	taskbar.Size = UDim2.new(1, 0, 0, 40)
+	taskbar.BackgroundColor3 = Color3.fromRGB(188, 188, 188)
+	taskbar.BorderSizePixel = 1
+	taskbar.BorderColor3 = Color3.fromRGB(230, 230, 230)
 	taskbar.Parent = screenGui
 
 	context.UI.ShowConfirmPopup = function(message: string, onConfirm)

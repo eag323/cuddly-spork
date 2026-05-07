@@ -1,13 +1,19 @@
 --!strict
 
+local UserInputService = game:GetService("UserInputService")
+local UITheme = require(script.Parent.Parent:WaitForChild("UITheme"))
+
 local Window = {}
 
 export type WindowProps = {
 	Title: string?,
+	Icon: string?,
+	AppId: string?,
 	Size: UDim2?,
 	Position: UDim2?,
 	Parent: Instance,
 	OnClose: (() -> ())?,
+	OnFocus: (() -> ())?,
 }
 
 function Window.Create(props: WindowProps)
@@ -15,74 +21,104 @@ function Window.Create(props: WindowProps)
 	rootFrame.Name = "Window"
 	rootFrame.Size = props.Size or UDim2.fromOffset(560, 380)
 	rootFrame.Position = props.Position or UDim2.fromScale(0.2, 0.18)
-	rootFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
-	rootFrame.BorderColor3 = Color3.fromRGB(80, 80, 88)
-	rootFrame.BorderSizePixel = 1
+	rootFrame.BackgroundColor3 = UITheme.Colors.WindowBody
+	rootFrame.BorderColor3 = UITheme.Colors.WindowBorderLight
+	rootFrame.BorderSizePixel = UITheme.Window.Border
+	rootFrame.Active = true
 	rootFrame.Parent = props.Parent
 
-	local titleBar = Instance.new("Frame")
+	local titleBar = Instance.new("TextButton")
 	titleBar.Name = "TitleBar"
-	titleBar.Size = UDim2.new(1, 0, 0, 34)
-	titleBar.BackgroundColor3 = Color3.fromRGB(45, 49, 60)
+	titleBar.Text = ""
+	titleBar.AutoButtonColor = false
+	titleBar.Size = UDim2.new(1, 0, 0, UITheme.Window.TitleBarHeight)
+	titleBar.BackgroundColor3 = UITheme.Colors.TitleBar
 	titleBar.BorderSizePixel = 0
 	titleBar.Parent = rootFrame
 
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Name = "TitleLabel"
-	titleLabel.Size = UDim2.new(1, -46, 1, 0)
-	titleLabel.Position = UDim2.fromOffset(10, 0)
+	titleLabel.Size = UDim2.new(1, -70, 1, 0)
+	titleLabel.Position = UDim2.fromOffset(8, 0)
 	titleLabel.BackgroundTransparency = 1
-	titleLabel.Text = props.Title or "Window"
-	titleLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
+	titleLabel.Text = string.format("%s %s", props.Icon or "◻", props.Title or "Window")
+	titleLabel.TextColor3 = UITheme.Colors.TitleText
 	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-	titleLabel.Font = Enum.Font.GothamSemibold
-	titleLabel.TextSize = 15
+	titleLabel.Font = UITheme.Font
+	titleLabel.TextSize = 16
 	titleLabel.Parent = titleBar
 
 	local closeButton = Instance.new("TextButton")
 	closeButton.Name = "CloseButton"
 	closeButton.AnchorPoint = Vector2.new(1, 0)
-	closeButton.Size = UDim2.fromOffset(28, 24)
-	closeButton.Position = UDim2.new(1, -6, 0, 5)
+	closeButton.Size = UDim2.fromOffset(24, 20)
+	closeButton.Position = UDim2.new(1, -4, 0, 4)
 	closeButton.Text = "X"
-	closeButton.Font = Enum.Font.GothamBold
+	closeButton.Font = UITheme.Font
 	closeButton.TextSize = 14
-	closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-	closeButton.BackgroundColor3 = Color3.fromRGB(150, 66, 66)
-	closeButton.BorderSizePixel = 0
+	closeButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+	closeButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+	closeButton.BorderColor3 = Color3.fromRGB(64, 64, 64)
 	closeButton.Parent = titleBar
 
 	local contentFrame = Instance.new("Frame")
 	contentFrame.Name = "Content"
-	contentFrame.Size = UDim2.new(1, -16, 1, -48)
-	contentFrame.Position = UDim2.fromOffset(8, 40)
+	contentFrame.Size = UDim2.new(1, -10, 1, -UITheme.Window.TitleBarHeight - 8)
+	contentFrame.Position = UDim2.fromOffset(5, UITheme.Window.TitleBarHeight + 4)
 	contentFrame.BackgroundTransparency = 1
 	contentFrame.Parent = rootFrame
 
+	local dragging = false
+	local dragStart = Vector2.zero
+	local startPos = UDim2.fromOffset(0,0)
+
+	titleBar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = rootFrame.Position
+			if props.OnFocus then props.OnFocus() end
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStart
+			rootFrame.Position = UDim2.fromOffset(startPos.X.Offset + delta.X, startPos.Y.Offset + delta.Y)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+
+	rootFrame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and props.OnFocus then
+			props.OnFocus()
+		end
+	end)
+
 	local isDestroyed = false
 	local function destroyWindow()
-		if isDestroyed then
-			return
-		end
+		if isDestroyed then return end
 		isDestroyed = true
-		if rootFrame.Parent then
-			rootFrame:Destroy()
-		end
+		if rootFrame.Parent then rootFrame:Destroy() end
 	end
 
 	closeButton.Activated:Connect(function()
-		if props.OnClose then
-			props.OnClose()
-			return
-		end
+		if props.OnClose then props.OnClose(); return end
 		destroyWindow()
 	end)
 
-	return {
-		Root = rootFrame,
-		Content = contentFrame,
-		Destroy = destroyWindow,
-	}
+	return { Root = rootFrame, Content = contentFrame, Destroy = destroyWindow, SetZIndex = function(z)
+		for _, gui in ipairs(rootFrame:GetDescendants()) do
+			if gui:IsA("GuiObject") then gui.ZIndex = z end
+		end
+		rootFrame.ZIndex = z
+		titleBar.BackgroundColor3 = UITheme.Colors.TitleBarActive
+	end }
 end
 
 return Window
