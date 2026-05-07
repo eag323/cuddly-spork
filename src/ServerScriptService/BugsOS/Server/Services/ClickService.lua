@@ -8,6 +8,7 @@ local ConfigFolder = SharedFolder:WaitForChild("Config")
 local RemotesFolder = SharedFolder:WaitForChild("Remotes")
 
 local ClickToolConfig = require(ConfigFolder:WaitForChild("ClickToolConfig"))
+local EconomyConfig = require(ConfigFolder:WaitForChild("EconomyConfig"))
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
 
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -92,6 +93,11 @@ local function computeFoodPerClick(playerData: PlayerData): number
 				total += toolBonus * levelValue
 			end
 		end
+	end
+
+		if EconomyConfig.DEV_MODE then
+		-- DEVELOPMENT ONLY: Must be disabled before real release.
+		total *= EconomyConfig.DEV_CLICK_MULTIPLIER
 	end
 
 	return total

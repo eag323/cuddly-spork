@@ -15,6 +15,7 @@ local CurrencyHUDController = require(ControllersFolder:WaitForChild("CurrencyHU
 local MarketController = require(ControllersFolder:WaitForChild("MarketController"))
 local UpgradeController = require(ControllersFolder:WaitForChild("UpgradeController"))
 local GeneratorController = require(ControllersFolder:WaitForChild("GeneratorController"))
+local NotificationController = require(ControllersFolder:WaitForChild("NotificationController"))
 
 local context = {
 	State = {
@@ -36,6 +37,7 @@ local context = {
 		GeneratorUpgrade = RemotesFolder:WaitForChild(RemoteNames.Generator_Upgrade) :: RemoteEvent,
 		GeneratorEquip = RemotesFolder:WaitForChild(RemoteNames.Generator_Equip) :: RemoteEvent,
 		PrestigeRequest = RemotesFolder:WaitForChild(RemoteNames.Prestige_Request) :: RemoteEvent,
+		NotificationPush = RemotesFolder:WaitForChild(RemoteNames.Notification_Push) :: RemoteEvent,
 	},
 	Controllers = {},
 }
@@ -45,6 +47,7 @@ context.Controllers.CurrencyHUD = CurrencyHUDController
 context.Controllers.Market = MarketController
 context.Controllers.Upgrade = UpgradeController
 context.Controllers.Generator = GeneratorController
+context.Controllers.Notification = NotificationController
 
 DesktopController.Init(context)
 WindowController.Init(context)
@@ -52,6 +55,7 @@ CurrencyHUDController.Init(context)
 MarketController.Init(context)
 UpgradeController.Init(context)
 GeneratorController.Init(context)
+NotificationController.Init(context)
 
 DesktopController.Start()
 WindowController.Start()
@@ -59,3 +63,4 @@ CurrencyHUDController.Start()
 MarketController.Start()
 UpgradeController.Start()
 GeneratorController.Start()
+NotificationController.Start()

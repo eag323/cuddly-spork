@@ -17,6 +17,7 @@ local CurrencyService = require(ServicesFolder:WaitForChild("CurrencyService"))
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 
 local upgradeBuyClickToolRemote: RemoteEvent? = nil
+local notificationPushRemote: RemoteEvent? = nil
 
 type ClickToolDef = {
 	id: string,
@@ -54,15 +55,28 @@ local function getClickToolLevel(playerData: { [string]: any }, toolId: string):
 	return level
 end
 
+local function pushNotification(player: Player, message: string, notificationType: string): ()
+	if not notificationPushRemote then
+		return
+	end
+
+	notificationPushRemote:FireClient(player, {
+		Message = message,
+		Type = notificationType,
+	})
+end
+
 local function onUpgradeBuyClickTool(player: Player, payload: any)
 	if type(payload) ~= "table" then
 		warn(string.format("[UpgradeService] Rejected Upgrade_BuyClickTool from %s: malformed payload", player.Name))
+		pushNotification(player, "Upgrade failed: invalid request.", "Warning")
 		return
 	end
 
 	local toolId = payload.ToolId
 	if type(toolId) ~= "string" or toolId == "" then
 		warn(string.format("[UpgradeService] Rejected Upgrade_BuyClickTool from %s: missing/invalid ToolId", player.Name))
+		pushNotification(player, "Upgrade failed: invalid tool.", "Warning")
 		return
 	end
 
@@ -81,6 +95,7 @@ local function onUpgradeBuyClickTool(player: Player, payload: any)
 	local currentLevel = getClickToolLevel(playerData, toolId)
 	if currentLevel >= toolConfig.maxLevel then
 		warn(string.format("[UpgradeService] Rejected Upgrade_BuyClickTool for %s (%s): max level reached (%d)", player.Name, toolId, currentLevel))
+		pushNotification(player, "Upgrade failed: max level reached.", "Warning")
 		return
 	end
 
@@ -95,11 +110,13 @@ local function onUpgradeBuyClickTool(player: Player, payload: any)
 			cost,
 			coins
 		))
+		pushNotification(player, "Upgrade failed: not enough coins.", "Warning")
 		return
 	end
 
 	if not CurrencyService.RemoveCurrency(player, "Coins", cost) then
 		warn(string.format("[UpgradeService] Rejected Upgrade_BuyClickTool for %s (%s): failed to remove coins", player.Name, toolId))
+		pushNotification(player, "Upgrade failed: could not spend coins.", "Warning")
 		return
 	end
 
@@ -107,6 +124,7 @@ local function onUpgradeBuyClickTool(player: Player, payload: any)
 	ProfileService.PatchPlayerState(player, { "ClickTools", toolId }, nextLevel)
 
 	print(string.format("[UpgradeService] %s upgraded %s to level %d for %d Coins", player.Name, toolId, nextLevel, cost))
+	pushNotification(player, "Upgrade purchased successfully.", "Success")
 end
 
 function UpgradeService.Init(): ()
@@ -117,6 +135,7 @@ function UpgradeService.Init(): ()
 	end
 
 	upgradeBuyClickToolRemote = getOrCreateRemoteEvent(RemoteNames.Upgrade_BuyClickTool or "Upgrade_BuyClickTool")
+	notificationPushRemote = getOrCreateRemoteEvent(RemoteNames.Notification_Push or "Notification_Push")
 end
 
 function UpgradeService.Start(): ()

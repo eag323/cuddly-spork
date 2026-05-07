@@ -82,16 +82,17 @@ function FoodHarvestersApp.Refresh(context): ()
 		local name = generator and generator.displayName or "Empty Slot"
 		local level = entry and entry.Level or 0
 		local baseFoodPerSec = generator and generator.baseFoodPerSec or 0
+		local baseUpgradeCost = generator and generator.baseUpgradeCost or 0
 		local prestigeMultiplier = getPrestigeMultiplier(context)
 		local estimatedFoodPerSec = baseFoodPerSec * (level ^ 1.55) * prestigeMultiplier
-		label.Text = string.format(
-			"Slot %d | %s | Level %d | Food/sec %s",
-			i,
-			name,
-			level,
-			NumberUtil.FormatNumber(estimatedFoodPerSec)
-		)
-		upgrade.Visible = entry ~= nil
+		label.Text = string.format("Slot %d\n%s\nLevel %d\nFood/sec %s", i, name, level, NumberUtil.FormatNumber(estimatedFoodPerSec))
+		if entry then
+			local upgradeCost = baseUpgradeCost * (level ^ 2.05)
+			upgrade.Text = string.format("Upgrade: %s Coins", NumberUtil.FormatNumber(upgradeCost))
+			upgrade.Visible = true
+		else
+			upgrade.Visible = false
+		end
 	end
 end
 
@@ -114,11 +115,14 @@ function FoodHarvestersApp.Mount(target: Instance, context): ()
 	for i = 1, 3 do
 		local label = Instance.new("TextLabel")
 		label.Name = "SlotLabel" .. i
-		label.Size = UDim2.new(0.65, 0, 0, 34)
+		label.Size = UDim2.new(0.65, 0, 0, 64)
 		label.Position = UDim2.fromOffset(10, 40 + ((i - 1) * 70))
 		label.BackgroundTransparency = 1
 		label.TextColor3 = Color3.new(1, 1, 1)
 		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.TextYAlignment = Enum.TextYAlignment.Top
+		label.TextWrapped = true
+		label.TextSize = 14
 		label.Parent = root
 
 		local upgrade = Instance.new("TextButton")
