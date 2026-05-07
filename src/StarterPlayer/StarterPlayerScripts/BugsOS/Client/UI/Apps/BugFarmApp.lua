@@ -47,13 +47,31 @@ local function refresh(context)
 	end
 	local invLayout = Instance.new("UIListLayout"); invLayout.Padding = UDim.new(0, 6); invLayout.Parent = invScroll
 	for uid, bug in pairs(inv) do
-		local row=Instance.new("Frame"); row.Size=UDim2.new(1,-8,0,74); row.BackgroundColor3=Color3.fromRGB(36,36,44); row.Parent=invScroll
-		local label=Instance.new("TextLabel"); label.Size=UDim2.new(1,-310,1,0); label.BackgroundTransparency=1; label.TextXAlignment=Enum.TextXAlignment.Left; label.TextWrapped=true; label.TextColor3=Color3.new(1,1,1)
+		local row=Instance.new("Frame"); row.Size=UDim2.new(1,-8,0,112); row.BackgroundColor3=Color3.fromRGB(36,36,44); row.Parent=invScroll
+		local label=Instance.new("TextLabel"); label.Size=UDim2.new(1,-430,1,-8); label.Position=UDim2.fromOffset(8,4); label.BackgroundTransparency=1; label.TextXAlignment=Enum.TextXAlignment.Left; label.TextYAlignment=Enum.TextYAlignment.Top; label.TextWrapped=true; label.TextColor3=Color3.new(1,1,1); label.TextSize=16
 		local isEquipped = false; for _,v in pairs(eq) do if v==uid then isEquipped=true break end end
-		label.Text=string.format("%s [%s]\n%s | Equipped: %s | Locked: %s", tostring(bug.Species or bug.SpeciesId), tostring(bug.Rarity or "Common"), fmtPrimary(bug.Primary), tostring(isEquipped), tostring(bug.Locked == true)); label.Parent=row
-		for i=1,(tonumber(bugsData.SlotsUnlocked) or 5) do local eb=Instance.new("TextButton"); eb.Size=UDim2.fromOffset(40,22); eb.Position=UDim2.new(1,-300+((i-1)*44),0,6); eb.Text=tostring(i); eb.Parent=row; eb.Activated:Connect(function() context.Controllers.BugFarm.Equip(i, uid) end) end
-		local lockB=Instance.new("TextButton"); lockB.Size=UDim2.fromOffset(90,22); lockB.Position=UDim2.new(1,-300,0,38); lockB.Text=(bug.Locked and "Unlock" or "Lock"); lockB.Parent=row; lockB.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid) end)
-		local sacB=Instance.new("TextButton"); sacB.Size=UDim2.fromOffset(90,22); sacB.Position=UDim2.new(1,-204,0,38); sacB.Text="Sacrifice"; sacB.Parent=row; sacB.Activated:Connect(function() context.Controllers.BugFarm.Sacrifice(uid) end)
+		label.Text=string.format(
+			"Bug: %s\nRarity: %s\nPrimary: %s\nEquipped: %s\nLocked: %s",
+			tostring(bug.Species or bug.SpeciesId or "Unknown"),
+			tostring(bug.Rarity or "Common"),
+			fmtPrimary(bug.Primary),
+			tostring(isEquipped),
+			tostring(bug.Locked == true)
+		); label.Parent=row
+		for i=1,(tonumber(bugsData.SlotsUnlocked) or 5) do
+			local eb=Instance.new("TextButton"); eb.Size=UDim2.fromOffset(86,22); eb.Position=UDim2.new(1,-420+((i-1)*84),0,8); eb.Text=string.format("Equip Slot %d", i); eb.TextSize=12; eb.Parent=row; eb.Activated:Connect(function() context.Controllers.BugFarm.Equip(i, uid) end)
+		end
+		local lockB=Instance.new("TextButton"); lockB.Size=UDim2.fromOffset(110,24); lockB.Position=UDim2.new(1,-222,0,38); lockB.Text=(bug.Locked and "Unlock" or "Lock"); lockB.Parent=row; lockB.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid) end)
+		local sacB=Instance.new("TextButton"); sacB.Size=UDim2.fromOffset(110,24); sacB.Position=UDim2.new(1,-110,0,38); sacB.Text="Sacrifice"; sacB.Parent=row
+		local sacrificeDisabled = (bug.Locked == true) or isEquipped
+		if sacrificeDisabled then
+			sacB.Active = false
+			sacB.AutoButtonColor = false
+			sacB.BackgroundColor3 = Color3.fromRGB(90, 90, 96)
+			sacB.TextColor3 = Color3.fromRGB(180, 180, 180)
+		else
+			sacB.Activated:Connect(function() context.Controllers.BugFarm.Sacrifice(uid) end)
+		end
 	end
 	invScroll.CanvasSize = UDim2.fromOffset(0, invLayout.AbsoluteContentSize.Y + 8)
 	task.defer(function()
