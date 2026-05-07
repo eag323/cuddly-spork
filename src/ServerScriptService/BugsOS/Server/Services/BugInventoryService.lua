@@ -9,10 +9,11 @@ local BugInventoryService = {}
 
 local RARITY_RANGES = {
 	Common = { 0.01, 0.05 },
-	Rare = { 0.05, 0.12 },
-	Epic = { 0.12, 0.24 },
-	Legendary = { 0.24, 0.38 },
-	Mythic = { 0.38, 0.50 },
+	Uncommon = { 0.03, 0.08 },
+	Rare = { 0.06, 0.14 },
+	Epic = { 0.1, 0.22 },
+	Legendary = { 0.16, 0.32 },
+	Mythic = { 0.24, 0.45 },
 }
 
 local function createUid(): string
@@ -45,9 +46,13 @@ function BugInventoryService.CreateBug(player: Player, speciesId: string, rarity
 
 	local statPool = BugConfig.StatTypes or {}
 	if #statPool == 0 then return nil end
-	local statId = statPool[math.random(1, #statPool)]
+	local statId = species.primaryStatType
+	if type(statId) ~= "string" or statId == "" then
+		statId = statPool[math.random(1, #statPool)]
+	end
 	local range = RARITY_RANGES[rarity] or RARITY_RANGES.Common
-	local value = Random.new():NextNumber(range[1], range[2])
+	local baseValue = tonumber(species.primaryStatValue) or Random.new():NextNumber(range[1], range[2])
+	local value = math.clamp(baseValue * Random.new():NextNumber(0.95, 1.05), range[1], range[2])
 	local uid = createUid()
 	while playerData.Bugs.Inventory[uid] ~= nil do
 		uid = createUid()
