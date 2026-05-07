@@ -36,6 +36,7 @@ local UpgradeController = require(ControllersFolder:WaitForChild("UpgradeControl
 local GeneratorController = require(ControllersFolder:WaitForChild("GeneratorController"))
 local NotificationController = require(ControllersFolder:WaitForChild("NotificationController"))
 local BugMinigameController = require(ControllersFolder:WaitForChild("BugMinigameController"))
+local BugFarmController = require(ControllersFolder:WaitForChild("BugFarmController"))
 
 local requiredRemoteNames = {
 	ClickRequest = RemoteNames.Click_Request,
@@ -54,6 +55,10 @@ local requiredRemoteNames = {
 	BugEscaped = RemoteNames.Bug_Escaped,
 	BugAttemptCatch = RemoteNames.Bug_AttemptCatch,
 	BugHitUpdate = RemoteNames.Bug_HitUpdate,
+	BugEquip = RemoteNames.Bug_Equip,
+	BugUnequip = RemoteNames.Bug_Unequip,
+	BugLock = RemoteNames.Bug_Lock,
+	BugSacrifice = RemoteNames.Bug_Sacrifice,
 }
 
 local remotes = {}
@@ -74,9 +79,10 @@ context.Controllers.Upgrade = UpgradeController
 context.Controllers.Generator = GeneratorController
 context.Controllers.Notification = NotificationController
 context.Controllers.BugMinigame = BugMinigameController
+context.Controllers.BugFarm = BugFarmController
 
 DesktopController.Init(context); WindowController.Init(context); CurrencyHUDController.Init(context); MarketController.Init(context)
-UpgradeController.Init(context); GeneratorController.Init(context); NotificationController.Init(context); BugMinigameController.Init(context)
+UpgradeController.Init(context); GeneratorController.Init(context); NotificationController.Init(context); BugMinigameController.Init(context); BugFarmController.Init(context)
 
 DesktopController.Start(); WindowController.Start(); CurrencyHUDController.Start(); MarketController.Start()
-UpgradeController.Start(); GeneratorController.Start(); NotificationController.Start(); BugMinigameController.Start()
+UpgradeController.Start(); GeneratorController.Start(); NotificationController.Start(); BugMinigameController.Start(); BugFarmController.Start()

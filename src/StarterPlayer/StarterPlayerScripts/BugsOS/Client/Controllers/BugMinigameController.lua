@@ -152,7 +152,7 @@ function BugMinigameController.Start()
 
 	context.Remotes.BugCaptured.OnClientEvent:Connect(function(payload)
 		if type(payload) == "table" and context.Controllers.Notification then
-			context.Controllers.Notification.Show(string.format("Caught %s %s +%s Bug Points", payload.Rarity or "Bug", payload.DisplayName or "Bug", tostring(payload.BugPointsAwarded or 0)), "Success")
+			context.Controllers.Notification.Show(string.format("Caught %s %s", payload.Rarity or "Bug", payload.DisplayName or "Bug"), "Success")
 		end
 		clear()
 	end)
