@@ -18,7 +18,8 @@ local function spawnFor(player)
  local now=os.clock(); local duration=species.baseTimer
  activeByUser[player.UserId]={ActiveBugId=id,SpeciesId=species.id,DisplayName=species.displayName,Rarity=rarity,HitsRequired=species.hitsRequired,HitsLanded=0,ExpiresAt=now+duration,SpawnedAt=now,Behavior=behavior}
  sinceSpawn[player.UserId]=0
- (Remotes:WaitForChild(RemoteNames.Bug_Spawned) :: RemoteEvent):FireClient(player,{SpeciesId=species.id,DisplayName=species.displayName,Rarity=rarity,HitsRequired=species.hitsRequired,Duration=duration,Behavior=behavior,ActiveBugId=id})
+ local spawnedRemote = Remotes:WaitForChild(RemoteNames.Bug_Spawned) :: RemoteEvent
+ spawnedRemote:FireClient(player,{SpeciesId=species.id,DisplayName=species.displayName,Rarity=rarity,HitsRequired=species.hitsRequired,Duration=duration,Behavior=behavior,ActiveBugId=id})
 end
 local function ensureRemoteEvent(remoteName: string): RemoteEvent
 	local existingRemote = Remotes:FindFirstChild(remoteName)
@@ -39,6 +40,11 @@ function BugSpawnService.Init()
 	ensureRemoteEvent(RemoteNames.Bug_AttemptCatch)
 end
 function BugSpawnService.Start()
+ local spawnedRemote = Remotes:WaitForChild(RemoteNames.Bug_Spawned) :: RemoteEvent
+ local escapedRemote = Remotes:WaitForChild(RemoteNames.Bug_Escaped) :: RemoteEvent
+ local capturedRemote = Remotes:WaitForChild(RemoteNames.Bug_Captured) :: RemoteEvent
+ local attemptCatchRemote = Remotes:WaitForChild(RemoteNames.Bug_AttemptCatch) :: RemoteEvent
+
  Players.PlayerRemoving:Connect(function(p) activeByUser[p.UserId]=nil; sinceSpawn[p.UserId]=nil; lastHit[p.UserId]=nil end)
  task.spawn(function()
   while true do
@@ -46,7 +52,7 @@ function BugSpawnService.Start()
    local now=os.clock()
    for _,p in ipairs(Players:GetPlayers()) do
     local st=activeByUser[p.UserId]
-    if st then if now>=st.ExpiresAt then clear(p); (Remotes:WaitForChild(RemoteNames.Bug_Escaped)::RemoteEvent):FireClient(p,{SpeciesId=st.SpeciesId,Rarity=st.Rarity}) end
+    if st then if now>=st.ExpiresAt then clear(p); escapedRemote:FireClient(p,{SpeciesId=st.SpeciesId,Rarity=st.Rarity}) end
     else
       sinceSpawn[p.UserId]=(sinceSpawn[p.UserId] or 0)+1
       local chance=0.02 + ((sinceSpawn[p.UserId])*0.0015)
@@ -55,7 +61,7 @@ function BugSpawnService.Start()
    end
   end
  end)
- (Remotes:WaitForChild(RemoteNames.Bug_AttemptCatch)::RemoteEvent).OnServerEvent:Connect(function(player,payload)
+ attemptCatchRemote.OnServerEvent:Connect(function(player,payload)
   local st=activeByUser[player.UserId]; if not st then return end
   if type(payload)~='table' or payload.ActiveBugId~=st.ActiveBugId then return end
   local now=os.clock(); if now>=st.ExpiresAt then clear(player); return end
@@ -66,7 +72,7 @@ function BugSpawnService.Start()
     local pdata = player:FindFirstChild("PlayerData")
     if pdata and pdata:IsA("Folder") then local bp = pdata:FindFirstChild("BugPoints") :: NumberValue; if bp then bp.Value += points end end
     clear(player)
-    (Remotes:WaitForChild(RemoteNames.Bug_Captured)::RemoteEvent):FireClient(player,{SpeciesId=st.SpeciesId,DisplayName=st.DisplayName,Rarity=st.Rarity,BugPointsAwarded=points})
+    capturedRemote:FireClient(player,{SpeciesId=st.SpeciesId,DisplayName=st.DisplayName,Rarity=st.Rarity,BugPointsAwarded=points})
   end
  end)
 end
