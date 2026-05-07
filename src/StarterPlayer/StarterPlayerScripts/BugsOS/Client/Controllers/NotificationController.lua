@@ -97,6 +97,10 @@ function NotificationController.Init(context): ()
 	contextRef = context
 end
 
+function NotificationController.Show(message: string, notificationType: string): ()
+	showNotification(message, notificationType)
+end
+
 function NotificationController.Start(): ()
 	if not contextRef or not contextRef.Remotes or not contextRef.Remotes.NotificationPush then
 		return

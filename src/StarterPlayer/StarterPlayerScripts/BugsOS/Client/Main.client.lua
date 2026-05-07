@@ -53,6 +53,7 @@ local requiredRemoteNames = {
 	BugCaptured = RemoteNames.Bug_Captured,
 	BugEscaped = RemoteNames.Bug_Escaped,
 	BugAttemptCatch = RemoteNames.Bug_AttemptCatch,
+	BugHitUpdate = RemoteNames.Bug_HitUpdate,
 }
 
 local remotes = {}

@@ -59,6 +59,7 @@ local RemoteNames: RemoteNameMap = {
 	Bug_Spawned = "Bug_Spawned",
 	Bug_Captured = "Bug_Captured",
 	Bug_Escaped = "Bug_Escaped",
+	Bug_HitUpdate = "Bug_HitUpdate",
 	Market_PriceUpdated = "Market_PriceUpdated",
 	Leaderboard_Updated = "Leaderboard_Updated",
 	Guild_Updated = "Guild_Updated",
