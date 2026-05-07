@@ -31,14 +31,19 @@ local function refresh()
  local data=context.State.PlayerData; if type(data)~='table' then return end
  labels.Food.Text="Food: "..NumberUtil.FormatNumber((data.Currencies or {}).Food or 0)
  labels.Coins.Text="Coins: "..NumberUtil.FormatNumber((data.Currencies or {}).Coins or 0)
+ local bugPoints = data.BugPoints
+ if type(bugPoints) ~= 'number' then
+  bugPoints = ((data.LeaderboardStats or {}).BugPoints) or 0
+ end
+ labels.BugPoints.Text="Bug Points: "..NumberUtil.FormatNumber(bugPoints)
  labels.FPS.Text="Food/sec: "..NumberUtil.FormatNumber(calcFPS(data))
  labels.FPC.Text="Food/click: "..NumberUtil.FormatNumber(calcFPC(data))
  labels.Prestige.Text="Prestige: "..tostring((((data.Progression or {}).Prestige) or 0))
 end
 function CurrencyHUDController.Init(c) context=c; for _,e in ClickToolConfig.Tools do clickToolBonusById[e.id]=e.foodPerClickPerLevel end for _,e in GeneratorConfig.Generators do if e.classId=='snack' then generatorById[e.id]=e end end end
 function CurrencyHUDController.Start()
- local frame=Instance.new('Frame'); frame.Name='CurrencyHUD'; frame.Position=UDim2.fromOffset(12,52); frame.Size=UDim2.fromOffset(240,158); frame.BackgroundColor3=Color3.fromRGB(0,0,0); frame.BackgroundTransparency=0.35; frame.Parent=context.UI.HUDLayer
- local names={{'Food',4},{'Coins',34},{'FPS',64},{'FPC',94},{'Prestige',124}}
+ local frame=Instance.new('Frame'); frame.Name='CurrencyHUD'; frame.Position=UDim2.fromOffset(12,52); frame.Size=UDim2.fromOffset(240,186); frame.BackgroundColor3=Color3.fromRGB(0,0,0); frame.BackgroundTransparency=0.35; frame.Parent=context.UI.HUDLayer
+ local names={{'Food',4},{'Coins',34},{'BugPoints',64},{'FPS',94},{'FPC',124},{'Prestige',154}}
  for _,n in ipairs(names) do local l=Instance.new('TextLabel'); l.Size=UDim2.new(1,-10,0,28); l.Position=UDim2.fromOffset(5,n[2]); l.BackgroundTransparency=1; l.TextColor3=Color3.new(1,1,1); l.TextXAlignment=Enum.TextXAlignment.Left; l.Font=Enum.Font.GothamSemibold; l.TextSize=14; l.Parent=frame; labels[n[1]]=l end
  refresh()
 end
