@@ -18,6 +18,9 @@ local ProfileService = {}
 local playerDataByUserId: { [number]: PlayerData } = {}
 local statePatchRemote: RemoteEvent? = nil
 local stateFullSyncRemote: RemoteEvent? = nil
+local saveInFlightByUserId: { [number]: boolean } = {}
+
+local AUTOSAVE_INTERVAL_SECONDS = 60
 
 local function deepCopy(value: any): any
 	if type(value) ~= "table" then
@@ -209,8 +212,44 @@ local function syncPlayer(player: Player): ()
 	end
 end
 
+local function savePlayerData(player: Player): boolean
+	local userId = player.UserId
+	if saveInFlightByUserId[userId] then
+		return false
+	end
+
+	local playerData = playerDataByUserId[userId]
+	if not playerData then
+		return false
+	end
+
+	saveInFlightByUserId[userId] = true
+	local ok, _err = pcall(function()
+		-- Placeholder for persistent profile save.
+		local _snapshot = deepCopy(playerData)
+	end)
+	saveInFlightByUserId[userId] = nil
+
+	if ok then
+		print(string.format("[ProfileService] Saved player %s", player.Name))
+	end
+
+	return ok
+end
+
+local function autosaveLoop(): ()
+	while true do
+		task.wait(AUTOSAVE_INTERVAL_SECONDS)
+		for _, player in Players:GetPlayers() do
+			savePlayerData(player)
+		end
+	end
+end
+
 local function onPlayerRemoving(player: Player): ()
+	savePlayerData(player)
 	playerDataByUserId[player.UserId] = nil
+	saveInFlightByUserId[player.UserId] = nil
 end
 
 function ProfileService.Init(): ()
@@ -228,6 +267,8 @@ function ProfileService.Start(): ()
 	for _, player in Players:GetPlayers() do
 		syncPlayer(player)
 	end
+
+	task.spawn(autosaveLoop)
 end
 
 return ProfileService

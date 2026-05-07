@@ -16,6 +16,7 @@ local ServicesFolder = BugsOSServerFolder:WaitForChild("Services")
 
 local CurrencyService = require(ServicesFolder:WaitForChild("CurrencyService"))
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
+local PrestigeService = require(ServicesFolder:WaitForChild("PrestigeService"))
 
 type PlayerData = { [string]: any }
 
@@ -105,7 +106,7 @@ local function onClickRequest(player: Player): ()
 		return
 	end
 
-	local foodPerClick = computeFoodPerClick(playerData)
+	local foodPerClick = computeFoodPerClick(playerData) * PrestigeService.GetPrestigeMultiplier(player)
 	if foodPerClick <= 0 then
 		return
 	end

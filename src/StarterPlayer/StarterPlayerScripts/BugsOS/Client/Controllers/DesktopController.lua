@@ -15,6 +15,7 @@ local FLOAT_RISE_PIXELS = 54
 local FLOAT_LIFETIME = 0.55
 local FLOAT_X_OFFSET = 18
 local FLOAT_Y_OFFSET = 10
+local AMBIENT_PARTICLE_COUNT = 14
 
 local rng = Random.new()
 
@@ -29,7 +30,7 @@ local function spawnFloatingText(parent: Instance, clickPos: Vector2): ()
 	floatText.TextSize = 20
 	floatText.TextColor3 = Color3.fromRGB(255, 240, 135)
 	floatText.TextStrokeTransparency = 0.35
-	floatText.ZIndex = 2
+	floatText.ZIndex = 3
 
 	local offsetX = rng:NextNumber(-FLOAT_X_OFFSET, FLOAT_X_OFFSET)
 	local offsetY = rng:NextNumber(-FLOAT_Y_OFFSET, FLOAT_Y_OFFSET)
@@ -46,6 +47,32 @@ local function spawnFloatingText(parent: Instance, clickPos: Vector2): ()
 	Debris:AddItem(floatText, FLOAT_LIFETIME + 0.1)
 end
 
+local function createAmbientParticles(worldLayer: Frame): ()
+	for _ = 1, AMBIENT_PARTICLE_COUNT do
+		local particle = Instance.new("Frame")
+		particle.Name = "AmbientParticle"
+		local size = rng:NextInteger(2, 5)
+		particle.Size = UDim2.fromOffset(size, size)
+		particle.BackgroundColor3 = Color3.fromRGB(220, 239, 255)
+		particle.BackgroundTransparency = 0.75
+		particle.BorderSizePixel = 0
+		particle.Position = UDim2.fromScale(rng:NextNumber(), rng:NextNumber())
+		particle.Parent = worldLayer
+
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(1, 0)
+		corner.Parent = particle
+
+		task.spawn(function()
+			while particle.Parent do
+				local nextPos = UDim2.fromScale(rng:NextNumber(), rng:NextNumber())
+				local duration = rng:NextNumber(6, 11)
+				TweenService:Create(particle, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Position = nextPos }):Play()
+				task.wait(duration)
+			end
+		end)
+	end
+end
 
 function DesktopController.Init(initContext): ()
 	context = initContext
@@ -70,6 +97,13 @@ function DesktopController.Start(): ()
 	desktopBackground.AutoButtonColor = false
 	desktopBackground.Parent = screenGui
 
+	local worldLayer = Instance.new("Frame")
+	worldLayer.Name = "WorldLayer"
+	worldLayer.Size = UDim2.fromScale(1, 1)
+	worldLayer.BackgroundTransparency = 1
+	worldLayer.Parent = desktopBackground
+	createAmbientParticles(worldLayer)
+
 	local backgroundScale = Instance.new("UIScale")
 	backgroundScale.Scale = 1
 	backgroundScale.Parent = desktopBackground
@@ -78,19 +112,12 @@ function DesktopController.Start(): ()
 		context.State.LastClickAt = os.clock()
 		context.Remotes.ClickRequest:FireServer()
 
-		local pressTween = TweenService:Create(backgroundScale, TweenInfo.new(BACKGROUND_PRESS_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Scale = BACKGROUND_PRESS_SCALE,
-		})
-		local releaseTween = TweenService:Create(backgroundScale, TweenInfo.new(BACKGROUND_PRESS_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Scale = 1,
-		})
-		pressTween.Completed:Once(function()
-			releaseTween:Play()
-		end)
+		local pressTween = TweenService:Create(backgroundScale, TweenInfo.new(BACKGROUND_PRESS_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = BACKGROUND_PRESS_SCALE })
+		local releaseTween = TweenService:Create(backgroundScale, TweenInfo.new(BACKGROUND_PRESS_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
+		pressTween.Completed:Once(function() releaseTween:Play() end)
 		pressTween:Play()
 
-		local mousePos = UserInputService:GetMouseLocation()
-		spawnFloatingText(screenGui, mousePos)
+		spawnFloatingText(screenGui, UserInputService:GetMouseLocation())
 	end)
 
 	local appsLayer = Instance.new("Frame")
@@ -114,7 +141,44 @@ function DesktopController.Start(): ()
 	taskbar.BorderSizePixel = 0
 	taskbar.Parent = screenGui
 
+	context.UI.ShowConfirmPopup = function(message: string, onConfirm)
+		local popup = Instance.new("Frame")
+		popup.Size = UDim2.fromOffset(320, 140)
+		popup.Position = UDim2.fromScale(0.5, 0.45)
+		popup.AnchorPoint = Vector2.new(0.5, 0.5)
+		popup.BackgroundColor3 = Color3.fromRGB(32, 32, 32)
+		popup.Parent = screenGui
+		popup.ZIndex = 10
+
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, -20, 0, 70)
+		label.Position = UDim2.fromOffset(10, 12)
+		label.BackgroundTransparency = 1
+		label.TextWrapped = true
+		label.Text = message
+		label.TextColor3 = Color3.new(1, 1, 1)
+		label.ZIndex = 11
+		label.Parent = popup
+
+		local yes = Instance.new("TextButton")
+		yes.Size = UDim2.fromOffset(120, 34)
+		yes.Position = UDim2.fromOffset(24, 92)
+		yes.Text = "Confirm"
+		yes.Parent = popup
+		yes.ZIndex = 11
+		yes.Activated:Connect(function() popup:Destroy(); onConfirm() end)
+
+		local no = Instance.new("TextButton")
+		no.Size = UDim2.fromOffset(120, 34)
+		no.Position = UDim2.fromOffset(176, 92)
+		no.Text = "Cancel"
+		no.Parent = popup
+		no.ZIndex = 11
+		no.Activated:Connect(function() popup:Destroy() end)
+	end
+
 	context.UI.ScreenGui = screenGui
+	context.UI.WorldLayer = worldLayer
 	context.UI.AppsLayer = appsLayer
 	context.UI.HUDLayer = hudLayer
 	context.UI.Taskbar = taskbar

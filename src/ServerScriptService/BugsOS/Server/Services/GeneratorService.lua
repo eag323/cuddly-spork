@@ -17,6 +17,7 @@ local ServicesFolder = BugsOSServerFolder:WaitForChild("Services")
 
 local CurrencyService = require(ServicesFolder:WaitForChild("CurrencyService"))
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
+local PrestigeService = require(ServicesFolder:WaitForChild("PrestigeService"))
 
 type PlayerData = { [string]: any }
 
@@ -97,21 +98,7 @@ local function sanitizeLevel(value: any): number
 	return math.floor(value)
 end
 
-local function getPrestigeMultiplier(playerData: PlayerData): number
-	local progression = playerData.Progression
-	if type(progression) ~= "table" then
-		return 1
-	end
-
-	local prestige = progression.Prestige
-	if type(prestige) ~= "number" or prestige < 0 then
-		return 1
-	end
-
-	return 1 + (0.1 * prestige)
-end
-
-local function computeGeneratorFoodPerSecond(playerData: PlayerData, slotData: any): number
+local function computeGeneratorFoodPerSecond(player: Player, slotData: any): number
 	if type(slotData) ~= "table" then
 		return 0
 	end
@@ -128,7 +115,7 @@ local function computeGeneratorFoodPerSecond(playerData: PlayerData, slotData: a
 
 	local level = sanitizeLevel(slotData.Level)
 	local baseFoodPerSec = generatorDef.baseFoodPerSec or DEFAULT_BASE_FOOD_PER_SEC
-	local prestigeMultiplier = getPrestigeMultiplier(playerData)
+	local prestigeMultiplier = PrestigeService.GetPrestigeMultiplier(player)
 
 	return baseFoodPerSec * (level ^ 1.55) * prestigeMultiplier
 end
@@ -319,7 +306,7 @@ function GeneratorService.CalculateTotalFoodPerSecond(player: Player): number
 	local totalFoodPerSecond = 0
 	for slotIndex = 1, MAX_EQUIPPABLE_SNACK_GENERATORS do
 		local slotData = playerData.Generators.Equipped[slotIndex]
-		totalFoodPerSecond += computeGeneratorFoodPerSecond(playerData, slotData)
+		totalFoodPerSecond += computeGeneratorFoodPerSecond(player, slotData)
 	end
 
 	return totalFoodPerSecond
