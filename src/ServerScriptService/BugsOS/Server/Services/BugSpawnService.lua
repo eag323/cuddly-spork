@@ -9,10 +9,30 @@ local EconomyConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForCh
 local BuffService = require(script.Parent:WaitForChild("BuffService"))
 local RemoteNames = require(ReplicatedStorage.BugsOS.Shared.Remotes.RemoteNames)
 local StatsService = require(script.Parent:WaitForChild("StatsService"))
+local ProfileService = require(script.Parent:WaitForChild("ProfileService"))
 local Remotes = ReplicatedStorage.BugsOS.Shared.Remotes
 
 local BugSpawnService = {}
 local activeByUser, sinceSpawn, lastHit, lastForcedSpawn = {}, {}, {}, {}
+local notificationPushRemote: RemoteEvent? = nil
+local RARITY_PRIORITY = {
+	Common = 1,
+	Uncommon = 2,
+	Rare = 3,
+	Epic = 4,
+	Legendary = 5,
+	Mythic = 6,
+}
+
+local function pushNotification(player: Player, message: string, notificationType: string): ()
+	if not notificationPushRemote then
+		return
+	end
+	notificationPushRemote:FireClient(player, {
+		Message = message,
+		Type = notificationType,
+	})
+end
 
 local function pickWeighted(map)
 	local total = 0
@@ -95,6 +115,7 @@ function BugSpawnService.Init()
 	ensureRemoteEvent(RemoteNames.Bug_Captured)
 	ensureRemoteEvent(RemoteNames.Bug_AttemptCatch)
 	ensureRemoteEvent(RemoteNames.Bug_HitUpdate)
+	notificationPushRemote = ensureRemoteEvent(RemoteNames.Notification_Push)
 end
 
 function BugSpawnService.Start()
@@ -176,6 +197,18 @@ function BugSpawnService.Start()
 			end)
 			if not ok then
 				warn(string.format("[BugSpawnService] Failed to create captured bug for %s: %s", player.Name, tostring(err)))
+			elseif createdBug then
+				local playerData = ProfileService.GetPlayerData(player)
+				local wasNewDiscovery = false
+				if playerData and type(playerData.Bugdex) == "table" and type(playerData.Bugdex.TotalCaughtBySpecies) == "table" then
+					wasNewDiscovery = tonumber(playerData.Bugdex.TotalCaughtBySpecies[st.SpeciesId]) == 1
+				end
+				if wasNewDiscovery then
+					pushNotification(player, string.format("New bug discovered: %s (%s)", st.DisplayName, st.Rarity), "Success")
+				end
+				if (RARITY_PRIORITY[st.Rarity] or 0) >= RARITY_PRIORITY.Rare then
+					pushNotification(player, string.format("%s catch: %s", st.Rarity, st.DisplayName), "Success")
+				end
 			end
 			capturedRemote:FireClient(player, { SpeciesId = st.SpeciesId, DisplayName = st.DisplayName, Rarity = st.Rarity, BugPointsAwarded = finalPoints, Bug = createdBug })
 		else

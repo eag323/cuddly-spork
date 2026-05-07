@@ -101,6 +101,7 @@ local DEFAULT_PLAYER_DATA: PlayerData = {
 	Achievements = {
 		Progress = {},
 		Claimed = {},
+		NotifiedCompleted = {},
 	},
 
 	LeaderboardStats = {
