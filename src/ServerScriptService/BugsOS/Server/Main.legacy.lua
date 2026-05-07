@@ -15,6 +15,7 @@ local serviceOrder = {
 	"GeneratorService",
 	"PrestigeService",
 	"ClickService",
+	"BugSpawnService",
 }
 
 local services: { ServiceEntry } = {}
