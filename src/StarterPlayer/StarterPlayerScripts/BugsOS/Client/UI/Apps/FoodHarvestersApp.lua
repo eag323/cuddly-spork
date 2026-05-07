@@ -5,9 +5,10 @@ local root: Frame?
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
-local GeneratorConfig = require(
-	ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("GeneratorConfig")
-)
+local BugsOSFolder = ReplicatedStorage:WaitForChild("BugsOS")
+local SharedFolder = BugsOSFolder:WaitForChild("Shared")
+local NumberUtil = require(SharedFolder:WaitForChild("Util"):WaitForChild("NumberUtil"))
+local GeneratorConfig = require(SharedFolder:WaitForChild("Config"):WaitForChild("GeneratorConfig"))
 
 local generatorById = {}
 for _, generator in ipairs(GeneratorConfig.Generators) do
@@ -24,6 +25,16 @@ local function getFeedbackAnchor(context): (Instance?, UDim2)
 	end
 
 	return nil, UDim2.fromScale(0.56, 0.12)
+end
+
+
+local function getPrestigeMultiplier(context): number
+	local prestige = 0
+	if context.State.PlayerData and context.State.PlayerData.Progression then
+		prestige = context.State.PlayerData.Progression.Prestige or 0
+	end
+
+	return 1 + (prestige * 0.1)
 end
 
 function FoodHarvestersApp.ShowPassiveIncomeFeedback(context, foodPerSecond: number): ()
@@ -43,7 +54,7 @@ function FoodHarvestersApp.ShowPassiveIncomeFeedback(context, foodPerSecond: num
 	popup.TextColor3 = Color3.fromRGB(152, 255, 168)
 	popup.TextStrokeTransparency = 0.35
 	popup.TextXAlignment = Enum.TextXAlignment.Right
-	popup.Text = string.format("+%.1f Food/sec", foodPerSecond)
+	popup.Text = string.format("+%s Food/sec", NumberUtil.FormatNumber(foodPerSecond))
 	popup.ZIndex = 8
 	popup.Parent = anchorParent
 
@@ -71,8 +82,15 @@ function FoodHarvestersApp.Refresh(context): ()
 		local name = generator and generator.displayName or "Empty Slot"
 		local level = entry and entry.Level or 0
 		local baseFoodPerSec = generator and generator.baseFoodPerSec or 0
-		local estimatedFoodPerSec = baseFoodPerSec * level
-		label.Text = string.format("Slot %d | %s | Level %d | Food/sec %.1f", i, name, level, estimatedFoodPerSec)
+		local prestigeMultiplier = getPrestigeMultiplier(context)
+		local estimatedFoodPerSec = baseFoodPerSec * (level ^ 1.55) * prestigeMultiplier
+		label.Text = string.format(
+			"Slot %d | %s | Level %d | Food/sec %s",
+			i,
+			name,
+			level,
+			NumberUtil.FormatNumber(estimatedFoodPerSec)
+		)
 		upgrade.Visible = entry ~= nil
 	end
 end
