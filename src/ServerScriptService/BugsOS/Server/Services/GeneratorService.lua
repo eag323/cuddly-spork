@@ -19,6 +19,7 @@ local ServicesFolder = BugsOSServerFolder:WaitForChild("Services")
 local CurrencyService = require(ServicesFolder:WaitForChild("CurrencyService"))
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 local PrestigeService = require(ServicesFolder:WaitForChild("PrestigeService"))
+local BuffService = require(ServicesFolder:WaitForChild("BuffService"))
 
 type PlayerData = { [string]: any }
 
@@ -112,7 +113,7 @@ local function sanitizeLevel(value: any): number
 	return math.floor(value)
 end
 
-local function computeGeneratorFoodPerSecond(player: Player, slotData: any): number
+local function computeGeneratorFoodPerSecond(slotData: any): number
 	if type(slotData) ~= "table" then
 		return 0
 	end
@@ -129,9 +130,7 @@ local function computeGeneratorFoodPerSecond(player: Player, slotData: any): num
 
 	local level = sanitizeLevel(slotData.Level)
 	local baseFoodPerSec = generatorDef.baseFoodPerSec or DEFAULT_BASE_FOOD_PER_SEC
-	local prestigeMultiplier = PrestigeService.GetPrestigeMultiplier(player)
-
-		local foodPerSecond = baseFoodPerSec * (level ^ 1.55) * prestigeMultiplier
+	local foodPerSecond = baseFoodPerSec * (level ^ 1.55)
 	if EconomyConfig.DEV_MODE then
 		-- DEVELOPMENT ONLY: Must be disabled before real release.
 		foodPerSecond *= EconomyConfig.DEV_GENERATOR_MULTIPLIER
@@ -339,9 +338,13 @@ function GeneratorService.CalculateTotalFoodPerSecond(player: Player): number
 	local totalFoodPerSecond = 0
 	for slotIndex = 1, MAX_EQUIPPABLE_SNACK_GENERATORS do
 		local slotData = playerData.Generators.Equipped[slotIndex]
-		totalFoodPerSecond += computeGeneratorFoodPerSecond(player, slotData)
+		totalFoodPerSecond += computeGeneratorFoodPerSecond(slotData)
 	end
 
+		local prestigeMultiplier = PrestigeService.GetPrestigeMultiplier(player)
+	local buffs = BuffService.GetPlayerBuffs(player)
+	totalFoodPerSecond *= prestigeMultiplier * (1 + buffs.AllFood) * (1 + buffs.FoodPerSec)
+	print(string.format("[GeneratorService] Food/sec with buffs for %s: %.3f", player.Name, totalFoodPerSecond))
 	return totalFoodPerSecond
 end
 

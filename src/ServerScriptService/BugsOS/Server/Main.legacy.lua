@@ -10,6 +10,7 @@ type ServiceEntry = {
 local serviceOrder = {
 	"ProfileService",
 	"CurrencyService",
+	"BuffService",
 	"MarketService",
 	"UpgradeService",
 	"GeneratorService",

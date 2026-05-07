@@ -12,6 +12,7 @@ local ServerFolder = ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Se
 local ServicesFolder = ServerFolder:WaitForChild("Services")
 
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
+local BuffService = require(ServicesFolder:WaitForChild("BuffService"))
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
 
 type PlayerData = { [string]: any }
@@ -128,8 +129,10 @@ local function onSellFoodRequested(player: Player, payload: SellPayload?): ()
 		return
 	end
 
-	local totalSellBonus = 0
-	local coinsGained = foodSold * currentPrice * (1 + totalSellBonus)
+	local buffs = BuffService.GetPlayerBuffs(player)
+	local sellBonus = buffs.SellBonus
+	local coinsGained = foodSold * currentPrice * (1 + sellBonus)
+	print(string.format("[MarketService] Sell bonus applied for %s: %.3f", player.Name, sellBonus))
 	coinsGained = roundToCents(coinsGained)
 
 	local newFood = currentFood - foodSold

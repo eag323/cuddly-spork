@@ -13,11 +13,41 @@ local equippedRowsFrame
 local invLabel
 local invScroll
 local eql
+local buffsLabel
 
 local function fmtPrimary(primary)
 	if type(primary) ~= "table" then return "No primary stat" end
 	local value = tonumber(primary.Value) or 0
 	return string.format("%s: %s%%", tostring(primary.Attribute or primary.Stat or "Stat"), NumberUtil.FormatNumber(value * 100))
+end
+
+
+local function totalBuffText(bugsData)
+	local inv = bugsData.Inventory or {}
+	local eq = bugsData.Equipped or {}
+	local totals = { AllFood=0, FoodPerSec=0, ClickPower=0, SellBonus=0, BugLuck=0, MinigameSpawnChance=0, MinigameTime=0, NectarChance=0 }
+	for _, uid in pairs(eq) do
+		local bug = inv[uid]
+		if type(bug) == "table" then
+			local stats = { bug.Primary, table.unpack(bug.Secondaries or {}) }
+			for _, st in ipairs(stats) do
+				if type(st) == "table" and type(st.Value) == "number" then
+					local key = st.Stat or st.Attribute
+					if totals[key] ~= nil then totals[key] += st.Value end
+				end
+			end
+		end
+	end
+	local rows = {}
+	local map = {
+		{"All Food","AllFood"},{"Food/sec","FoodPerSec"},{"Click Power","ClickPower"},{"Sell Bonus","SellBonus"},{"Bug Luck","BugLuck"},{"Spawn Chance","MinigameSpawnChance"},{"Minigame Time","MinigameTime"},{"Nectar Chance","NectarChance"},
+	}
+	for _, pair in ipairs(map) do
+		local value = totals[pair[2]] or 0
+		if value ~= 0 then table.insert(rows, string.format("%s: %s%%", pair[1], NumberUtil.FormatNumber(value * 100))) end
+	end
+	if #rows == 0 then return "Active Buffs: 0%" end
+	return "Active Buffs\n" .. table.concat(rows, "\n")
 end
 
 local function refresh(context)
@@ -32,6 +62,7 @@ local function refresh(context)
 	local inv = bugsData.Inventory or {}
 	local eq = bugsData.Equipped or {}
 	local slotsUnlocked = tonumber(bugsData.SlotsUnlocked) or 5
+	if buffsLabel then buffsLabel.Text = totalBuffText(bugsData) end
 	if slotsUnlocked < 1 then slotsUnlocked = 1 end
 	for i = 1, slotsUnlocked do
 		local row = Instance.new("Frame"); row.Size=UDim2.new(1,0,0,58); row.BackgroundColor3=Color3.fromRGB(46,46,54); row.Parent=equippedRowsFrame
@@ -93,7 +124,8 @@ function BugFarmApp.Mount(target: Instance, context): ()
 	local topLabel=Instance.new("TextLabel"); topLabel.Size=UDim2.new(1,0,0,24); topLabel.BackgroundTransparency=1; topLabel.TextXAlignment=Enum.TextXAlignment.Left; topLabel.TextColor3=Color3.new(1,1,1); topLabel.Text="Equipped Bug Slots"; topLabel.Parent=equippedFrame
 	equippedRowsFrame = Instance.new("Frame"); equippedRowsFrame.Size = UDim2.new(1,0,1,-30); equippedRowsFrame.Position = UDim2.fromOffset(0,30); equippedRowsFrame.BackgroundTransparency = 1; equippedRowsFrame.Parent = equippedFrame
 	eql=Instance.new("UIListLayout"); eql.Padding=UDim.new(0,5); eql.Parent=equippedRowsFrame
-	invLabel=Instance.new("TextLabel"); invLabel.Size=UDim2.new(1,-8,0,24); invLabel.Position=UDim2.fromOffset(4,320); invLabel.BackgroundTransparency=1; invLabel.Text="Bug Inventory"; invLabel.TextXAlignment=Enum.TextXAlignment.Left; invLabel.TextColor3=Color3.new(1,1,1); invLabel.Parent=root
+	buffsLabel=Instance.new("TextLabel"); buffsLabel.Size=UDim2.new(0,220,0,120); buffsLabel.Position=UDim2.new(1,-228,0,8); buffsLabel.BackgroundTransparency=1; buffsLabel.TextXAlignment=Enum.TextXAlignment.Left; buffsLabel.TextYAlignment=Enum.TextYAlignment.Top; buffsLabel.TextWrapped=true; buffsLabel.TextColor3=Color3.fromRGB(220,240,220); buffsLabel.TextSize=14; buffsLabel.Parent=root
+	invLabel=Instance.new("TextLabel"); invLabel.Size=UDim2.new(1,-236,0,24); invLabel.Position=UDim2.fromOffset(4,320); invLabel.BackgroundTransparency=1; invLabel.Text="Bug Inventory"; invLabel.TextXAlignment=Enum.TextXAlignment.Left; invLabel.TextColor3=Color3.new(1,1,1); invLabel.Parent=root
 	invScroll = Instance.new("ScrollingFrame"); invScroll.Size=UDim2.new(1,-8,1,-350); invScroll.Position=UDim2.fromOffset(4,344); invScroll.BackgroundColor3=Color3.fromRGB(28,28,34); invScroll.BorderSizePixel=0; invScroll.ScrollBarThickness=8; invScroll.Parent=root
 	if stateChangedConn then
 		stateChangedConn:Disconnect()
@@ -110,7 +142,7 @@ end
 function BugFarmApp.Unmount(): ()
 	if stateChangedConn then stateChangedConn:Disconnect(); stateChangedConn=nil end
 	if windowRef then windowRef.Destroy() end
-	windowRef=nil; root=nil; equippedFrame=nil; equippedRowsFrame=nil; invLabel=nil; invScroll=nil; eql=nil
+	windowRef=nil; root=nil; equippedFrame=nil; equippedRowsFrame=nil; invLabel=nil; invScroll=nil; eql=nil; buffsLabel=nil
 end
 
 return BugFarmApp

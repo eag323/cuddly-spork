@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BugConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("BugConfig"))
 local BugInventoryService = require(script.Parent:WaitForChild("BugInventoryService"))
 local EconomyConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("EconomyConfig"))
+local BuffService = require(script.Parent:WaitForChild("BuffService"))
 local RemoteNames = require(ReplicatedStorage.BugsOS.Shared.Remotes.RemoteNames)
 local Remotes = ReplicatedStorage.BugsOS.Shared.Remotes
 
@@ -26,6 +27,14 @@ local function pickWeighted(map)
 	end
 end
 
+local function withBugLuckWeights(baseWeights, bugLuck)
+	local boosted = table.clone(baseWeights)
+	boosted.Epic = (boosted.Epic or 0) * (1 + bugLuck * 0.5)
+	boosted.Legendary = (boosted.Legendary or 0) * (1 + bugLuck * 0.75)
+	boosted.Mythic = (boosted.Mythic or 0) * (1 + bugLuck)
+	return boosted
+end
+
 local function pickSpecies(rarity)
 	local pool = {}
 	for _, s in ipairs(BugConfig.Species) do
@@ -42,16 +51,19 @@ local function clear(player)
 end
 
 local function spawnFor(player, spawnedRemote: RemoteEvent)
-	local rarity = pickWeighted(BugConfig.RarityWeights)
+	local buffs = BuffService.GetPlayerBuffs(player)
+	local rarityWeights = withBugLuckWeights(BugConfig.RarityWeights, buffs.BugLuck)
+	local rarity = pickWeighted(rarityWeights)
 	local species = pickSpecies(rarity)
 	if not species then return end
 	local id = tostring(player.UserId) .. ":" .. tostring(math.floor(os.clock() * 1000))
 	local behavior = species.behaviorPool[Random.new():NextInteger(1, #species.behaviorPool)]
 	local now = os.clock()
-	local duration = species.baseTimer
+	local duration = species.baseTimer * (1 + buffs.MinigameTime)
 	activeByUser[player.UserId] = { ActiveBugId = id, SpeciesId = species.id, DisplayName = species.displayName, Rarity = rarity, HitsRequired = species.hitsRequired, HitsLanded = 0, ExpiresAt = now + duration, SpawnedAt = now, Behavior = behavior }
 	sinceSpawn[player.UserId] = 0
 	spawnedRemote:FireClient(player, { SpeciesId = species.id, DisplayName = species.displayName, Rarity = rarity, HitsRequired = species.hitsRequired, Duration = duration, Behavior = behavior, ActiveBugId = id })
+	print(string.format("[BugSpawnService] Spawn buffs for %s chance/time/luck: %.3f %.3f %.3f", player.Name, buffs.MinigameSpawnChance, buffs.MinigameTime, buffs.BugLuck))
 end
 
 local function ensureRemoteEvent(remoteName: string): RemoteEvent
@@ -108,7 +120,9 @@ function BugSpawnService.Start()
 						end
 					else
 						sinceSpawn[p.UserId] = (sinceSpawn[p.UserId] or 0) + 1
-						local chance = 0.02 + ((sinceSpawn[p.UserId]) * 0.0015)
+						local buffs = BuffService.GetPlayerBuffs(p)
+					local baseChance = 0.02 + ((sinceSpawn[p.UserId]) * 0.0015)
+					local chance = baseChance * (1 + buffs.MinigameSpawnChance)
 						if Random.new():NextNumber() <= chance then
 							spawnFor(p, spawnedRemote)
 						end
@@ -129,11 +143,13 @@ function BugSpawnService.Start()
 		st.HitsLanded += 1
 
 		if st.HitsLanded >= st.HitsRequired then
-			local points = BugConfig.BaseBugPoints[st.Rarity] or 1
+			local basePoints = BugConfig.BaseBugPoints[st.Rarity] or 1
+			local buffs = BuffService.GetPlayerBuffs(player)
+			local finalPoints = math.floor((basePoints * (1 + buffs.BugPoints)) + 0.5)
 			local pdata = player:FindFirstChild("PlayerData")
 			if pdata and pdata:IsA("Folder") then
 				local bp = pdata:FindFirstChild("BugPoints") :: NumberValue
-				if bp then bp.Value += points end
+				if bp then bp.Value += finalPoints end
 			end
 			clear(player)
 			local createdBug = nil
@@ -143,7 +159,7 @@ function BugSpawnService.Start()
 			if not ok then
 				warn(string.format("[BugSpawnService] Failed to create captured bug for %s: %s", player.Name, tostring(err)))
 			end
-			capturedRemote:FireClient(player, { SpeciesId = st.SpeciesId, DisplayName = st.DisplayName, Rarity = st.Rarity, BugPointsAwarded = points, Bug = createdBug })
+			capturedRemote:FireClient(player, { SpeciesId = st.SpeciesId, DisplayName = st.DisplayName, Rarity = st.Rarity, BugPointsAwarded = finalPoints, Bug = createdBug })
 		else
 			hitUpdateRemote:FireClient(player, {
 				ActiveBugId = st.ActiveBugId,

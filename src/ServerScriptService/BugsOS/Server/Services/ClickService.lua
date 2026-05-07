@@ -18,6 +18,7 @@ local ServicesFolder = BugsOSServerFolder:WaitForChild("Services")
 local CurrencyService = require(ServicesFolder:WaitForChild("CurrencyService"))
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 local PrestigeService = require(ServicesFolder:WaitForChild("PrestigeService"))
+local BuffService = require(ServicesFolder:WaitForChild("BuffService"))
 
 type PlayerData = { [string]: any }
 
@@ -79,7 +80,7 @@ local function isClickOffCooldown(player: Player): boolean
 	return true
 end
 
-local function computeFoodPerClick(playerData: PlayerData): number
+local function computeBaseClickPower(playerData: PlayerData): number
 	local total = 1
 	local clickTools = playerData.ClickTools
 	if type(clickTools) ~= "table" then
@@ -113,7 +114,7 @@ local function onClickRequest(player: Player): ()
 		return
 	end
 
-	local foodPerClick = computeFoodPerClick(playerData) * PrestigeService.GetPrestigeMultiplier(player)
+	local foodPerClick = ClickService.CalculateFoodPerClick(player)
 	if foodPerClick <= 0 then
 		return
 	end
@@ -125,6 +126,21 @@ local function onClickRequest(player: Player): ()
 			FoodGained = foodPerClick,
 		})
 	end
+end
+
+
+function ClickService.CalculateFoodPerClick(player: Player): number
+	local playerData = getPlayerData(player)
+	if not playerData then
+		return 0
+	end
+
+	local baseClickPower = computeBaseClickPower(playerData)
+	local prestigeMultiplier = PrestigeService.GetPrestigeMultiplier(player)
+	local buffs = BuffService.GetPlayerBuffs(player)
+	local foodPerClick = baseClickPower * prestigeMultiplier * (1 + buffs.AllFood) * (1 + buffs.ClickPower)
+	print(string.format("[ClickService] Food/click with buffs for %s: %.3f", player.Name, foodPerClick))
+	return foodPerClick
 end
 
 function ClickService.Init(): ()
