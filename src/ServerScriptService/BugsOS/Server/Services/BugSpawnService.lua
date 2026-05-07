@@ -20,7 +20,24 @@ local function spawnFor(player)
  sinceSpawn[player.UserId]=0
  (Remotes:WaitForChild(RemoteNames.Bug_Spawned) :: RemoteEvent):FireClient(player,{SpeciesId=species.id,DisplayName=species.displayName,Rarity=rarity,HitsRequired=species.hitsRequired,Duration=duration,Behavior=behavior,ActiveBugId=id})
 end
-function BugSpawnService.Init() end
+local function ensureRemoteEvent(remoteName: string): RemoteEvent
+	local existingRemote = Remotes:FindFirstChild(remoteName)
+	if existingRemote and existingRemote:IsA("RemoteEvent") then
+		return existingRemote
+	end
+
+	local remoteEvent = Instance.new("RemoteEvent")
+	remoteEvent.Name = remoteName
+	remoteEvent.Parent = Remotes
+	return remoteEvent
+end
+
+function BugSpawnService.Init()
+	ensureRemoteEvent(RemoteNames.Bug_Spawned)
+	ensureRemoteEvent(RemoteNames.Bug_Escaped)
+	ensureRemoteEvent(RemoteNames.Bug_Captured)
+	ensureRemoteEvent(RemoteNames.Bug_AttemptCatch)
+end
 function BugSpawnService.Start()
  Players.PlayerRemoving:Connect(function(p) activeByUser[p.UserId]=nil; sinceSpawn[p.UserId]=nil; lastHit[p.UserId]=nil end)
  task.spawn(function()
