@@ -15,6 +15,9 @@ local serviceOrder = {
 	"GeneratorService",
 	"PrestigeService",
 	"ClickService",
+	"BugInventoryService",
+	"BugFarmService",
+	"BugdexService",
 	"BugSpawnService",
 }
 

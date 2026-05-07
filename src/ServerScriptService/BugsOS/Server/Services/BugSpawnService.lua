@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BugConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("BugConfig"))
+local BugInventoryService = require(script.Parent:WaitForChild("BugInventoryService"))
 local EconomyConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("EconomyConfig"))
 local RemoteNames = require(ReplicatedStorage.BugsOS.Shared.Remotes.RemoteNames)
 local Remotes = ReplicatedStorage.BugsOS.Shared.Remotes
@@ -135,7 +136,14 @@ function BugSpawnService.Start()
 				if bp then bp.Value += points end
 			end
 			clear(player)
-			capturedRemote:FireClient(player, { SpeciesId = st.SpeciesId, DisplayName = st.DisplayName, Rarity = st.Rarity, BugPointsAwarded = points })
+			local createdBug = nil
+			local ok, err = pcall(function()
+				createdBug = BugInventoryService.CreateBug(player, st.SpeciesId, st.Rarity)
+			end)
+			if not ok then
+				warn(string.format("[BugSpawnService] Failed to create captured bug for %s: %s", player.Name, tostring(err)))
+			end
+			capturedRemote:FireClient(player, { SpeciesId = st.SpeciesId, DisplayName = st.DisplayName, Rarity = st.Rarity, BugPointsAwarded = points, Bug = createdBug })
 		else
 			hitUpdateRemote:FireClient(player, {
 				ActiveBugId = st.ActiveBugId,
