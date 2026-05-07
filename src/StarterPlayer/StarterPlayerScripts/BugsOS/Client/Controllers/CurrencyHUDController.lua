@@ -4,6 +4,7 @@ local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
 local ClickToolConfig = require(Shared:WaitForChild("Config"):WaitForChild("ClickToolConfig"))
 local GeneratorConfig = require(Shared:WaitForChild("Config"):WaitForChild("GeneratorConfig"))
 local NumberUtil = require(Shared:WaitForChild("Util"):WaitForChild("NumberUtil"))
+local UITheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UITheme"))
 local CurrencyHUDController = {}
 local context; local labels={}; local generatorById={}; local clickToolBonusById={}
 
@@ -42,9 +43,12 @@ local function refresh()
 end
 function CurrencyHUDController.Init(c) context=c; for _,e in ClickToolConfig.Tools do clickToolBonusById[e.id]=e.foodPerClickPerLevel end for _,e in GeneratorConfig.Generators do if e.classId=='snack' then generatorById[e.id]=e end end end
 function CurrencyHUDController.Start()
- local frame=Instance.new('Frame'); frame.Name='CurrencyHUD'; frame.Position=UDim2.fromOffset(12,52); frame.Size=UDim2.fromOffset(240,186); frame.BackgroundColor3=Color3.fromRGB(0,0,0); frame.BackgroundTransparency=0.35; frame.Parent=context.UI.HUDLayer
+ local frame=Instance.new('Frame'); frame.Name='CurrencyHUD'; frame.AnchorPoint=Vector2.new(1,0); frame.Position=UDim2.new(1,-12,0,12); frame.Size=UDim2.fromOffset(278,206); frame.BackgroundColor3=UITheme.Colors.TaskbarFace; frame.BackgroundTransparency=0; frame.BorderColor3=UITheme.Colors.WindowBorderLight; frame.Parent=context.UI.HUDLayer
+ local borderInner=Instance.new("Frame"); borderInner.Size=UDim2.new(1,-4,1,-4); borderInner.Position=UDim2.fromOffset(2,2); borderInner.BackgroundTransparency=1; borderInner.BorderColor3=UITheme.Colors.WindowBorderDark; borderInner.Parent=frame
+ local panel=Instance.new("Frame"); panel.Size=UDim2.new(1,-12,1,-32); panel.Position=UDim2.fromOffset(6,24); panel.BackgroundColor3=UITheme.Colors.Panel; panel.BorderColor3=UITheme.Colors.PanelBorder; panel.Parent=frame
+ local title=Instance.new("TextLabel"); title.Size=UDim2.new(1,-10,0,20); title.Position=UDim2.fromOffset(6,2); title.BackgroundTransparency=1; title.Text="System Stats"; title.TextXAlignment=Enum.TextXAlignment.Left; title.Font=UITheme.Font; title.TextSize=14; title.TextColor3=Color3.new(1,1,1); title.Parent=frame
  local names={{'Food',4},{'Coins',34},{'BugPoints',64},{'FPS',94},{'FPC',124},{'Prestige',154}}
- for _,n in ipairs(names) do local l=Instance.new('TextLabel'); l.Size=UDim2.new(1,-10,0,28); l.Position=UDim2.fromOffset(5,n[2]); l.BackgroundTransparency=1; l.TextColor3=Color3.new(1,1,1); l.TextXAlignment=Enum.TextXAlignment.Left; l.Font=Enum.Font.GothamSemibold; l.TextSize=14; l.Parent=frame; labels[n[1]]=l end
+ for _,n in ipairs(names) do local l=Instance.new('TextLabel'); l.Size=UDim2.new(1,-14,0,26); l.Position=UDim2.fromOffset(7,n[2]); l.BackgroundTransparency=1; l.TextColor3=Color3.new(1,1,1); l.TextXAlignment=Enum.TextXAlignment.Left; l.Font=UITheme.Font; l.TextSize=14; l.Parent=panel; labels[n[1]]=l end
  refresh()
 end
 function CurrencyHUDController.Refresh() refresh() end

@@ -11,6 +11,7 @@ local SharedFolder = BugsOSFolder:WaitForChild("Shared")
 local UtilFolder = SharedFolder:WaitForChild("Util")
 
 local NumberUtil = require(UtilFolder:WaitForChild("NumberUtil"))
+local UITheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UITheme"))
 
 local DesktopController = {}
 
@@ -99,11 +100,30 @@ function DesktopController.Start(): ()
 	local desktopBackground = Instance.new("TextButton")
 	desktopBackground.Name = "DesktopBackground"
 	desktopBackground.Size = UDim2.fromScale(1, 1)
-	desktopBackground.BackgroundColor3 = Color3.fromRGB(35, 73, 122)
+	desktopBackground.BackgroundColor3 = UITheme.Colors.DesktopBackground
 	desktopBackground.BorderSizePixel = 0
 	desktopBackground.Text = ""
 	desktopBackground.AutoButtonColor = false
 	desktopBackground.Parent = screenGui
+
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, UITheme.Colors.DesktopBackground),
+		ColorSequenceKeypoint.new(1, UITheme.Colors.DesktopBackgroundDark),
+	})
+	gradient.Rotation = 90
+	gradient.Parent = desktopBackground
+
+	for y = 0, 20 do
+		local stripe = Instance.new("Frame")
+		stripe.Size = UDim2.new(1, 0, 0, 2)
+		stripe.Position = UDim2.fromScale(0, y / 20)
+		stripe.BackgroundColor3 = UITheme.Colors.DesktopPattern
+		stripe.BackgroundTransparency = 0.9
+		stripe.BorderSizePixel = 0
+		stripe.ZIndex = 0
+		stripe.Parent = desktopBackground
+	end
 
 	local worldLayer = Instance.new("Frame")
 	worldLayer.Name = "WorldLayer"
@@ -159,10 +179,30 @@ function DesktopController.Start(): ()
 	taskbar.AnchorPoint = Vector2.new(0.5, 1)
 	taskbar.Position = UDim2.fromScale(0.5, 1)
 	taskbar.Size = UDim2.new(1, 0, 0, 40)
-	taskbar.BackgroundColor3 = Color3.fromRGB(188, 188, 188)
+	taskbar.BackgroundColor3 = UITheme.Colors.TaskbarFace
 	taskbar.BorderSizePixel = 1
-	taskbar.BorderColor3 = Color3.fromRGB(230, 230, 230)
+	taskbar.BorderColor3 = UITheme.Colors.TaskbarBorderDark
 	taskbar.Parent = screenGui
+
+	local bevelTop = Instance.new("Frame")
+	bevelTop.Size = UDim2.new(1, 0, 0, 2)
+	bevelTop.Position = UDim2.fromOffset(0, 0)
+	bevelTop.BackgroundColor3 = UITheme.Colors.TaskbarBorderLight
+	bevelTop.BorderSizePixel = 0
+	bevelTop.Parent = taskbar
+
+	local startButton = Instance.new("TextButton")
+	startButton.Name = "StartButton"
+	startButton.Size = UDim2.fromOffset(86, 30)
+	startButton.Position = UDim2.fromOffset(6, 5)
+	startButton.BackgroundColor3 = UITheme.Colors.ButtonFace
+	startButton.BorderColor3 = UITheme.Colors.ButtonShadow
+	startButton.Font = UITheme.Font
+	startButton.TextSize = 14
+	startButton.TextColor3 = Color3.new(0, 0, 0)
+	startButton.Text = "🪲 Start"
+	startButton.AutoButtonColor = false
+	startButton.Parent = taskbar
 
 	context.UI.ShowConfirmPopup = function(message: string, onConfirm)
 		local popup = Instance.new("Frame")
