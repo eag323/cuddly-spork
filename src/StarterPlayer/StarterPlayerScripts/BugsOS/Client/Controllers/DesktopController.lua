@@ -5,6 +5,13 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Debris = game:GetService("Debris")
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BugsOSFolder = ReplicatedStorage:WaitForChild("BugsOS")
+local SharedFolder = BugsOSFolder:WaitForChild("Shared")
+local UtilFolder = SharedFolder:WaitForChild("Util")
+
+local NumberUtil = require(UtilFolder:WaitForChild("NumberUtil"))
+
 local DesktopController = {}
 
 local context: { [string]: any }
@@ -18,14 +25,15 @@ local FLOAT_Y_OFFSET = 10
 local AMBIENT_PARTICLE_COUNT = 14
 
 local rng = Random.new()
+local latestClickMousePosition = Vector2.zero
 
-local function spawnFloatingText(parent: Instance, clickPos: Vector2): ()
+local function spawnFloatingText(parent: Instance, clickPos: Vector2, text: string): ()
 	local floatText = Instance.new("TextLabel")
 	floatText.Name = "FoodClickFloat"
 	floatText.AnchorPoint = Vector2.new(0.5, 0.5)
 	floatText.Size = UDim2.fromOffset(112, 26)
 	floatText.BackgroundTransparency = 1
-	floatText.Text = "+X Food"
+	floatText.Text = text
 	floatText.Font = Enum.Font.GothamBold
 	floatText.TextSize = 20
 	floatText.TextColor3 = Color3.fromRGB(255, 240, 135)
@@ -110,6 +118,7 @@ function DesktopController.Start(): ()
 
 	desktopBackground.Activated:Connect(function()
 		context.State.LastClickAt = os.clock()
+		latestClickMousePosition = UserInputService:GetMouseLocation()
 		context.Remotes.ClickRequest:FireServer()
 
 		local pressTween = TweenService:Create(backgroundScale, TweenInfo.new(BACKGROUND_PRESS_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = BACKGROUND_PRESS_SCALE })
@@ -117,7 +126,20 @@ function DesktopController.Start(): ()
 		pressTween.Completed:Once(function() releaseTween:Play() end)
 		pressTween:Play()
 
-		spawnFloatingText(screenGui, UserInputService:GetMouseLocation())
+	end)
+
+	context.Remotes.ClickResult.OnClientEvent:Connect(function(payload)
+		if type(payload) ~= "table" then
+			return
+		end
+
+		local foodGained = payload.FoodGained
+		if type(foodGained) ~= "number" then
+			return
+		end
+
+		local formattedFoodGained = NumberUtil.FormatNumber(foodGained)
+		spawnFloatingText(screenGui, latestClickMousePosition, "+" .. formattedFoodGained .. " Food")
 	end)
 
 	local appsLayer = Instance.new("Frame")
