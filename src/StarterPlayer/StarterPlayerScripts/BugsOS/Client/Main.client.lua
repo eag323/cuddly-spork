@@ -15,6 +15,18 @@ local SharedFolder = BugsOSFolder:WaitForChild("Shared")
 local RemotesFolder = SharedFolder:WaitForChild("Remotes")
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
 
+
+local REMOTE_WAIT_TIMEOUT_SECONDS = 10
+
+local function waitForRemote(remotesFolder: Instance, remoteName: string): RemoteEvent?
+	local remote = remotesFolder:WaitForChild(remoteName, REMOTE_WAIT_TIMEOUT_SECONDS)
+	if not remote then
+		warn(string.format("[BugsOS] Missing remote '%s' after %ds; aborting client startup.", remoteName, REMOTE_WAIT_TIMEOUT_SECONDS))
+		return nil
+	end
+	return remote :: RemoteEvent
+end
+
 local ControllersFolder = script.Parent:WaitForChild("Controllers")
 local DesktopController = require(ControllersFolder:WaitForChild("DesktopController"))
 local WindowController = require(ControllersFolder:WaitForChild("WindowController"))
@@ -25,16 +37,34 @@ local GeneratorController = require(ControllersFolder:WaitForChild("GeneratorCon
 local NotificationController = require(ControllersFolder:WaitForChild("NotificationController"))
 local BugMinigameController = require(ControllersFolder:WaitForChild("BugMinigameController"))
 
-local context = { State = { PlayerData = nil, Market = { Price = 1, History = { 1 } } }, UI = {}, Remotes = {
-	ClickRequest = RemotesFolder:WaitForChild(RemoteNames.Click_Request), ClickResult = RemotesFolder:WaitForChild(RemoteNames.Click_Result),
-	StateFullSync = RemotesFolder:WaitForChild(RemoteNames.State_FullSync), StatePatch = RemotesFolder:WaitForChild(RemoteNames.State_Patch),
-	MarketSellFood = RemotesFolder:WaitForChild(RemoteNames.Market_SellFood), MarketPriceUpdated = RemotesFolder:WaitForChild(RemoteNames.Market_PriceUpdated),
-	UpgradeBuyClickTool = RemotesFolder:WaitForChild(RemoteNames.Upgrade_BuyClickTool), GeneratorUpgrade = RemotesFolder:WaitForChild(RemoteNames.Generator_Upgrade),
-	GeneratorEquip = RemotesFolder:WaitForChild(RemoteNames.Generator_Equip), PrestigeRequest = RemotesFolder:WaitForChild(RemoteNames.Prestige_Request),
-	NotificationPush = RemotesFolder:WaitForChild(RemoteNames.Notification_Push),
-	BugSpawned = RemotesFolder:WaitForChild(RemoteNames.Bug_Spawned), BugCaptured = RemotesFolder:WaitForChild(RemoteNames.Bug_Captured),
-	BugEscaped = RemotesFolder:WaitForChild(RemoteNames.Bug_Escaped), BugAttemptCatch = RemotesFolder:WaitForChild(RemoteNames.Bug_AttemptCatch),
-}, Controllers = {} }
+local requiredRemoteNames = {
+	ClickRequest = RemoteNames.Click_Request,
+	ClickResult = RemoteNames.Click_Result,
+	StateFullSync = RemoteNames.State_FullSync,
+	StatePatch = RemoteNames.State_Patch,
+	MarketSellFood = RemoteNames.Market_SellFood,
+	MarketPriceUpdated = RemoteNames.Market_PriceUpdated,
+	UpgradeBuyClickTool = RemoteNames.Upgrade_BuyClickTool,
+	GeneratorUpgrade = RemoteNames.Generator_Upgrade,
+	GeneratorEquip = RemoteNames.Generator_Equip,
+	PrestigeRequest = RemoteNames.Prestige_Request,
+	NotificationPush = RemoteNames.Notification_Push,
+	BugSpawned = RemoteNames.Bug_Spawned,
+	BugCaptured = RemoteNames.Bug_Captured,
+	BugEscaped = RemoteNames.Bug_Escaped,
+	BugAttemptCatch = RemoteNames.Bug_AttemptCatch,
+}
+
+local remotes = {}
+for key, remoteName in pairs(requiredRemoteNames) do
+	local remote = waitForRemote(RemotesFolder, remoteName)
+	if not remote then
+		return
+	end
+	remotes[key] = remote
+end
+
+local context = { State = { PlayerData = nil, Market = { Price = 1, History = { 1 } } }, UI = {}, Remotes = remotes, Controllers = {} }
 
 context.Controllers.Window = WindowController
 context.Controllers.CurrencyHUD = CurrencyHUDController
