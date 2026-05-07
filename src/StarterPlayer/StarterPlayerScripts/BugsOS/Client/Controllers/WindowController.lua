@@ -4,8 +4,9 @@ local UpgradesApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild
 local FoodHarvestersApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("FoodHarvestersApp"))
 local PrestigeApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("PrestigeApp"))
 local BugFarmApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("BugFarmApp"))
+local BugdexApp = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Apps"):WaitForChild("BugdexApp"))
 local WindowController, context, openApps = {}, nil, {}
-local APP_DEFS={{id='Market',title='Market.exe',app=MarketApp},{id='Upgrades',title='Upgrades.exe',app=UpgradesApp},{id='FoodHarvesters',title='Food Harvesters.exe',app=FoodHarvestersApp},{id='BugFarm',title='Bug Farm.exe',app=BugFarmApp},{id='Prestige',title='Prestige.exe',app=PrestigeApp}}
+local APP_DEFS={{id='Market',title='Market.exe',app=MarketApp},{id='Upgrades',title='Upgrades.exe',app=UpgradesApp},{id='FoodHarvesters',title='Food Harvesters.exe',app=FoodHarvestersApp},{id='BugFarm',title='Bug Farm.exe',app=BugFarmApp},{id='Bugdex',title='Bugdex.exe',app=BugdexApp},{id='Prestige',title='Prestige.exe',app=PrestigeApp}}
 function WindowController.Init(c) context=c end
 function WindowController.Open(id) if openApps[id] then return end for _,d in APP_DEFS do if d.id==id then d.app.Mount(context.UI.AppsLayer,context); openApps[id]=true; return end end end
 function WindowController.Close(id) for _,d in APP_DEFS do if d.id==id then d.app.Unmount(); openApps[id]=nil; return end end end
