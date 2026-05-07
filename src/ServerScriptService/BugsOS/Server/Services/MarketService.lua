@@ -13,6 +13,7 @@ local ServicesFolder = ServerFolder:WaitForChild("Services")
 
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 local BuffService = require(ServicesFolder:WaitForChild("BuffService"))
+local StatsService = require(ServicesFolder:WaitForChild("StatsService"))
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
 
 type PlayerData = { [string]: any }
@@ -143,6 +144,12 @@ local function onSellFoodRequested(player: Player, payload: SellPayload?): ()
 
 	ProfileService.PatchPlayerState(player, { "Currencies", "Food" }, newFood)
 	ProfileService.PatchPlayerState(player, { "Currencies", "Coins" }, newCoins)
+	StatsService.Increment(player, "TotalFoodSold", foodSold)
+	StatsService.Increment(player, "TotalCoinsEarned", coinsGained)
+	StatsService.Increment(player, "MarketSales", 1)
+	if currentPrice > 2.9 then
+		StatsService.Increment(player, "HighPriceSales", 1)
+	end
 end
 
 function MarketService.GetCurrentPrice(): number

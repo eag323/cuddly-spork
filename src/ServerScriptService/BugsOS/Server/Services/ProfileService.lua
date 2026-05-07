@@ -96,6 +96,8 @@ local DEFAULT_PLAYER_DATA: PlayerData = {
 		ContributionBugPoints = 0,
 	},
 
+	Stats = {},
+
 	Achievements = {
 		Progress = {},
 		Claimed = {},

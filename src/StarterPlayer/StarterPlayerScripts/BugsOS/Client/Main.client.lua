@@ -59,6 +59,7 @@ local requiredRemoteNames = {
 	BugUnequip = RemoteNames.Bug_Unequip,
 	BugLock = RemoteNames.Bug_Lock,
 	BugSacrifice = RemoteNames.Bug_Sacrifice,
+	AchievementClaim = RemoteNames.Achievement_Claim,
 }
 
 local remotes = {}
