@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
+local AchievementConfig = require(Shared:WaitForChild("Config"):WaitForChild("AchievementConfig"))
 local BugConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugConfig"))
 local NumberUtil = require(Shared:WaitForChild("Util"):WaitForChild("NumberUtil"))
 local Window = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("Window"))
@@ -15,6 +16,8 @@ local summaryLabel
 local milestoneLabel
 local listFrame
 local stateChangedConn
+
+local rarityOrder = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" }
 
 local rarityColors = {
 	Common = Color3.fromRGB(185, 185, 185),
@@ -29,8 +32,38 @@ local function getRarityColor(rarity: string): Color3
 	return rarityColors[rarity] or Color3.fromRGB(210, 210, 210)
 end
 
+local function makeProgressBar(parent: Instance, percent: number, color: Color3)
+	local barTrack = Instance.new("Frame")
+	barTrack.Size = UDim2.new(1, 0, 0, 8)
+	barTrack.BackgroundColor3 = Color3.fromRGB(24, 38, 54)
+	barTrack.BorderSizePixel = 0
+	barTrack.Parent = parent
+
+	local barFill = Instance.new("Frame")
+	barFill.Size = UDim2.new(math.clamp(percent, 0, 1), 0, 1, 0)
+	barFill.BackgroundColor3 = color
+	barFill.BorderSizePixel = 0
+	barFill.Parent = barTrack
+end
+
+local function getNextCollectionMilestone(discovered: number)
+	local bestRequired = math.huge
+	local bestDefinition = nil
+
+	for _, definition in ipairs(AchievementConfig.Definitions) do
+		if definition.section == "Collection" and definition.stat == "UniqueBugsDiscovered" then
+			if definition.required > discovered and definition.required < bestRequired then
+				bestRequired = definition.required
+				bestDefinition = definition
+			end
+		end
+	end
+
+	return bestDefinition
+end
+
 local function refresh(context)
-	if not root or not summaryLabel or not listFrame then
+	if not root or not summaryLabel or not listFrame or not milestoneLabel then
 		return
 	end
 
@@ -46,75 +79,142 @@ local function refresh(context)
 	local totalSpecies = #BugConfig.Species
 	local discovered = 0
 	local totalCaught = 0
+	local groups = {}
+
+	for _, rarity in ipairs(rarityOrder) do
+		groups[rarity] = { total = 0, discovered = 0, entries = {} }
+	end
 
 	for _, species in ipairs(BugConfig.Species) do
 		local count = tonumber(totalsBySpecies[species.id]) or 0
+		local rarity = tostring(species.rarity)
+		local group = groups[rarity]
+		if group then
+			group.total += 1
+			if count > 0 then
+				group.discovered += 1
+			end
+			table.insert(group.entries, { species = species, count = count })
+		end
+
 		if count > 0 then
 			discovered += 1
 		end
 		totalCaught += count
-
-		local row = Instance.new("Frame")
-		row.Size = UDim2.new(1, -8, 0, 56)
-		row.BackgroundColor3 = Color3.fromRGB(36, 36, 44)
-		row.BorderSizePixel = 0
-		row.Parent = listFrame
-
-		local nameLabel = Instance.new("TextLabel")
-		nameLabel.Size = UDim2.new(0.5, -8, 0, 24)
-		nameLabel.Position = UDim2.fromOffset(8, 6)
-		nameLabel.BackgroundTransparency = 1
-		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-		nameLabel.TextColor3 = Color3.new(1, 1, 1)
-		nameLabel.TextSize = 16
-		nameLabel.Text = if count > 0 then tostring(species.displayName) else "???"
-		nameLabel.Parent = row
-
-		local rarityLabel = Instance.new("TextLabel")
-		rarityLabel.Size = UDim2.new(0.22, -8, 0, 24)
-		rarityLabel.Position = UDim2.new(0.5, 0, 0, 6)
-		rarityLabel.BackgroundTransparency = 1
-		rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
-		rarityLabel.TextColor3 = getRarityColor(species.rarity)
-		rarityLabel.TextSize = 14
-		rarityLabel.Text = tostring(species.rarity)
-		rarityLabel.Parent = row
-
-		local statusLabel = Instance.new("TextLabel")
-		statusLabel.Size = UDim2.new(0.28, -8, 0, 24)
-		statusLabel.Position = UDim2.new(0.72, 0, 0, 6)
-		statusLabel.BackgroundTransparency = 1
-		statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-		statusLabel.TextSize = 14
-		statusLabel.Text = if count > 0 then "Discovered" else "Locked"
-		statusLabel.TextColor3 = if count > 0 then Color3.fromRGB(159, 255, 159) else Color3.fromRGB(140, 140, 140)
-		statusLabel.Parent = row
-
-		local countLabel = Instance.new("TextLabel")
-		countLabel.Size = UDim2.new(1, -16, 0, 18)
-		countLabel.Position = UDim2.fromOffset(8, 32)
-		countLabel.BackgroundTransparency = 1
-		countLabel.TextXAlignment = Enum.TextXAlignment.Left
-		countLabel.TextColor3 = Color3.fromRGB(205, 205, 205)
-		countLabel.TextSize = 13
-		countLabel.Text = string.format("Caught: %s", NumberUtil.FormatNumber(count))
-		countLabel.Parent = row
-
-		if count <= 0 then
-			row.BackgroundTransparency = 0.35
-			nameLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-			countLabel.TextColor3 = Color3.fromRGB(140, 140, 140)
-		end
 	end
 
-	local toNext = math.max(300 - discovered, 0)
-	milestoneLabel.Text = string.format("Next collection milestone: %s bugs left", NumberUtil.FormatNumber(toNext))
+	local completion = if totalSpecies > 0 then math.floor((discovered / totalSpecies) * 1000 + 0.5) / 10 else 0
 	summaryLabel.Text = string.format(
-		"Discovered %s / %s    Total Caught %s",
+		"Discovered %s / %s bugs    Total bugs caught %s    Completion %s%%",
 		NumberUtil.FormatNumber(discovered),
 		NumberUtil.FormatNumber(totalSpecies),
-		NumberUtil.FormatNumber(totalCaught)
+		NumberUtil.FormatNumber(totalCaught),
+		tostring(completion)
 	)
+
+	local nextMilestone = getNextCollectionMilestone(discovered)
+	if nextMilestone then
+		milestoneLabel.Text = string.format("Next: %d discovered -> %s", nextMilestone.required, nextMilestone.name)
+	else
+		milestoneLabel.Text = "Next: Collection milestones complete"
+	end
+
+	for _, rarity in ipairs(rarityOrder) do
+		local group = groups[rarity]
+		if group and group.total > 0 then
+			local section = Instance.new("Frame")
+			section.Size = UDim2.new(1, -4, 0, 0)
+			section.AutomaticSize = Enum.AutomaticSize.Y
+			section.BackgroundColor3 = Color3.fromRGB(23, 37, 54)
+			section.BorderSizePixel = 0
+			section.Parent = listFrame
+
+			local sectionPadding = Instance.new("UIPadding")
+			sectionPadding.PaddingTop = UDim.new(0, 8)
+			sectionPadding.PaddingBottom = UDim.new(0, 8)
+			sectionPadding.PaddingLeft = UDim.new(0, 8)
+			sectionPadding.PaddingRight = UDim.new(0, 8)
+			sectionPadding.Parent = section
+
+			local sectionLayout = Instance.new("UIListLayout")
+			sectionLayout.Padding = UDim.new(0, 6)
+			sectionLayout.Parent = section
+
+			local header = Instance.new("TextLabel")
+			header.Size = UDim2.new(1, 0, 0, 24)
+			header.BackgroundTransparency = 1
+			header.TextXAlignment = Enum.TextXAlignment.Left
+			header.TextColor3 = getRarityColor(rarity)
+			header.Font = Enum.Font.GothamBold
+			header.TextSize = 16
+			header.Text = string.format("%s  %d/%d", rarity, group.discovered, group.total)
+			header.Parent = section
+
+			local sectionPercent = if group.total > 0 then group.discovered / group.total else 0
+			makeProgressBar(section, sectionPercent, getRarityColor(rarity))
+
+			for _, entry in ipairs(group.entries) do
+				local row = Instance.new("Frame")
+				row.Size = UDim2.new(1, 0, 0, 44)
+				row.BackgroundColor3 = Color3.fromRGB(28, 45, 66)
+				row.BorderSizePixel = 0
+				row.Parent = section
+
+				local discoveredEntry = entry.count > 0
+				if not discoveredEntry then
+					row.BackgroundTransparency = 0.35
+				end
+
+				local iconLabel = Instance.new("TextLabel")
+				iconLabel.Size = UDim2.fromOffset(22, 22)
+				iconLabel.Position = UDim2.fromOffset(6, 11)
+				iconLabel.BackgroundTransparency = 1
+				iconLabel.TextSize = 16
+				iconLabel.TextColor3 = if discoveredEntry then Color3.fromRGB(225, 225, 225) else Color3.fromRGB(95, 95, 95)
+				iconLabel.Text = if discoveredEntry then "[]" else "##"
+				iconLabel.Parent = row
+
+				local nameLabel = Instance.new("TextLabel")
+				nameLabel.Size = UDim2.new(0.42, -8, 1, 0)
+				nameLabel.Position = UDim2.fromOffset(32, 0)
+				nameLabel.BackgroundTransparency = 1
+				nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+				nameLabel.TextColor3 = if discoveredEntry then Color3.new(1, 1, 1) else Color3.fromRGB(140, 140, 140)
+				nameLabel.TextSize = 15
+				nameLabel.Text = if discoveredEntry then tostring(entry.species.displayName) else "???"
+				nameLabel.Parent = row
+
+				local rarityLabel = Instance.new("TextLabel")
+				rarityLabel.Size = UDim2.new(0.2, -6, 1, 0)
+				rarityLabel.Position = UDim2.new(0.48, 0, 0, 0)
+				rarityLabel.BackgroundTransparency = 1
+				rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
+				rarityLabel.TextColor3 = getRarityColor(rarity)
+				rarityLabel.TextSize = 14
+				rarityLabel.Text = rarity
+				rarityLabel.Parent = row
+
+				local caughtLabel = Instance.new("TextLabel")
+				caughtLabel.Size = UDim2.new(0.2, -6, 1, 0)
+				caughtLabel.Position = UDim2.new(0.68, 0, 0, 0)
+				caughtLabel.BackgroundTransparency = 1
+				caughtLabel.TextXAlignment = Enum.TextXAlignment.Left
+				caughtLabel.TextColor3 = if discoveredEntry then Color3.fromRGB(206, 206, 206) else Color3.fromRGB(120, 120, 120)
+				caughtLabel.TextSize = 14
+				caughtLabel.Text = if discoveredEntry then string.format("Caught %s", NumberUtil.FormatNumber(entry.count)) else "Caught --"
+				caughtLabel.Parent = row
+
+				local checkLabel = Instance.new("TextLabel")
+				checkLabel.Size = UDim2.new(0.12, 0, 1, 0)
+				checkLabel.Position = UDim2.new(0.88, 0, 0, 0)
+				checkLabel.BackgroundTransparency = 1
+				checkLabel.TextColor3 = if discoveredEntry then Color3.fromRGB(121, 255, 163) else Color3.fromRGB(120, 120, 120)
+				checkLabel.TextSize = 18
+				checkLabel.Text = if discoveredEntry then "✓" else ""
+				checkLabel.Parent = row
+			end
+		end
+	end
 
 	local layout = listFrame:FindFirstChildOfClass("UIListLayout")
 	if layout then
@@ -129,8 +229,8 @@ function BugdexApp.Mount(target: Instance, context): ()
 
 	windowRef = Window.Create({
 		Title = "Bugdex.exe",
-		Size = UDim2.fromOffset(720, 500),
-		Position = UDim2.fromScale(0.1, 0.12),
+		Size = UDim2.fromOffset(780, 540),
+		Position = UDim2.fromScale(0.1, 0.1),
 		Parent = target,
 		OnClose = function()
 			context.Controllers.Window.Close("Bugdex")
@@ -142,35 +242,51 @@ function BugdexApp.Mount(target: Instance, context): ()
 	root.BackgroundTransparency = 1
 	root.Parent = windowRef.Content
 
+	local rootPadding = Instance.new("UIPadding")
+	rootPadding.PaddingTop = UDim.new(0, 8)
+	rootPadding.PaddingBottom = UDim.new(0, 8)
+	rootPadding.PaddingLeft = UDim.new(0, 8)
+	rootPadding.PaddingRight = UDim.new(0, 8)
+	rootPadding.Parent = root
+
 	summaryLabel = Instance.new("TextLabel")
-	summaryLabel.Size = UDim2.new(1, -16, 0, 30)
-	summaryLabel.Position = UDim2.fromOffset(8, 8)
+	summaryLabel.Size = UDim2.new(1, 0, 0, 28)
 	summaryLabel.BackgroundTransparency = 1
 	summaryLabel.TextXAlignment = Enum.TextXAlignment.Left
 	summaryLabel.TextColor3 = Color3.new(1, 1, 1)
-	summaryLabel.TextSize = 18
-	summaryLabel.Text = "Discovered 0 / 0    Total Caught 0"
+	summaryLabel.Font = Enum.Font.GothamBold
+	summaryLabel.TextSize = 17
+	summaryLabel.Text = "Discovered 0 / 300 bugs    Total bugs caught 0    Completion 0%"
 	summaryLabel.Parent = root
+
 	milestoneLabel = Instance.new("TextLabel")
-	milestoneLabel.Size = UDim2.new(1, -16, 0, 22)
-	milestoneLabel.Position = UDim2.fromOffset(8, 34)
+	milestoneLabel.Size = UDim2.new(1, 0, 0, 22)
+	milestoneLabel.Position = UDim2.fromOffset(0, 30)
 	milestoneLabel.BackgroundTransparency = 1
 	milestoneLabel.TextXAlignment = Enum.TextXAlignment.Left
-	milestoneLabel.TextColor3 = Color3.fromRGB(180, 210, 255)
+	milestoneLabel.TextColor3 = Color3.fromRGB(255, 220, 110)
 	milestoneLabel.TextSize = 14
-	milestoneLabel.Text = "Next collection milestone: 300 bugs"
+	milestoneLabel.Text = "Next: 10 discovered -> Budding Collector"
 	milestoneLabel.Parent = root
 
 	listFrame = Instance.new("ScrollingFrame")
-	listFrame.Size = UDim2.new(1, -16, 1, -70)
-	listFrame.Position = UDim2.fromOffset(8, 62)
-	listFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
+	listFrame.Size = UDim2.new(1, 0, 1, -62)
+	listFrame.Position = UDim2.fromOffset(0, 58)
+	listFrame.BackgroundColor3 = Color3.fromRGB(16, 28, 42)
 	listFrame.BorderSizePixel = 0
 	listFrame.ScrollBarThickness = 8
+	listFrame.CanvasSize = UDim2.fromOffset(0, 0)
 	listFrame.Parent = root
 
+	local listPadding = Instance.new("UIPadding")
+	listPadding.PaddingTop = UDim.new(0, 8)
+	listPadding.PaddingBottom = UDim.new(0, 8)
+	listPadding.PaddingLeft = UDim.new(0, 8)
+	listPadding.PaddingRight = UDim.new(0, 8)
+	listPadding.Parent = listFrame
+
 	local listLayout = Instance.new("UIListLayout")
-	listLayout.Padding = UDim.new(0, 6)
+	listLayout.Padding = UDim.new(0, 10)
 	listLayout.Parent = listFrame
 
 	if stateChangedConn then
