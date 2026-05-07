@@ -48,6 +48,9 @@ function MarketController.Start(): ()
 		passiveAccumulatedFood = 0
 		passiveFlushAt = os.clock() + PASSIVE_FEEDBACK_WINDOW
 		refreshAll()
+		if context.Events and context.Events.StateChanged then
+			context.Events.StateChanged:Fire(context.State.PlayerData)
+		end
 	end)
 
 	context.Remotes.StatePatch.OnClientEvent:Connect(function(payload)
@@ -83,6 +86,9 @@ function MarketController.Start(): ()
 			end
 		end
 		refreshAll()
+		if context.Events and context.Events.StateChanged then
+			context.Events.StateChanged:Fire(context.State.PlayerData)
+		end
 	end)
 
 	context.Remotes.MarketPriceUpdated.OnClientEvent:Connect(function(payload)
