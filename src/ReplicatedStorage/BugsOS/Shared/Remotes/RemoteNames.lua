@@ -51,6 +51,7 @@ local RemoteNames: RemoteNameMap = {
 	ServerEvent_TriggerDevProduct = "ServerEvent_TriggerDevProduct",
 
 	-- Server to Client
+	Click_Result = "Click_Result",
 	State_Patch = "State_Patch",
 	State_FullSync = "State_FullSync",
 	Currency_Updated = "Currency_Updated",

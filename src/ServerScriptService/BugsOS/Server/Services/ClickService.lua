@@ -30,6 +30,7 @@ local ClickService = {}
 local CLICK_COOLDOWN_SECONDS = 0.08
 
 local clickRequestRemote: RemoteEvent? = nil
+local clickResultRemote: RemoteEvent? = nil
 local toolBonusById: { [string]: number } = {}
 local lastClickAtByUserId: { [number]: number } = {}
 
@@ -112,12 +113,20 @@ local function onClickRequest(player: Player): ()
 	end
 
 	CurrencyService.AddFood(player, foodPerClick)
+
+	if clickResultRemote then
+		clickResultRemote:FireClient(player, {
+			FoodGained = foodPerClick,
+		})
+	end
 end
 
 function ClickService.Init(): ()
 	buildToolBonusLookup()
 	local clickRequestName = RemoteNames.Click_Request or "Click_Request"
+	local clickResultName = RemoteNames.Click_Result or "Click_Result"
 	clickRequestRemote = getOrCreateRemoteEvent(clickRequestName)
+	clickResultRemote = getOrCreateRemoteEvent(clickResultName)
 end
 
 function ClickService.Start(): ()

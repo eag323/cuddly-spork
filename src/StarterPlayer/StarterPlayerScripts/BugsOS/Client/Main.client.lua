@@ -27,6 +27,7 @@ local context = {
 	UI = {},
 	Remotes = {
 		ClickRequest = RemotesFolder:WaitForChild(RemoteNames.Click_Request) :: RemoteEvent,
+		ClickResult = RemotesFolder:WaitForChild(RemoteNames.Click_Result) :: RemoteEvent,
 		StateFullSync = RemotesFolder:WaitForChild(RemoteNames.State_FullSync) :: RemoteEvent,
 		StatePatch = RemotesFolder:WaitForChild(RemoteNames.State_Patch) :: RemoteEvent,
 		MarketSellFood = RemotesFolder:WaitForChild(RemoteNames.Market_SellFood) :: RemoteEvent,
