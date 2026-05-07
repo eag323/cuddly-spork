@@ -27,6 +27,15 @@ function Window.Create(props: WindowProps)
 	rootFrame.Active = true
 	rootFrame.Parent = props.Parent
 
+	local innerBorder = Instance.new("Frame")
+	innerBorder.Name = "InnerBorder"
+	innerBorder.Size = UDim2.new(1, -4, 1, -4)
+	innerBorder.Position = UDim2.fromOffset(2, 2)
+	innerBorder.BackgroundTransparency = 1
+	innerBorder.BorderColor3 = UITheme.Colors.WindowInnerBorder
+	innerBorder.BorderSizePixel = 1
+	innerBorder.Parent = rootFrame
+
 	local titleBar = Instance.new("TextButton")
 	titleBar.Name = "TitleBar"
 	titleBar.Text = ""
@@ -38,10 +47,10 @@ function Window.Create(props: WindowProps)
 
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Name = "TitleLabel"
-	titleLabel.Size = UDim2.new(1, -70, 1, 0)
-	titleLabel.Position = UDim2.fromOffset(8, 0)
+	titleLabel.Size = UDim2.new(1, -82, 1, 0)
+	titleLabel.Position = UDim2.fromOffset(6, 0)
 	titleLabel.BackgroundTransparency = 1
-	titleLabel.Text = string.format("%s %s", props.Icon or "◻", props.Title or "Window")
+	titleLabel.Text = string.format("%s  %s", props.Icon or "🗔", props.Title or "Window")
 	titleLabel.TextColor3 = UITheme.Colors.TitleText
 	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 	titleLabel.Font = UITheme.Font
@@ -51,22 +60,31 @@ function Window.Create(props: WindowProps)
 	local closeButton = Instance.new("TextButton")
 	closeButton.Name = "CloseButton"
 	closeButton.AnchorPoint = Vector2.new(1, 0)
-	closeButton.Size = UDim2.fromOffset(24, 20)
-	closeButton.Position = UDim2.new(1, -4, 0, 4)
-	closeButton.Text = "X"
+	closeButton.Size = UDim2.fromOffset(22, 18)
+	closeButton.Position = UDim2.new(1, -4, 0, 5)
+	closeButton.Text = "×"
 	closeButton.Font = UITheme.Font
 	closeButton.TextSize = 14
 	closeButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-	closeButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-	closeButton.BorderColor3 = Color3.fromRGB(64, 64, 64)
+	closeButton.BackgroundColor3 = UITheme.Colors.ButtonFace
+	closeButton.BorderColor3 = UITheme.Colors.ButtonShadow
 	closeButton.Parent = titleBar
 
 	local contentFrame = Instance.new("Frame")
 	contentFrame.Name = "Content"
-	contentFrame.Size = UDim2.new(1, -10, 1, -UITheme.Window.TitleBarHeight - 8)
-	contentFrame.Position = UDim2.fromOffset(5, UITheme.Window.TitleBarHeight + 4)
-	contentFrame.BackgroundTransparency = 1
+	contentFrame.Size = UDim2.new(1, -12, 1, -UITheme.Window.TitleBarHeight - 10)
+	contentFrame.Position = UDim2.fromOffset(6, UITheme.Window.TitleBarHeight + 4)
+	contentFrame.BackgroundColor3 = UITheme.Colors.WindowBody
+	contentFrame.BorderColor3 = UITheme.Colors.WindowInnerBorder
+	contentFrame.BorderSizePixel = 1
 	contentFrame.Parent = rootFrame
+
+	local contentPadding = Instance.new("UIPadding")
+	contentPadding.PaddingLeft = UDim.new(0, UITheme.Window.ContentPadding)
+	contentPadding.PaddingRight = UDim.new(0, UITheme.Window.ContentPadding)
+	contentPadding.PaddingTop = UDim.new(0, UITheme.Window.ContentPadding)
+	contentPadding.PaddingBottom = UDim.new(0, UITheme.Window.ContentPadding)
+	contentPadding.Parent = contentFrame
 
 	local dragging = false
 	local dragStart = Vector2.zero
