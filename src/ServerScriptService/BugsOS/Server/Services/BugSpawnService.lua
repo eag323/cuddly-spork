@@ -37,14 +37,26 @@ local function withBugLuckWeights(baseWeights, bugLuck)
 end
 
 local function pickSpecies(rarity)
-	local pool = {}
+	local pool, totalWeight = {}, 0
 	for _, s in ipairs(BugConfig.Species) do
 		if s.rarity == rarity then
-			table.insert(pool, s)
+			local weight = tonumber(s.spawnWeight) or 1
+			if weight > 0 then
+				totalWeight += weight
+				table.insert(pool, { species = s, weight = weight })
+			end
 		end
 	end
-	if #pool == 0 then return nil end
-	return pool[Random.new():NextInteger(1, #pool)]
+	if #pool == 0 or totalWeight <= 0 then return nil end
+	local roll = Random.new():NextNumber(0, totalWeight)
+	local cursor = 0
+	for _, entry in ipairs(pool) do
+		cursor += entry.weight
+		if roll <= cursor then
+			return entry.species
+		end
+	end
+	return pool[#pool].species
 end
 
 local function clear(player)

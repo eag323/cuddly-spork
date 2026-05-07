@@ -1,16 +1,31 @@
 --!strict
 
+local CommonSpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("CommonSpecies"))
+local UncommonSpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("UncommonSpecies"))
+local RareSpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("RareSpecies"))
+local EpicSpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("EpicSpecies"))
+local LegendarySpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("LegendarySpecies"))
+local MythicSpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("MythicSpecies"))
+
+local function append(into, items)
+	for _, item in ipairs(items) do
+		table.insert(into, item)
+	end
+end
+
+local allSpecies = {}
+append(allSpecies, CommonSpecies)
+append(allSpecies, UncommonSpecies)
+append(allSpecies, RareSpecies)
+append(allSpecies, EpicSpecies)
+append(allSpecies, LegendarySpecies)
+append(allSpecies, MythicSpecies)
+
 local BugConfig = {
-	Rarities = { "Common", "Rare", "Epic", "Legendary", "Mythic" },
-	RarityWeights = { Common = 60, Rare = 25, Epic = 10, Legendary = 4, Mythic = 1 },
-	BaseBugPoints = { Common = 1, Rare = 3, Epic = 10, Legendary = 35, Mythic = 150 },
-	Species = {
-		{ id = "worker_ant", displayName = "Worker Ant", rarity = "Common", baseTimer = 14, hitsRequired = 1, behaviorPool = { "Wanderer" } },
-		{ id = "house_fly", displayName = "House Fly", rarity = "Common", baseTimer = 13, hitsRequired = 1, behaviorPool = { "Wanderer" } },
-		{ id = "ladybug", displayName = "Ladybug", rarity = "Rare", baseTimer = 12, hitsRequired = 2, behaviorPool = { "Wanderer", "ZigZagger" } },
-		{ id = "honey_bee", displayName = "Honey Bee", rarity = "Rare", baseTimer = 11, hitsRequired = 2, behaviorPool = { "ZigZagger" } },
-		{ id = "rhinoceros_beetle", displayName = "Rhinoceros Beetle", rarity = "Epic", baseTimer = 10, hitsRequired = 3, behaviorPool = { "ZigZagger" } },
-	},
+	Rarities = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" },
+	RarityWeights = { Common = 100, Uncommon = 65, Rare = 35, Epic = 18, Legendary = 7, Mythic = 2 },
+	BaseBugPoints = { Common = 1, Uncommon = 2, Rare = 4, Epic = 9, Legendary = 20, Mythic = 45 },
+	Species = allSpecies,
 	StatTypes = { "AllFood", "FoodPerSec", "ClickPower", "SellBonus", "NectarChance", "BugLuck", "MinigameSpawnChance", "MinigameTime", "ExpeditionSpeed", "OfflineEarnings" },
 }
 

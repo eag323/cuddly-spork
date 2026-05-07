@@ -17,6 +17,7 @@ local stateChangedConn
 
 local rarityColors = {
 	Common = Color3.fromRGB(185, 185, 185),
+	Uncommon = Color3.fromRGB(105, 214, 134),
 	Rare = Color3.fromRGB(88, 170, 255),
 	Epic = Color3.fromRGB(187, 102, 255),
 	Legendary = Color3.fromRGB(255, 176, 66),
