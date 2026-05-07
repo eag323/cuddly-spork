@@ -1,11 +1,13 @@
 --!strict
 
-local CommonSpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("CommonSpecies"))
-local UncommonSpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("UncommonSpecies"))
-local RareSpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("RareSpecies"))
-local EpicSpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("EpicSpecies"))
-local LegendarySpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("LegendarySpecies"))
-local MythicSpecies = require(script:WaitForChild("BugSpecies"):WaitForChild("MythicSpecies"))
+local bugSpeciesFolder = script.Parent:WaitForChild("BugSpecies")
+
+local CommonSpecies = require(bugSpeciesFolder:WaitForChild("CommonSpecies"))
+local UncommonSpecies = require(bugSpeciesFolder:WaitForChild("UncommonSpecies"))
+local RareSpecies = require(bugSpeciesFolder:WaitForChild("RareSpecies"))
+local EpicSpecies = require(bugSpeciesFolder:WaitForChild("EpicSpecies"))
+local LegendarySpecies = require(bugSpeciesFolder:WaitForChild("LegendarySpecies"))
+local MythicSpecies = require(bugSpeciesFolder:WaitForChild("MythicSpecies"))
 
 local function append(into, items)
 	for _, item in ipairs(items) do
