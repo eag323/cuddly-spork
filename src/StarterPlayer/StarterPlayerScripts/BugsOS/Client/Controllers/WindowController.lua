@@ -8,7 +8,7 @@ local WindowController = {}
 local context
 local openApps: {[string]: boolean} = {}
 local registryById: {[string]: any} = {}
-local taskbarButtons: {[string]: TextButton} = {}
+local taskbarButtons: {[string]: GuiButton} = {}
 local taskbarSetActive: {[string]: (boolean) -> ()} = {}
 local zCounter = 20
 

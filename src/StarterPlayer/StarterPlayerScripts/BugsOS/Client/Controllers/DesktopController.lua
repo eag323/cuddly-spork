@@ -29,6 +29,43 @@ local AMBIENT_PARTICLE_COUNT = 14
 local rng = Random.new()
 local latestClickMousePosition = Vector2.zero
 
+local function createTaskbarImageButton(parent: Instance, name: string, buttonSize: UDim2, buttonPosition: UDim2, text: string, iconImage: string?)
+	local button = Instance.new("ImageButton")
+	button.Name = name
+	button.Size = buttonSize
+	button.Position = buttonPosition
+	button.BackgroundTransparency = 1
+	button.Image = UIAssets.TaskbarTabDefaultImage
+	button.ScaleType = Enum.ScaleType.Slice
+	button.SliceCenter = UIAssets.SliceCenter
+	button.AutoButtonColor = false
+	button.Parent = parent
+
+	if type(iconImage) == "string" and iconImage ~= "" and iconImage ~= "rbxassetid://0" then
+		local icon = Instance.new("ImageLabel")
+		icon.Name = "Icon"
+		icon.Size = UDim2.fromOffset(14, 14)
+		icon.Position = UDim2.fromOffset(8, 7)
+		icon.BackgroundTransparency = 1
+		icon.Image = iconImage
+		icon.Parent = button
+	end
+
+	local label = Instance.new("TextLabel")
+	label.Name = "Label"
+	label.Size = UDim2.new(1, -16, 1, 0)
+	label.Position = UDim2.fromOffset(8, 0)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextColor3 = Color3.new(0, 0, 0)
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = UITheme.Font
+	label.TextSize = 14
+	label.Parent = button
+
+	return button, label
+end
+
 local function spawnFloatingText(parent: Instance, clickPos: Vector2, text: string): ()
 	local floatText = Instance.new("TextLabel")
 	floatText.Name = "FoodClickFloat"
@@ -183,29 +220,15 @@ function DesktopController.Start(): ()
 	taskbarSkin.SliceCenter = UIAssets.SliceCenter
 	taskbarSkin.Parent = taskbar
 
-	local startButton = Instance.new("ImageButton")
-	startButton.Name = "StartButton"
-	startButton.Size = UDim2.fromOffset(72, 28)
-	startButton.Position = UDim2.fromOffset(8, 9)
-	startButton.BackgroundTransparency = 1
-	startButton.Image = UIAssets.TaskbarTabDefaultImage
-	startButton.ScaleType = Enum.ScaleType.Slice
-	startButton.SliceCenter = UIAssets.SliceCenter
-	startButton.Font = UITheme.Font
-	startButton.TextSize = 14
-	startButton.TextColor3 = Color3.new(0, 0, 0)
-	startButton.Text = ""
-	startButton.AutoButtonColor = false
-	startButton.Parent = taskbar
-
-	local startLabel = Instance.new("TextLabel")
-	startLabel.Size = UDim2.fromScale(1, 1)
-	startLabel.BackgroundTransparency = 1
-	startLabel.Text = "Start"
-	startLabel.TextColor3 = Color3.new(0, 0, 0)
-	startLabel.Font = UITheme.Font
-	startLabel.TextSize = 14
-	startLabel.Parent = startButton
+	local startButton, startLabel = createTaskbarImageButton(
+		taskbar,
+		"StartButton",
+		UDim2.fromOffset(72, 28),
+		UDim2.fromOffset(8, 9),
+		"Start",
+		(UIAssets :: any).StartButtonIconImage
+	)
+	startLabel.TextXAlignment = Enum.TextXAlignment.Center
 	startButton.MouseButton1Down:Connect(function()
 		startButton.Image = UIAssets.TaskbarTabPressedImage
 	end)
