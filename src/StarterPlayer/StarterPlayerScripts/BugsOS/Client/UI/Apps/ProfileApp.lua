@@ -57,8 +57,8 @@ function ProfileApp.Init(c)
 	context = c
 end
 
-function ProfileApp.Mount(target: Instance): ()
-	local deps = context and context.AppDependencies or nil
+function ProfileApp.Mount(target: Instance, depsArg): ()
+	local deps = depsArg or (context and context.AppDependencies or nil)
 	local summary = buildSummary(deps)
 
 	windowRef = Window.Create({

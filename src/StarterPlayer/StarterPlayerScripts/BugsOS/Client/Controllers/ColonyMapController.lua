@@ -143,12 +143,6 @@ end
 
 function ColonyMapController.Init(initContext): ()
 	context = initContext
-	if context and context.UI and context.UI.WorldLayer and ProfileCard.SetParent then
-		ProfileCard.SetParent(context.UI.WorldLayer)
-	end
-	if ProfileCard.Hide then
-		ProfileCard.Hide()
-	end
 	getSummaryRemote = ensureRemote(RemoteNames.Profile_GetSummary)
 	if getSummaryRemote then
 		getSummaryRemote.OnClientEvent:Connect(function(summary)
@@ -172,6 +166,12 @@ function ColonyMapController.Start(): ()
 	local world = context.UI.WorldLayer
 	if not world then
 		return
+	end
+	if ProfileCard.SetParent then
+		ProfileCard.SetParent(world)
+	end
+	if ProfileCard.Hide then
+		ProfileCard.Hide()
 	end
 	for _, p in ipairs(Players:GetPlayers()) do
 		if not markerByUserId[p.UserId] then
