@@ -3,7 +3,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local NumberFormatter = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("NumberFormatter"))
 local RemoteNames = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Remotes"):WaitForChild("RemoteNames"))
 
 local ColonyMapController = {}
@@ -11,7 +10,9 @@ local context: { [string]: any }
 local markerByUserId: { [number]: Frame } = {}
 local warnedMissingNameplateByUserId: { [number]: boolean } = {}
 local profileSummaryByUserId: { [number]: any } = {}
-local card: Frame? = nil
+local ProfileCard = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Components"):WaitForChild("ProfileCard"))
+
+local selectedUserId: number? = nil
 
 local function ensureRemote(name: string): RemoteEvent?
 	local remotes = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Remotes")
@@ -79,8 +80,11 @@ local function CreateColonyMarker(player: Player): Frame
 	nameplate.Parent = marker
 
 	icon.Activated:Connect(function()
+		selectedUserId = player.UserId
 		if getSummaryRemote then
 			getSummaryRemote:FireServer(player.UserId)
+		else
+			warn("[BugsOS] Missing profile summary remote")
 		end
 	end)
 
@@ -137,25 +141,27 @@ local function DestroyMarker(userId: number)
 	warnedMissingNameplateByUserId[userId] = nil
 end
 
-local function showCard(summary)
-	if not context.UI.WorldLayer then return end
-	if card then card:Destroy() end
-	card=Instance.new("Frame") card.Size=UDim2.fromOffset(300,250) card.Position=UDim2.fromScale(0.62,0.2) card.BackgroundColor3=Color3.fromRGB(12,27,54) card.Parent=context.UI.WorldLayer
-	Instance.new("UICorner",card).CornerRadius=UDim.new(0,12)
-	local n=Instance.new("TextLabel") n.Size=UDim2.fromOffset(280,24) n.Position=UDim2.fromOffset(12,10) n.BackgroundTransparency=1 n.TextXAlignment=Enum.TextXAlignment.Left n.Font=Enum.Font.GothamBold n.TextColor3=Color3.new(1,1,1) n.Text=summary.DisplayName n.Parent=card
-	local t=Instance.new("TextLabel") t.Size=UDim2.fromOffset(280,18) t.Position=UDim2.fromOffset(12,36) t.BackgroundTransparency=1 t.TextXAlignment=Enum.TextXAlignment.Left t.TextColor3=Color3.fromRGB(0,255,120) t.Text="● Online" t.Parent=card
-	local st=Instance.new("TextLabel") st.Size=UDim2.fromOffset(280,52) st.Position=UDim2.fromOffset(12,58) st.BackgroundTransparency=1 st.TextXAlignment=Enum.TextXAlignment.Left st.TextYAlignment=Enum.TextYAlignment.Top st.TextWrapped=true st.Text=string.format("Prestige: %d | Farm: %d Generators\nFood/sec: %s | Lifetime Food: %s\nNectar: %s", summary.Prestige or 0, summary.GeneratorCount or 0, NumberFormatter.Format(summary.FoodPerSec or 0), NumberFormatter.Format(summary.LifetimeFood or 0), NumberFormatter.Format(summary.CurrentNectar or 0)) st.Parent=card
-end
-
 function ColonyMapController.Init(initContext): ()
 	context = initContext
+	if context and context.UI and context.UI.WorldLayer and ProfileCard.SetParent then
+		ProfileCard.SetParent(context.UI.WorldLayer)
+	end
+	if ProfileCard.Hide then
+		ProfileCard.Hide()
+	end
 	getSummaryRemote = ensureRemote(RemoteNames.Profile_GetSummary)
 	if getSummaryRemote then
 		getSummaryRemote.OnClientEvent:Connect(function(summary)
-			if type(summary)=="table" and summary.UserId then
-				profileSummaryByUserId[summary.UserId]=summary
+			if type(summary) == "table" and summary.UserId then
+				profileSummaryByUserId[summary.UserId] = summary
 				UpdateNameplate(summary.UserId)
-				showCard(summary)
+				if selectedUserId == summary.UserId then
+					if ProfileCard and ProfileCard.Show then
+						ProfileCard.Show(summary)
+					else
+						warn("[BugsOS] ProfileCard.Show is unavailable")
+					end
+				end
 			end
 		end)
 	end
@@ -176,7 +182,6 @@ function ColonyMapController.Start(): ()
 	for index, p in ipairs(Players:GetPlayers()) do
 		UpdateMarkerPosition(p.UserId, index)
 		UpdateNameplate(p.UserId)
-		if getSummaryRemote then getSummaryRemote:FireServer(p.UserId) end
 	end
 
 	Players.PlayerRemoving:Connect(function(player)
