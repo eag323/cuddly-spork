@@ -31,9 +31,9 @@ local latestClickMousePosition = Vector2.zero
 
 local warnedWallpaper = false
 
-local TASKBAR_HEIGHT = 46
+local DEFAULT_TASKBAR_HEIGHT = 46
 
-local function applyWallpaperMode(desktopRoot: Frame, wallpaperImage: string)
+local function applyWallpaperMode(desktopRoot: Frame, wallpaperImage: string, getDesktopAreaHeight: (() -> number)?)
 	local mode = UIAssets.WallpaperMode
 	if mode ~= "Stretch" and mode ~= "Crop" and mode ~= "Tile" then
 		mode = "Crop"
@@ -41,7 +41,7 @@ local function applyWallpaperMode(desktopRoot: Frame, wallpaperImage: string)
 
 	local holder = Instance.new("Frame")
 	holder.Name = "WallpaperHolder"
-	holder.Size = UDim2.new(1, 0, 1, -TASKBAR_HEIGHT)
+	holder.Size = UDim2.fromScale(1, 1)
 	holder.Position = UDim2.fromOffset(0, 0)
 	holder.BackgroundTransparency = 1
 	holder.BorderSizePixel = 0
@@ -49,49 +49,54 @@ local function applyWallpaperMode(desktopRoot: Frame, wallpaperImage: string)
 	holder.ClipsDescendants = true
 	holder.Parent = desktopRoot
 
+	local function applyHolderHeight()
+		if getDesktopAreaHeight then
+			holder.Size = UDim2.new(1, 0, 0, math.max(0, getDesktopAreaHeight()))
+		end
+	end
+
+	applyHolderHeight()
+
 	if mode == "Tile" then
 		local tileSize = UIAssets.WallpaperTileSize
 		local tileWidth = math.max(32, math.floor(tileSize.X))
 		local tileHeight = math.max(32, math.floor(tileSize.Y))
-		local layout = Instance.new("UIGridLayout")
-		layout.CellSize = UDim2.fromOffset(tileWidth, tileHeight)
-		layout.CellPadding = UDim2.fromOffset(0, 0)
-		layout.FillDirectionMaxCells = 2048
-		layout.SortOrder = Enum.SortOrder.LayoutOrder
-		layout.Parent = holder
 
-		local function refillTiles()
+		local function clearTiles()
+			for _, child in ipairs(holder:GetChildren()) do
+				if child:IsA("ImageLabel") and child.Name == "WallpaperTile" then
+					child:Destroy()
+				end
+			end
+		end
+
+		local function rebuildTiles()
+			applyHolderHeight()
 			local area = holder.AbsoluteSize
 			local cols = math.max(1, math.ceil(area.X / tileWidth) + 1)
 			local rows = math.max(1, math.ceil(area.Y / tileHeight) + 1)
-			local needed = cols * rows
-			local current = #holder:GetChildren() - 1
-			if needed > current then
-				for _ = 1, needed - current do
+
+			clearTiles()
+
+			for row = 0, rows - 1 do
+				for col = 0, cols - 1 do
 					local tile = Instance.new("ImageLabel")
 					tile.Name = "WallpaperTile"
 					tile.BackgroundTransparency = 1
 					tile.BorderSizePixel = 0
 					tile.Image = wallpaperImage
 					tile.ScaleType = Enum.ScaleType.Stretch
+					tile.Size = UDim2.fromOffset(tileWidth, tileHeight)
+					tile.Position = UDim2.fromOffset(col * tileWidth, row * tileHeight)
+					tile.ZIndex = 1
 					tile.Parent = holder
-				end
-			elseif needed < current then
-				local removed = 0
-				for _, child in ipairs(holder:GetChildren()) do
-					if child:IsA("ImageLabel") then
-						child:Destroy()
-						removed += 1
-						if current - removed <= needed then
-							break
-						end
-					end
 				end
 			end
 		end
 
-		refillTiles()
-		holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(refillTiles)
+		rebuildTiles()
+		holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(rebuildTiles)
+		desktopRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(rebuildTiles)
 	else
 		local wallpaper = Instance.new("ImageLabel")
 		wallpaper.Name = "Wallpaper"
@@ -104,7 +109,13 @@ local function applyWallpaperMode(desktopRoot: Frame, wallpaperImage: string)
 		wallpaper.ScaleType = if mode == "Stretch" then Enum.ScaleType.Stretch else Enum.ScaleType.Crop
 		wallpaper.ZIndex = 1
 		wallpaper.Parent = holder
+
+		if getDesktopAreaHeight then
+			desktopRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(applyHolderHeight)
+		end
 	end
+
+	return holder
 end
 
 local function isValidWallpaperAsset(image: any): boolean
@@ -239,10 +250,19 @@ function DesktopController.Start(): ()
 	fallbackBackground.ZIndex = 0
 	fallbackBackground.Parent = desktopRoot
 
+	local taskbarHeight = DEFAULT_TASKBAR_HEIGHT
+	local function getDesktopAreaHeight(): number
+		return math.max(0, desktopRoot.AbsoluteSize.Y - taskbarHeight)
+	end
+	local function getDesktopAreaSize(): UDim2
+		return UDim2.new(1, 0, 0, getDesktopAreaHeight())
+	end
+
 	local wallpaperImage = UIAssets.DesktopWallpaperImage
 	local hasValidWallpaper = isValidWallpaperAsset(wallpaperImage)
+	local wallpaperHolder: Frame? = nil
 	if hasValidWallpaper then
-		applyWallpaperMode(desktopRoot, wallpaperImage)
+		wallpaperHolder = applyWallpaperMode(desktopRoot, wallpaperImage, getDesktopAreaHeight)
 	else
 		if not warnedWallpaper then
 			warn(string.format("[BugsOS] Missing or invalid wallpaper asset id '%s'. Using fallback background color.", tostring(wallpaperImage)))
@@ -253,7 +273,7 @@ function DesktopController.Start(): ()
 
 	local desktopClickLayer = Instance.new("TextButton")
 	desktopClickLayer.Name = "DesktopClickLayer"
-	desktopClickLayer.Size = UDim2.fromScale(1, 1)
+	desktopClickLayer.Size = getDesktopAreaSize()
 	desktopClickLayer.Position = UDim2.fromScale(0, 0)
 	desktopClickLayer.BackgroundTransparency = 1
 	desktopClickLayer.BorderSizePixel = 0
@@ -264,7 +284,7 @@ function DesktopController.Start(): ()
 
 	local worldLayer = Instance.new("Frame")
 	worldLayer.Name = "WorldLayer"
-	worldLayer.Size = UDim2.new(1, 0, 1, -TASKBAR_HEIGHT)
+	worldLayer.Size = getDesktopAreaSize()
 	worldLayer.BackgroundTransparency = 1
 	worldLayer.ZIndex = 3
 	worldLayer.Parent = desktopRoot
@@ -347,6 +367,21 @@ function DesktopController.Start(): ()
 		startButton.Image = UIAssets.TaskbarTabDefaultImage
 	end)
 
+
+	local function updateDesktopSizing()
+		taskbarHeight = math.max(0, taskbar.AbsoluteSize.Y)
+		local desktopAreaSize = getDesktopAreaSize()
+		fallbackBackground.Size = desktopAreaSize
+		desktopClickLayer.Size = desktopAreaSize
+		worldLayer.Size = desktopAreaSize
+		if wallpaperHolder then
+			wallpaperHolder.Size = desktopAreaSize
+		end
+	end
+
+	updateDesktopSizing()
+	desktopRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateDesktopSizing)
+	taskbar:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateDesktopSizing)
 	context.UI.ShowConfirmPopup = function(message: string, onConfirm)
 		local popup = Instance.new("Frame")
 		popup.Size = UDim2.fromOffset(320, 140)
