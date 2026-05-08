@@ -1,29 +1,31 @@
 --!strict
 local UITheme = require(script.Parent.Parent:WaitForChild("UITheme"))
+local UIAssets = require(script.Parent.Parent:WaitForChild("UIAssets"))
 local TaskbarButton = {}
 
 function TaskbarButton.Create(parent: Instance, text: string, onActivate: () -> ())
-	local b = Instance.new("TextButton")
+	local b = Instance.new("ImageButton")
 	b.Size = UDim2.fromOffset(136, 24)
-	b.BackgroundColor3 = UITheme.Colors.ButtonFace
-	b.BorderColor3 = UITheme.Colors.TaskbarBorderDark
-	b.BorderSizePixel = 1
-	b.TextColor3 = Color3.new(0, 0, 0)
-	b.TextXAlignment = Enum.TextXAlignment.Left
-	b.Font = UITheme.Font
-	b.TextSize = 13
-	b.Text = " " .. text
+	b.BackgroundTransparency = 1
+	b.Image = UIAssets.TaskbarTabDefaultImage
+	b.ScaleType = Enum.ScaleType.Slice
+	b.SliceCenter = UIAssets.SliceCenter
 	b.AutoButtonColor = false
 	b.Parent = parent
 
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -8, 1, 0)
+	label.Position = UDim2.fromOffset(6, 0)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.new(0, 0, 0)
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = UITheme.Font
+	label.TextSize = 13
+	label.Text = text
+	label.Parent = b
+
 	local function setActive(isActive: boolean)
-		if isActive then
-			b.BackgroundColor3 = Color3.fromRGB(173, 173, 173)
-			b.BorderColor3 = UITheme.Colors.TaskbarBorderDark
-		else
-			b.BackgroundColor3 = UITheme.Colors.ButtonFace
-			b.BorderColor3 = UITheme.Colors.TaskbarBorderDark
-		end
+		b.Image = isActive and UIAssets.TaskbarTabPressedImage or UIAssets.TaskbarTabDefaultImage
 	end
 
 	b.Activated:Connect(onActivate)
