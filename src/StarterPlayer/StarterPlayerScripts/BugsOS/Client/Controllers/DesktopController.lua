@@ -31,6 +31,82 @@ local latestClickMousePosition = Vector2.zero
 
 local warnedWallpaper = false
 
+local TASKBAR_HEIGHT = 46
+
+local function applyWallpaperMode(desktopRoot: Frame, wallpaperImage: string)
+	local mode = UIAssets.WallpaperMode
+	if mode ~= "Stretch" and mode ~= "Crop" and mode ~= "Tile" then
+		mode = "Crop"
+	end
+
+	local holder = Instance.new("Frame")
+	holder.Name = "WallpaperHolder"
+	holder.Size = UDim2.new(1, 0, 1, -TASKBAR_HEIGHT)
+	holder.Position = UDim2.fromOffset(0, 0)
+	holder.BackgroundTransparency = 1
+	holder.BorderSizePixel = 0
+	holder.ZIndex = 1
+	holder.ClipsDescendants = true
+	holder.Parent = desktopRoot
+
+	if mode == "Tile" then
+		local tileSize = UIAssets.WallpaperTileSize
+		local tileWidth = math.max(32, math.floor(tileSize.X))
+		local tileHeight = math.max(32, math.floor(tileSize.Y))
+		local layout = Instance.new("UIGridLayout")
+		layout.CellSize = UDim2.fromOffset(tileWidth, tileHeight)
+		layout.CellPadding = UDim2.fromOffset(0, 0)
+		layout.FillDirectionMaxCells = 2048
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Parent = holder
+
+		local function refillTiles()
+			local area = holder.AbsoluteSize
+			local cols = math.max(1, math.ceil(area.X / tileWidth) + 1)
+			local rows = math.max(1, math.ceil(area.Y / tileHeight) + 1)
+			local needed = cols * rows
+			local current = #holder:GetChildren() - 1
+			if needed > current then
+				for _ = 1, needed - current do
+					local tile = Instance.new("ImageLabel")
+					tile.Name = "WallpaperTile"
+					tile.BackgroundTransparency = 1
+					tile.BorderSizePixel = 0
+					tile.Image = wallpaperImage
+					tile.ScaleType = Enum.ScaleType.Stretch
+					tile.Parent = holder
+				end
+			elseif needed < current then
+				local removed = 0
+				for _, child in ipairs(holder:GetChildren()) do
+					if child:IsA("ImageLabel") then
+						child:Destroy()
+						removed += 1
+						if current - removed <= needed then
+							break
+						end
+					end
+				end
+			end
+		end
+
+		refillTiles()
+		holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(refillTiles)
+	else
+		local wallpaper = Instance.new("ImageLabel")
+		wallpaper.Name = "Wallpaper"
+		wallpaper.Size = UDim2.fromScale(1, 1)
+		wallpaper.Position = UDim2.fromScale(0, 0)
+		wallpaper.BackgroundTransparency = 1
+		wallpaper.ImageTransparency = 0
+		wallpaper.Visible = true
+		wallpaper.Image = wallpaperImage
+		wallpaper.ScaleType = if mode == "Stretch" then Enum.ScaleType.Stretch else Enum.ScaleType.Crop
+		wallpaper.ZIndex = 1
+		wallpaper.Parent = holder
+	end
+end
+
 local function isValidWallpaperAsset(image: any): boolean
 	if type(image) ~= "string" then
 		return false
@@ -163,26 +239,16 @@ function DesktopController.Start(): ()
 	fallbackBackground.ZIndex = 0
 	fallbackBackground.Parent = desktopRoot
 
-	local wallpaper = Instance.new("ImageLabel")
-	wallpaper.Name = "Wallpaper"
-	wallpaper.Size = UDim2.fromScale(1, 1)
-	wallpaper.Position = UDim2.fromScale(0, 0)
-	wallpaper.BackgroundTransparency = 1
-	wallpaper.ImageTransparency = 0
-	wallpaper.Visible = true
-	wallpaper.ScaleType = Enum.ScaleType.Crop
-	wallpaper.ZIndex = 1
 	local wallpaperImage = UIAssets.DesktopWallpaperImage
 	local hasValidWallpaper = isValidWallpaperAsset(wallpaperImage)
 	if hasValidWallpaper then
-		wallpaper.Image = wallpaperImage
+		applyWallpaperMode(desktopRoot, wallpaperImage)
 	else
 		if not warnedWallpaper then
 			warn(string.format("[BugsOS] Missing or invalid wallpaper asset id '%s'. Using fallback background color.", tostring(wallpaperImage)))
 			warnedWallpaper = true
 		end
 	end
-	wallpaper.Parent = desktopRoot
 	fallbackBackground.Visible = not hasValidWallpaper
 
 	local desktopClickLayer = Instance.new("TextButton")
@@ -198,7 +264,7 @@ function DesktopController.Start(): ()
 
 	local worldLayer = Instance.new("Frame")
 	worldLayer.Name = "WorldLayer"
-	worldLayer.Size = UDim2.fromScale(1, 1)
+	worldLayer.Size = UDim2.new(1, 0, 1, -TASKBAR_HEIGHT)
 	worldLayer.BackgroundTransparency = 1
 	worldLayer.ZIndex = 3
 	worldLayer.Parent = desktopRoot

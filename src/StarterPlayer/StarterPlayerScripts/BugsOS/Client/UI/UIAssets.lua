@@ -6,6 +6,8 @@ UIAssets.TaskbarBackgroundImage = "rbxassetid://104682368007242"
 UIAssets.TaskbarTabDefaultImage = "rbxassetid://119258117138817"
 UIAssets.TaskbarTabPressedImage = "rbxassetid://76075104182281"
 UIAssets.DesktopWallpaperImage = "rbxassetid://128525574360351"
+UIAssets.WallpaperMode = "Crop"
+UIAssets.WallpaperTileSize = Vector2.new(256, 256)
 
 UIAssets.SliceCenter = Rect.new(4, 4, 12, 12)
 
