@@ -42,8 +42,8 @@ function WindowController.Open(id: string)
 		WindowController.Focus(id)
 		return
 	end
-	context.AppDependencies = { Root = context.UI.AppsLayer, Services = context.Services or {}, State = context.State or {}, Controllers = context.Controllers or {} }
-	app.Module.Mount(context.UI.AppsLayer, context)
+	context.AppDependencies = { Root = context.UI.AppsLayer, Services = context.Services or {}, State = context.State, Controllers = context.Controllers or {}, Remotes = context.Remotes }
+	app.Module.Mount(context.UI.AppsLayer, context.AppDependencies)
 	openApps[id] = true
 	if not taskbarButtons[id] and taskbarHolder then
 		local btn, setActive = TaskbarButton.Create(taskbarHolder, app.Title, app.IconImage, false, function()
