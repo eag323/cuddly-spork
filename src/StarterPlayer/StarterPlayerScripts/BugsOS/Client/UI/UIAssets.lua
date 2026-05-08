@@ -2,23 +2,23 @@
 
 local UIAssets = {}
 
-UIAssets.TaskbarBackgroundImage = "rbxassetid://0"
-UIAssets.TaskbarTabDefaultImage = "rbxassetid://0"
-UIAssets.TaskbarTabPressedImage = "rbxassetid://0"
-UIAssets.DesktopWallpaperImage = "rbxassetid://0"
+UIAssets.TaskbarBackgroundImage = "rbxassetid://104682368007242"
+UIAssets.TaskbarTabDefaultImage = "rbxassetid://119258117138817"
+UIAssets.TaskbarTabPressedImage = "rbxassetid://76075104182281"
+UIAssets.DesktopWallpaperImage = "rbxassetid://128525574360351"
 
 UIAssets.SliceCenter = Rect.new(4, 4, 12, 12)
 
 UIAssets.AppIconImages = {
-	Market = "rbxassetid://0",
-	Upgrades = "rbxassetid://0",
-	FoodHarvesters = "rbxassetid://0",
-	BugFarm = "rbxassetid://0",
-	Bugdex = "rbxassetid://0",
-	Achievements = "rbxassetid://0",
-	Prestige = "rbxassetid://0",
+	Market = "rbxassetid://129811951098527",
+	Upgrades = "rbxassetid://122777337205516",
+	FoodHarvesters = "rbxassetid://87306650435672",
+	BugFarm = "rbxassetid://136208954566314",
+	Bugdex = "rbxassetid://121778391381153",
+	Achievements = "rbxassetid://84857170618196",
+	Prestige = "rbxassetid://83942913847072",
 	Settings = "rbxassetid://0",
-	Expeditions = "rbxassetid://0",
+	Expeditions = "rbxassetid://109209644725101",
 	Treasures = "rbxassetid://0",
 	BeetleBay = "rbxassetid://0",
 	Guild = "rbxassetid://0",
@@ -28,7 +28,7 @@ UIAssets.AppIconImages = {
 
 UIAssets.CurrencyIconImages = {
 	Food = "rbxassetid://0",
-	Coins = "rbxassetid://0",
+	Coins = "rbxassetid://98043025082534",
 	BugPoints = "rbxassetid://0",
 	FPS = "rbxassetid://0",
 	FPC = "rbxassetid://0",
