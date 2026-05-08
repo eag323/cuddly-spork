@@ -42,6 +42,7 @@ function WindowController.Open(id: string)
 		WindowController.Focus(id)
 		return
 	end
+	context.AppDependencies = { Root = context.UI.AppsLayer, Services = context.Services or {}, State = context.State or {}, Controllers = context.Controllers or {} }
 	app.Module.Mount(context.UI.AppsLayer, context)
 	openApps[id] = true
 	if not taskbarButtons[id] and taskbarHolder then

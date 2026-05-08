@@ -3,13 +3,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-if playerGui:GetAttribute("BugsOSClientInitialized") then
-	warn("[BugsOS] Client already initialized; skipping duplicate Main.client.lua startup.")
-	return
-end
-playerGui:SetAttribute("BugsOSClientInitialized", true)
-
 local BugsOSFolder = ReplicatedStorage:WaitForChild("BugsOS")
 local SharedFolder = BugsOSFolder:WaitForChild("Shared")
 local RemotesFolder = SharedFolder:WaitForChild("Remotes")
