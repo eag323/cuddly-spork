@@ -12,6 +12,7 @@ local UtilFolder = SharedFolder:WaitForChild("Util")
 
 local NumberUtil = require(UtilFolder:WaitForChild("NumberUtil"))
 local UITheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UITheme"))
+local UIAssets = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UIAssets"))
 
 local DesktopController = {}
 
@@ -100,30 +101,20 @@ function DesktopController.Start(): ()
 	local desktopBackground = Instance.new("TextButton")
 	desktopBackground.Name = "DesktopBackground"
 	desktopBackground.Size = UDim2.fromScale(1, 1)
-	desktopBackground.BackgroundColor3 = UITheme.Colors.DesktopBackground
+	desktopBackground.BackgroundColor3 = Color3.fromRGB(34, 85, 34)
 	desktopBackground.BorderSizePixel = 0
 	desktopBackground.Text = ""
 	desktopBackground.AutoButtonColor = false
 	desktopBackground.Parent = screenGui
 
-	local gradient = Instance.new("UIGradient")
-	gradient.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, UITheme.Colors.DesktopBackground),
-		ColorSequenceKeypoint.new(1, UITheme.Colors.DesktopBackgroundDark),
-	})
-	gradient.Rotation = 90
-	gradient.Parent = desktopBackground
-
-	for y = 0, 20 do
-		local stripe = Instance.new("Frame")
-		stripe.Size = UDim2.new(1, 0, 0, 2)
-		stripe.Position = UDim2.fromScale(0, y / 20)
-		stripe.BackgroundColor3 = UITheme.Colors.DesktopPattern
-		stripe.BackgroundTransparency = 0.9
-		stripe.BorderSizePixel = 0
-		stripe.ZIndex = 0
-		stripe.Parent = desktopBackground
-	end
+	local wallpaper = Instance.new("ImageLabel")
+	wallpaper.Name = "Wallpaper"
+	wallpaper.Size = UDim2.fromScale(1, 1)
+	wallpaper.BackgroundTransparency = 1
+	wallpaper.Image = UIAssets.DesktopWallpaperImage
+	wallpaper.ScaleType = Enum.ScaleType.Crop
+	wallpaper.ZIndex = 0
+	wallpaper.Parent = desktopBackground
 
 	local worldLayer = Instance.new("Frame")
 	worldLayer.Name = "WorldLayer"
@@ -178,31 +169,49 @@ function DesktopController.Start(): ()
 	taskbar.Name = "Taskbar"
 	taskbar.AnchorPoint = Vector2.new(0.5, 1)
 	taskbar.Position = UDim2.fromScale(0.5, 1)
-	taskbar.Size = UDim2.new(1, 0, 0, 40)
-	taskbar.BackgroundColor3 = UITheme.Colors.TaskbarFace
-	taskbar.BorderSizePixel = 1
-	taskbar.BorderColor3 = UITheme.Colors.TaskbarBorderDark
+	taskbar.Size = UDim2.new(1, 0, 0, 46)
+	taskbar.BackgroundTransparency = 1
+	taskbar.BorderSizePixel = 0
 	taskbar.Parent = screenGui
 
-	local bevelTop = Instance.new("Frame")
-	bevelTop.Size = UDim2.new(1, 0, 0, 2)
-	bevelTop.Position = UDim2.fromOffset(0, 0)
-	bevelTop.BackgroundColor3 = UITheme.Colors.TaskbarBorderLight
-	bevelTop.BorderSizePixel = 0
-	bevelTop.Parent = taskbar
+	local taskbarSkin = Instance.new("ImageLabel")
+	taskbarSkin.Name = "TaskbarSkin"
+	taskbarSkin.Size = UDim2.fromScale(1, 1)
+	taskbarSkin.BackgroundTransparency = 1
+	taskbarSkin.Image = UIAssets.TaskbarBackgroundImage
+	taskbarSkin.ScaleType = Enum.ScaleType.Slice
+	taskbarSkin.SliceCenter = UIAssets.SliceCenter
+	taskbarSkin.Parent = taskbar
 
-	local startButton = Instance.new("TextButton")
+	local startButton = Instance.new("ImageButton")
 	startButton.Name = "StartButton"
-	startButton.Size = UDim2.fromOffset(86, 30)
-	startButton.Position = UDim2.fromOffset(6, 5)
-	startButton.BackgroundColor3 = UITheme.Colors.ButtonFace
-	startButton.BorderColor3 = UITheme.Colors.ButtonShadow
+	startButton.Size = UDim2.fromOffset(72, 28)
+	startButton.Position = UDim2.fromOffset(8, 9)
+	startButton.BackgroundTransparency = 1
+	startButton.Image = UIAssets.TaskbarTabDefaultImage
+	startButton.ScaleType = Enum.ScaleType.Slice
+	startButton.SliceCenter = UIAssets.SliceCenter
 	startButton.Font = UITheme.Font
 	startButton.TextSize = 14
 	startButton.TextColor3 = Color3.new(0, 0, 0)
-	startButton.Text = "🪲 Start"
+	startButton.Text = ""
 	startButton.AutoButtonColor = false
 	startButton.Parent = taskbar
+
+	local startLabel = Instance.new("TextLabel")
+	startLabel.Size = UDim2.fromScale(1, 1)
+	startLabel.BackgroundTransparency = 1
+	startLabel.Text = "Start"
+	startLabel.TextColor3 = Color3.new(0, 0, 0)
+	startLabel.Font = UITheme.Font
+	startLabel.TextSize = 14
+	startLabel.Parent = startButton
+	startButton.MouseButton1Down:Connect(function()
+		startButton.Image = UIAssets.TaskbarTabPressedImage
+	end)
+	startButton.MouseButton1Up:Connect(function()
+		startButton.Image = UIAssets.TaskbarTabDefaultImage
+	end)
 
 	context.UI.ShowConfirmPopup = function(message: string, onConfirm)
 		local popup = Instance.new("Frame")

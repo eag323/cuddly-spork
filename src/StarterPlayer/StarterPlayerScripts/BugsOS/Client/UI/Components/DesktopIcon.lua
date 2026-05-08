@@ -3,7 +3,7 @@ local UITheme = require(script.Parent.Parent:WaitForChild("UITheme"))
 
 local DesktopIcon = {}
 
-function DesktopIcon.Create(parent: Instance, title: string, iconText: string, onActivate: () -> ())
+function DesktopIcon.Create(parent: Instance, title: string, iconImage: string, onActivate: () -> ())
 	local button = Instance.new("TextButton")
 	button.Size = UDim2.fromOffset(92, 92)
 	button.BackgroundTransparency = 1
@@ -11,33 +11,12 @@ function DesktopIcon.Create(parent: Instance, title: string, iconText: string, o
 	button.AutoButtonColor = false
 	button.Parent = parent
 
-	local iconFrame = Instance.new("Frame")
-	iconFrame.Size = UDim2.fromOffset(48, 48)
-	iconFrame.Position = UDim2.fromOffset(22, 4)
-	iconFrame.BackgroundColor3 = Color3.fromRGB(216, 225, 245)
-	iconFrame.BorderColor3 = Color3.fromRGB(250, 250, 255)
-	iconFrame.BorderSizePixel = 1
-	iconFrame.Parent = button
-
-	local iconShadow = Instance.new("Frame")
-	iconShadow.Size = UDim2.new(1, 0, 1, 0)
-	iconShadow.Position = UDim2.fromOffset(1, 1)
-	iconShadow.BackgroundColor3 = Color3.fromRGB(76, 89, 130)
-	iconShadow.BorderSizePixel = 0
-	iconShadow.ZIndex = 0
-	iconShadow.Parent = iconFrame
-
-	local icon = Instance.new("TextLabel")
-	icon.Size = UDim2.new(1, -4, 1, -4)
-	icon.Position = UDim2.fromOffset(2, 2)
-	icon.BackgroundColor3 = Color3.fromRGB(248, 251, 255)
-	icon.BorderColor3 = Color3.fromRGB(108, 126, 176)
-	icon.BorderSizePixel = 1
-	icon.Text = iconText
-	icon.Font = UITheme.Font
-	icon.TextSize = 24
-	icon.TextColor3 = Color3.fromRGB(36, 42, 58)
-	icon.Parent = iconFrame
+	local icon = Instance.new("ImageLabel")
+	icon.Size = UDim2.fromOffset(48, 48)
+	icon.Position = UDim2.fromOffset(22, 4)
+	icon.BackgroundTransparency = 1
+	icon.Image = iconImage
+	icon.Parent = button
 
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(1, -6, 0, 36)
@@ -61,7 +40,7 @@ function DesktopIcon.Create(parent: Instance, title: string, iconText: string, o
 	local function setSelected(isSelected: boolean)
 		label.BackgroundTransparency = isSelected and 0.08 or 0.4
 		label.BackgroundColor3 = isSelected and UITheme.Colors.IconSelected or Color3.fromRGB(8, 45, 102)
-		icon.BackgroundColor3 = isSelected and Color3.fromRGB(226, 239, 255) or Color3.fromRGB(248, 251, 255)
+		icon.ImageColor3 = isSelected and Color3.fromRGB(215, 235, 255) or Color3.new(1, 1, 1)
 	end
 
 	button.MouseEnter:Connect(function()

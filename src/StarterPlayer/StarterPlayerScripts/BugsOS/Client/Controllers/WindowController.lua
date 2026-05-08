@@ -73,8 +73,8 @@ function WindowController.Start()
 
 	local holder = Instance.new("ScrollingFrame")
 	holder.Name = "TaskbarButtons"
-	holder.Size = UDim2.new(1, -100, 1, -8)
-	holder.Position = UDim2.fromOffset(96, 4)
+	holder.Size = UDim2.new(1, -392, 1, -12)
+	holder.Position = UDim2.fromOffset(88, 6)
 	holder.BackgroundTransparency = 1
 	holder.BorderSizePixel = 0
 	holder.ScrollBarThickness = 4
@@ -90,7 +90,7 @@ function WindowController.Start()
 
 	for _, app in ipairs(AppRegistry) do
 		if app.UnlockedByDefault then
-			DesktopIcon.Create(desktopIcons, app.Title, app.Icon, function()
+			DesktopIcon.Create(desktopIcons, app.Title, app.IconImage, function()
 				WindowController.Open(app.Id)
 			end)
 		end
