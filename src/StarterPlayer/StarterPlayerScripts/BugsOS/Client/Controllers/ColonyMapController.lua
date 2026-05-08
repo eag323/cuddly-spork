@@ -1,184 +1,82 @@
 --!strict
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local NumberFormatter = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("NumberFormatter"))
+local RemoteNames = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Remotes"):WaitForChild("RemoteNames"))
 
 local ColonyMapController = {}
-
 local context: { [string]: any }
 local markerByUserId: { [number]: Frame } = {}
+local profileSummaryByUserId: {[number]: any} = {}
+local card: Frame? = nil
 
-local SAFE_LEFT_MARGIN = 130
-local SAFE_RIGHT_MARGIN = 40
-local SAFE_TOP_MARGIN = 80
-local SAFE_BOTTOM_MARGIN = 60
-local EDGE_PADDING = 14
-local MARKER_SPACING = 56
-local LOCAL_ICON_COLUMN_BUFFER = 44
-
-local function hashToUnitInterval(userId: number, salt: number): number
-	local value = (userId * 1103515245 + 12345 + salt * 2654435761) % 2147483647
-	return value / 2147483647
+local function ensureRemote(name: string): RemoteEvent?
+	local remotes = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Remotes")
+	local r = remotes:FindFirstChild(name)
+	if r and r:IsA("RemoteEvent") then return r end
+	return nil
 end
 
-local function createMarker(player: Player, isLocalPlayer: boolean): Frame
-	local marker = Instance.new("Frame")
-	marker.Name = "ColonyMarker_" .. tostring(player.UserId)
-	marker.Size = UDim2.fromOffset(64, 44)
-	marker.BackgroundTransparency = 1
-	marker.ZIndex = 4
-
-	local icon = Instance.new("TextLabel")
-	icon.Name = "NestIcon"
-	icon.Size = UDim2.fromOffset(26, 26)
-	icon.Position = UDim2.fromOffset(19, 0)
-	icon.BackgroundColor3 = if isLocalPlayer then Color3.fromRGB(90, 156, 255) else Color3.fromRGB(120, 89, 58)
-	icon.Text = "🪹"
-	icon.TextSize = 18
-	icon.Font = Enum.Font.GothamBold
-	icon.TextColor3 = Color3.new(1, 1, 1)
-	icon.BorderSizePixel = 0
-	icon.ZIndex = 4
-	icon.Parent = marker
-
-	local iconCorner = Instance.new("UICorner")
-	iconCorner.CornerRadius = UDim.new(1, 0)
-	iconCorner.Parent = icon
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = if isLocalPlayer then 2 else 1
-	stroke.Color = if isLocalPlayer then Color3.fromRGB(255, 242, 129) else Color3.fromRGB(45, 30, 18)
-	stroke.Parent = icon
-
-	if isLocalPlayer then
-		local star = Instance.new("TextLabel")
-		star.Name = "Star"
-		star.Size = UDim2.fromOffset(14, 14)
-		star.Position = UDim2.fromOffset(40, -2)
-		star.BackgroundTransparency = 1
-		star.Text = "★"
-		star.TextColor3 = Color3.fromRGB(255, 245, 120)
-		star.TextSize = 14
-		star.Font = Enum.Font.GothamBold
-		star.ZIndex = 5
-		star.Parent = marker
+local getSummaryRemote: RemoteEvent? = nil
+local function styleName(label: TextLabel, summary)
+	local display = if summary and summary.DisplayName then summary.DisplayName else label.Text
+	local textColor = Color3.fromRGB(255,255,255)
+	if summary and summary.LeaderboardPlacements and #summary.LeaderboardPlacements > 0 then
+		display = "🏆 " .. display
+		textColor = Color3.fromRGB(255,215,80)
 	end
+	if summary and summary.Guild and summary.Guild.Tag then
+		display = "["..summary.Guild.Tag.."] " .. display
+	end
+	label.Text = display
+	label.TextColor3 = textColor
+end
 
-	local label = Instance.new("TextLabel")
-	label.Name = "ColonyLabel"
-	label.Size = UDim2.fromOffset(88, 16)
-	label.Position = UDim2.fromOffset(-12, 28)
-	label.BackgroundTransparency = 1
-	label.Text = if isLocalPlayer then "My Colony" else (player.DisplayName ~= "" and player.DisplayName or player.Name)
-	label.TextColor3 = Color3.fromRGB(255, 255, 255)
-	label.TextStrokeTransparency = 0.5
-	label.TextSize = 12
-	label.Font = Enum.Font.GothamSemibold
-	label.TextXAlignment = Enum.TextXAlignment.Center
-	label.ZIndex = 4
-	label.Parent = marker
-
+local function createMarker(player: Player): Frame
+	local marker = Instance.new("Frame") marker.Size = UDim2.fromOffset(120,46) marker.BackgroundTransparency=1
+	local button=Instance.new("TextButton") button.Size=UDim2.fromOffset(28,28) button.Position=UDim2.fromOffset(46,0) button.Text="🪹" button.Parent=marker
+	local plate=Instance.new("Frame") plate.Size=UDim2.fromOffset(116,16) plate.Position=UDim2.fromOffset(2,30) plate.BackgroundColor3=Color3.fromRGB(0,0,0) plate.BackgroundTransparency=0.25 plate.Parent=marker
+	local c=Instance.new("UICorner") c.CornerRadius=UDim.new(0,8) c.Parent=plate
+	local lbl=Instance.new("TextLabel") lbl.Name="NameplateLabel" lbl.Size=UDim2.fromScale(1,1) lbl.BackgroundTransparency=1 lbl.TextScaled=true lbl.Font=Enum.Font.GothamSemibold lbl.Text = player==Players.LocalPlayer and "My Colony" or player.DisplayName lbl.Parent=plate
+	button.Activated:Connect(function()
+		if getSummaryRemote then getSummaryRemote:FireServer(player.UserId) end
+	end)
 	return marker
 end
 
-local function computeSafeArea(size: Vector2): (number, number, number, number)
-	local minX = SAFE_LEFT_MARGIN + EDGE_PADDING
-	local maxX = size.X - SAFE_RIGHT_MARGIN - EDGE_PADDING
-	local minY = SAFE_TOP_MARGIN + EDGE_PADDING
-	local maxY = size.Y - SAFE_BOTTOM_MARGIN - EDGE_PADDING
-	return minX, maxX, minY, maxY
-end
-
-local function generatePositions(playersList: { Player }, containerSize: Vector2): { [number]: Vector2 }
-	local positions: { [number]: Vector2 } = {}
-	local minX, maxX, minY, maxY = computeSafeArea(containerSize)
-	local width = math.max(0, maxX - minX)
-	local height = math.max(0, maxY - minY)
-
-	table.sort(playersList, function(a, b)
-		return a.UserId < b.UserId
-	end)
-
-	local placed: { Vector2 } = {}
-	for index, player in ipairs(playersList) do
-		local targetX = minX + width * hashToUnitInterval(player.UserId, 17)
-		local targetY = minY + height * hashToUnitInterval(player.UserId, 73)
-
-		if player == Players.LocalPlayer then
-			targetX = math.max(targetX, minX + LOCAL_ICON_COLUMN_BUFFER)
-		end
-
-		local pos = Vector2.new(targetX, targetY)
-		local attempt = 0
-		while attempt < 20 do
-			local overlaps = false
-			for _, existing in ipairs(placed) do
-				if (existing - pos).Magnitude < MARKER_SPACING then
-					overlaps = true
-					break
-				end
-			end
-			if not overlaps then
-				break
-			end
-			attempt += 1
-			local angle = attempt * 0.9 + index * 0.4
-			local radius = 16 + attempt * 7
-			pos = Vector2.new(
-				math.clamp(targetX + math.cos(angle) * radius, minX, maxX),
-				math.clamp(targetY + math.sin(angle) * radius, minY, maxY)
-			)
-		end
-
-		table.insert(placed, pos)
-		positions[player.UserId] = pos
-	end
-
-	return positions
+local function showCard(summary)
+	if not context.UI.WorldLayer then return end
+	if card then card:Destroy() end
+	card=Instance.new("Frame") card.Size=UDim2.fromOffset(300,250) card.Position=UDim2.fromScale(0.62,0.2) card.BackgroundColor3=Color3.fromRGB(12,27,54) card.Parent=context.UI.WorldLayer
+	Instance.new("UICorner",card).CornerRadius=UDim.new(0,12)
+	local n=Instance.new("TextLabel") n.Size=UDim2.fromOffset(280,24) n.Position=UDim2.fromOffset(12,10) n.BackgroundTransparency=1 n.TextXAlignment=Enum.TextXAlignment.Left n.Font=Enum.Font.GothamBold n.TextColor3=Color3.new(1,1,1) n.Text=summary.DisplayName n.Parent=card
+	local t=Instance.new("TextLabel") t.Size=UDim2.fromOffset(280,18) t.Position=UDim2.fromOffset(12,36) t.BackgroundTransparency=1 t.TextXAlignment=Enum.TextXAlignment.Left t.TextColor3=Color3.fromRGB(0,255,120) t.Text="● Online" t.Parent=card
+	local st=Instance.new("TextLabel") st.Size=UDim2.fromOffset(280,52) st.Position=UDim2.fromOffset(12,58) st.BackgroundTransparency=1 st.TextXAlignment=Enum.TextXAlignment.Left st.TextYAlignment=Enum.TextYAlignment.Top st.TextWrapped=true st.Text=string.format("Prestige: %d | Farm: %d Generators\nFood/sec: %s | Lifetime Food: %s\nNectar: %s", summary.Prestige or 0, summary.GeneratorCount or 0, NumberFormatter.Format(summary.FoodPerSec or 0), NumberFormatter.Format(summary.LifetimeFood or 0), NumberFormatter.Format(summary.CurrentNectar or 0)) st.Parent=card
 end
 
 function ColonyMapController.Init(initContext): ()
 	context = initContext
-end
-
-function ColonyMapController.Refresh(): ()
-	local worldLayer = context.UI.WorldLayer
-	if not worldLayer then
-		return
-	end
-
-	local list = Players:GetPlayers()
-	local positions = generatePositions(list, worldLayer.AbsoluteSize)
-
-	for userId, marker in pairs(markerByUserId) do
-		if not positions[userId] then
-			marker:Destroy()
-			markerByUserId[userId] = nil
-		end
-	end
-
-	for _, player in ipairs(list) do
-		if not markerByUserId[player.UserId] then
-			markerByUserId[player.UserId] = createMarker(player, player == Players.LocalPlayer)
-			markerByUserId[player.UserId].Parent = worldLayer
-		end
-		local p = positions[player.UserId]
-		if p then
-			markerByUserId[player.UserId].Position = UDim2.fromOffset(math.floor(p.X - 32), math.floor(p.Y - 22))
-		end
+	getSummaryRemote = ensureRemote(RemoteNames.Profile_GetSummary)
+	if getSummaryRemote then
+		getSummaryRemote.OnClientEvent:Connect(function(summary)
+			if type(summary)=="table" and summary.UserId then
+				profileSummaryByUserId[summary.UserId]=summary
+				local m=markerByUserId[summary.UserId]
+				if m then styleName(m.NameplateLabel, summary) end
+				showCard(summary)
+			end
+		end)
 	end
 end
 
+function ColonyMapController.Refresh(): () end
 function ColonyMapController.Start(): ()
-	ColonyMapController.Refresh()
-	Players.PlayerAdded:Connect(function()
-		ColonyMapController.Refresh()
-	end)
-	Players.PlayerRemoving:Connect(function()
-		ColonyMapController.Refresh()
-	end)
-	context.UI.WorldLayer:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		ColonyMapController.Refresh()
-	end)
+	local world = context.UI.WorldLayer
+	for i,p in ipairs(Players:GetPlayers()) do
+		local m=createMarker(p); m.Parent=world; m.Position=UDim2.fromOffset(120 + (i*90)%600, 120 + math.floor(i/7)*80); markerByUserId[p.UserId]=m
+		if getSummaryRemote then getSummaryRemote:FireServer(p.UserId) end
+	end
 end
 
 return ColonyMapController

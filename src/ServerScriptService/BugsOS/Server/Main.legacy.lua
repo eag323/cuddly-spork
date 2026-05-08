@@ -21,6 +21,7 @@ local serviceOrder = {
 	"BugFarmService",
 	"BugdexService",
 	"AchievementService",
+	"ProfileDisplayService",
 	"BugSpawnService",
 }
 

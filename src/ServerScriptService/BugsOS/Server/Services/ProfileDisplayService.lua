@@ -1,18 +1,116 @@
 --!strict
 
---[[
-	ProfileDisplayService: server service scaffold.
-	TODO: Implement service responsibilities from docs/PROJECT_MAP.md.
-]]
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
+local Remotes = Shared:WaitForChild("Remotes")
+local ConfigFolder = Shared:WaitForChild("Config")
+local RemoteNames = require(Remotes:WaitForChild("RemoteNames"))
+local BugConfig = require(ConfigFolder:WaitForChild("BugConfig"))
+local ServicesFolder = ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Server"):WaitForChild("Services")
+local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 
 local ProfileDisplayService = {}
+local getSummaryRemote: RemoteEvent
+local equipTitleRemote: RemoteEvent
+
+local function getOrCreateRemoteEvent(name: string): RemoteEvent
+	local existing = Remotes:FindFirstChild(name)
+	if existing and existing:IsA("RemoteEvent") then return existing end
+	local r = Instance.new("RemoteEvent")
+	r.Name = name
+	r.Parent = Remotes
+	return r
+end
+
+local rarityRank = {Common=1,Uncommon=2,Rare=3,Epic=4,Legendary=5,Mythic=6}
+local function topBugs(data): {any}
+	local inv = (((data or {}).Bugs or {}).Inventory) or {}
+	local equippedSet = {}
+	for _,uid in pairs((((data or {}).Bugs or {}).Equipped) or {}) do equippedSet[uid]=true end
+	local items = {}
+	for uid,bug in pairs(inv) do
+		if type(bug)=="table" then
+			table.insert(items,{Uid=uid,Bug=bug,Equipped=equippedSet[uid]==true})
+		end
+	end
+	table.sort(items,function(a,b)
+		if a.Equipped ~= b.Equipped then return a.Equipped end
+		local ar = rarityRank[tostring(a.Bug.Rarity)] or 0
+		local br = rarityRank[tostring(b.Bug.Rarity)] or 0
+		if ar ~= br then return ar > br end
+		local ap = tonumber(a.Bug.PrimaryValue) or tonumber(a.Bug.Power) or 0
+		local bp = tonumber(b.Bug.PrimaryValue) or tonumber(b.Bug.Power) or 0
+		if ap ~= bp then return ap > bp end
+		return (tonumber(a.Bug.BugPoints) or 0) > (tonumber(b.Bug.BugPoints) or 0)
+	end)
+	local out = {}
+	for i=1, math.min(8,#items) do
+		local bug = items[i].Bug
+		table.insert(out,{ConfigId=bug.SpeciesId or "Unknown",DisplayName=bug.DisplayName or "Bug",Rarity=bug.Rarity or "Common",Icon=BugConfig.RarityColors and "" or "",IsEquipped=items[i].Equipped})
+	end
+	return out
+end
+
+local function buildSummary(player: Player): {[string]: any}
+	local data = ProfileService.GetPlayerData(player) or {}
+	local cosmetics = (data.Cosmetics or {})
+	local owned = cosmetics.Owned or {}
+	local equipped = cosmetics.Equipped or {}
+	local guild = data.Guild or {}
+	local lb = data.LeaderboardStats or {}
+	local top3 = {}
+	if (lb.BugPoints or 0) > 0 then table.insert(top3, {Rank=1, Name="Bug Points"}) end
+	return {
+		UserId = player.UserId,
+		DisplayName = player.DisplayName ~= "" and player.DisplayName or player.Name,
+		Prestige = ((data.Progression or {}).Prestige) or 0,
+		EquippedTitle = equipped.Title,
+		UnlockedTitles = owned.Titles or {},
+		EquippedColonySkin = equipped.ColonySkin or "Default",
+		EquippedColonyAura = equipped.ColonyAura,
+		UnlockedColonySkins = owned.ColonySkins or {Default=true},
+		UnlockedColonyAuras = owned.ColonyAuras or {},
+		GeneratorCount = #( (((data.Generators or {}).Equipped) or {}) ),
+		FoodPerSec = (lb.BestFoodPerSec or 0),
+		LifetimeFood = (((data.Currencies or {}).LifetimeFood) or 0),
+		CurrentNectar = (((data.Currencies or {}).Nectar) or 0),
+		TopBugs = topBugs(data),
+		Guild = {Tag = guild.Tag, Name = guild.Name, Color = guild.Color},
+		LeaderboardPlacements = top3,
+		Stats = data.Stats or {},
+		BugPoints = lb.BugPoints or 0,
+	}
+end
 
 function ProfileDisplayService.Init(): ()
-	-- TODO: Wire dependencies, remotes, and state access.
+	getSummaryRemote = getOrCreateRemoteEvent(RemoteNames.Profile_GetSummary)
+	equipTitleRemote = getOrCreateRemoteEvent(RemoteNames.Profile_EquipTitle)
 end
 
 function ProfileDisplayService.Start(): ()
-	-- TODO: Start runtime listeners and loops.
+	getSummaryRemote.OnServerEvent:Connect(function(player, targetUserId)
+		local target = player
+		if type(targetUserId)=="number" then
+			local p = Players:GetPlayerByUserId(targetUserId)
+			if p then target = p end
+		end
+		getSummaryRemote:FireClient(player, buildSummary(target))
+	end)
+	equipTitleRemote.OnServerEvent:Connect(function(player, titleId)
+		if type(titleId)~="string" and titleId ~= nil then return end
+		local data = ProfileService.GetPlayerData(player)
+		if not data then return end
+		data.Cosmetics = data.Cosmetics or {Owned={Titles={}},Equipped={}}
+		data.Cosmetics.Owned = data.Cosmetics.Owned or {Titles={}}
+		data.Cosmetics.Equipped = data.Cosmetics.Equipped or {}
+		if titleId ~= nil and data.Cosmetics.Owned.Titles[titleId] ~= true then return end
+		data.Cosmetics.Equipped.Title = titleId
+		ProfileService.PatchPlayerState(player,{"Cosmetics","Equipped","Title"},titleId)
+		getSummaryRemote:FireClient(player, buildSummary(player))
+	end)
 end
 
 return ProfileDisplayService

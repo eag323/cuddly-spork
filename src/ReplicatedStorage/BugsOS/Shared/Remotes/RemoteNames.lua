@@ -49,6 +49,8 @@ local RemoteNames: RemoteNameMap = {
 	Loadout_Apply = "Loadout_Apply",
 	MysteryCache_Claim = "MysteryCache_Claim",
 	ServerEvent_TriggerDevProduct = "ServerEvent_TriggerDevProduct",
+	Profile_GetSummary = "Profile_GetSummary",
+	Profile_EquipTitle = "Profile_EquipTitle",
 
 	-- Server to Client
 	Click_Result = "Click_Result",
@@ -68,6 +70,7 @@ local RemoteNames: RemoteNameMap = {
 	Achievement_Unlocked = "Achievement_Unlocked",
 	ServerEvent_Started = "ServerEvent_Started",
 	MysteryCache_Spawned = "MysteryCache_Spawned",
+	Profile_SummaryUpdated = "Profile_SummaryUpdated",
 }
 
 return RemoteNames
