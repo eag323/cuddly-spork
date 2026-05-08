@@ -31,6 +31,24 @@ local latestClickMousePosition = Vector2.zero
 
 local warnedWallpaper = false
 
+local function isValidWallpaperAsset(image: any): boolean
+	if type(image) ~= "string" then
+		return false
+	end
+
+	local trimmed = string.gsub(image, "%s+", "")
+	if trimmed == "" or trimmed == "rbxassetid://0" then
+		return false
+	end
+
+	if string.match(trimmed, "^rbxassetid://%d+$") == nil then
+		return false
+	end
+
+	local numericId = tonumber(string.match(trimmed, "^rbxassetid://(%d+)$"))
+	return numericId ~= nil and numericId > 0
+end
+
 local function createTaskbarImageButton(parent: Instance, name: string, buttonSize: UDim2, buttonPosition: UDim2, text: string)
 	local button = Instance.new("ImageButton")
 	button.Name = name
@@ -126,47 +144,71 @@ function DesktopController.Start(): ()
 	screenGui.Name = "BugsOSDesktop"
 	screenGui.ResetOnSpawn = false
 	screenGui.IgnoreGuiInset = true
+	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	screenGui.Parent = playerGui
 
-	local desktopBackground = Instance.new("TextButton")
-	desktopBackground.Name = "DesktopBackground"
-	desktopBackground.Size = UDim2.fromScale(1, 1)
-	desktopBackground.BackgroundColor3 = Color3.fromRGB(34, 85, 34)
-	desktopBackground.BorderSizePixel = 0
-	desktopBackground.Text = ""
-	desktopBackground.AutoButtonColor = false
-	desktopBackground.Parent = screenGui
+	local desktopRoot = Instance.new("Frame")
+	desktopRoot.Name = "DesktopRoot"
+	desktopRoot.Size = UDim2.fromScale(1, 1)
+	desktopRoot.BackgroundTransparency = 1
+	desktopRoot.ZIndex = 0
+	desktopRoot.Parent = screenGui
+
+	local fallbackBackground = Instance.new("Frame")
+	fallbackBackground.Name = "DesktopFallbackBackground"
+	fallbackBackground.Size = UDim2.fromScale(1, 1)
+	fallbackBackground.Position = UDim2.fromScale(0, 0)
+	fallbackBackground.BackgroundColor3 = Color3.fromRGB(34, 85, 34)
+	fallbackBackground.BorderSizePixel = 0
+	fallbackBackground.ZIndex = 0
+	fallbackBackground.Parent = desktopRoot
 
 	local wallpaper = Instance.new("ImageLabel")
 	wallpaper.Name = "Wallpaper"
-	wallpaper.Size = UDim2.new(1, 0, 1, -46)
-	wallpaper.Position = UDim2.fromOffset(0, 0)
+	wallpaper.Size = UDim2.fromScale(1, 1)
+	wallpaper.Position = UDim2.fromScale(0, 0)
 	wallpaper.BackgroundTransparency = 1
+	wallpaper.ImageTransparency = 0
+	wallpaper.Visible = true
 	wallpaper.ScaleType = Enum.ScaleType.Crop
-	wallpaper.ZIndex = 0
+	wallpaper.ZIndex = 1
 	local wallpaperImage = UIAssets.DesktopWallpaperImage
-	if type(wallpaperImage) == "string" and wallpaperImage ~= "" and wallpaperImage ~= "rbxassetid://0" then
+	local hasValidWallpaper = isValidWallpaperAsset(wallpaperImage)
+	if hasValidWallpaper then
 		wallpaper.Image = wallpaperImage
 	else
 		if not warnedWallpaper then
-			warn("[BugsOS] Missing or invalid wallpaper asset id. Using fallback background color.")
+			warn(string.format("[BugsOS] Missing or invalid wallpaper asset id '%s'. Using fallback background color.", tostring(wallpaperImage)))
 			warnedWallpaper = true
 		end
 	end
-	wallpaper.Parent = desktopBackground
+	wallpaper.Parent = desktopRoot
+	fallbackBackground.Visible = not hasValidWallpaper
+
+	local desktopClickLayer = Instance.new("TextButton")
+	desktopClickLayer.Name = "DesktopClickLayer"
+	desktopClickLayer.Size = UDim2.fromScale(1, 1)
+	desktopClickLayer.Position = UDim2.fromScale(0, 0)
+	desktopClickLayer.BackgroundTransparency = 1
+	desktopClickLayer.BorderSizePixel = 0
+	desktopClickLayer.Text = ""
+	desktopClickLayer.AutoButtonColor = false
+	desktopClickLayer.ZIndex = 2
+	desktopClickLayer.Parent = desktopRoot
 
 	local worldLayer = Instance.new("Frame")
 	worldLayer.Name = "WorldLayer"
 	worldLayer.Size = UDim2.fromScale(1, 1)
 	worldLayer.BackgroundTransparency = 1
-	worldLayer.Parent = desktopBackground
+	worldLayer.ZIndex = 3
+	worldLayer.Parent = desktopRoot
 	createAmbientParticles(worldLayer)
 
 	local backgroundScale = Instance.new("UIScale")
 	backgroundScale.Scale = 1
-	backgroundScale.Parent = desktopBackground
+	backgroundScale.Parent = desktopClickLayer
 
-	desktopBackground.Activated:Connect(function()
+	desktopClickLayer.Activated:Connect(function()
 		context.State.LastClickAt = os.clock()
 		latestClickMousePosition = UserInputService:GetMouseLocation()
 		context.Remotes.ClickRequest:FireServer()
@@ -196,12 +238,14 @@ function DesktopController.Start(): ()
 	appsLayer.Name = "AppsLayer"
 	appsLayer.Size = UDim2.fromScale(1, 1)
 	appsLayer.BackgroundTransparency = 1
+	appsLayer.ZIndex = 10
 	appsLayer.Parent = screenGui
 
 	local hudLayer = Instance.new("Frame")
 	hudLayer.Name = "HUDLayer"
 	hudLayer.Size = UDim2.fromScale(1, 1)
 	hudLayer.BackgroundTransparency = 1
+	hudLayer.ZIndex = 5
 	hudLayer.Parent = screenGui
 
 	local taskbar = Instance.new("Frame")
@@ -211,6 +255,7 @@ function DesktopController.Start(): ()
 	taskbar.Size = UDim2.new(1, 0, 0, 46)
 	taskbar.BackgroundTransparency = 1
 	taskbar.BorderSizePixel = 0
+	taskbar.ZIndex = 20
 	taskbar.Parent = screenGui
 
 	local taskbarSkin = Instance.new("ImageLabel")
