@@ -1,0 +1,13 @@
+{
+  "name": "cuddly-spork-bug-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate:bug-assets": "node scripts/generate-bug-assets.mjs"
+  },
+  "dependencies": {
+    "@pixellab/sdk": "^1.0.0",
+    "p-limit": "^6.2.0",
+    "xlsx": "^0.18.5"
+  }
+}
