@@ -31,27 +31,32 @@ local function calcFPS(d) local eq=((((d or {}).Generators or {}).Equipped)); if
 local function calcFPC(d) local t=1; local tools=(d or {}).ClickTools; if type(tools)~="table" then return t end for id,l in tools do if type(l)=="number" and l>0 and clickToolBonusById[id] then t += clickToolBonusById[id]*l end end local b=getBugBuffs(d); return t*prestigeMult(d)*(1+b.AllFood)*(1+b.ClickPower) end
 local function refresh()
  local data=context.State.PlayerData; if type(data)~='table' then return end
- labels.Food.Text="Food: "..NumberUtil.FormatNumber((data.Currencies or {}).Food or 0)
- labels.Coins.Text="Coins: "..NumberUtil.FormatNumber((data.Currencies or {}).Coins or 0)
+ labels.Food.Text=NumberUtil.FormatNumber((data.Currencies or {}).Food or 0)
+ labels.Coins.Text=NumberUtil.FormatNumber((data.Currencies or {}).Coins or 0)
  local bugPoints = data.BugPoints
  if type(bugPoints) ~= 'number' then
   bugPoints = ((data.LeaderboardStats or {}).BugPoints) or 0
  end
- labels.BugPoints.Text="Bug Points: "..NumberUtil.FormatNumber(bugPoints)
- labels.FPS.Text="Food/sec: "..NumberUtil.FormatNumber(calcFPS(data))
- labels.FPC.Text="Food/click: "..NumberUtil.FormatNumber(calcFPC(data))
- labels.Prestige.Text="Prestige: "..tostring((((data.Progression or {}).Prestige) or 0))
+ labels.BugPoints.Text=NumberUtil.FormatNumber(bugPoints)
+ labels.FPS.Text=NumberUtil.FormatNumber(calcFPS(data))
+ labels.FPC.Text=NumberUtil.FormatNumber(calcFPC(data))
 end
 function CurrencyHUDController.Init(c) context=c; for _,e in ClickToolConfig.Tools do clickToolBonusById[e.id]=e.foodPerClickPerLevel end for _,e in GeneratorConfig.Generators do if e.classId=='snack' then generatorById[e.id]=e end end end
 function CurrencyHUDController.Start()
- local frame=Instance.new('ImageLabel'); frame.Name='CurrencyTray'; frame.AnchorPoint=Vector2.new(1,0.5); frame.Position=UDim2.new(1,-8,0.5,0); frame.Size=UDim2.fromOffset(296,38); frame.BackgroundTransparency=1; frame.Image=UIAssets.TaskbarTabPressedImage; frame.ScaleType=Enum.ScaleType.Slice; frame.SliceCenter=UIAssets.SliceCenter; frame.Parent=context.UI.Taskbar
- local list=Instance.new("UIListLayout"); list.FillDirection=Enum.FillDirection.Horizontal; list.Padding=UDim.new(0,8); list.VerticalAlignment=Enum.VerticalAlignment.Center; list.Parent=frame
+ local frame=Instance.new('ImageLabel'); frame.Name='CurrencyTray'; frame.AnchorPoint=Vector2.new(1,0.5); frame.Position=UDim2.new(1,-8,0.5,0); frame.Size=UDim2.fromOffset(404,30); frame.BackgroundTransparency=1; frame.Image=UIAssets.TaskbarTabPressedImage; frame.ScaleType=Enum.ScaleType.Slice; frame.SliceCenter=UIAssets.SliceCenter; frame.Parent=context.UI.Taskbar
+ local list=Instance.new("UIListLayout"); list.FillDirection=Enum.FillDirection.Horizontal; list.Padding=UDim.new(0,10); list.VerticalAlignment=Enum.VerticalAlignment.Center; list.Parent=frame
  local pad=Instance.new("UIPadding"); pad.PaddingLeft=UDim.new(0,8); pad.PaddingRight=UDim.new(0,8); pad.Parent=frame
- local names={'Food','Coins','BugPoints','FPS','FPC','Prestige'}
- for _,id in ipairs(names) do
-  local item=Instance.new("Frame"); item.Size=UDim2.fromOffset(44,30); item.BackgroundTransparency=1; item.Parent=frame
-  local icon=Instance.new("ImageLabel"); icon.Size=UDim2.fromOffset(12,12); icon.Position=UDim2.fromOffset(0,9); icon.BackgroundTransparency=1; icon.Image=UIAssets.CurrencyIconImages[id]; icon.Parent=item
-  local l=Instance.new('TextLabel'); l.Size=UDim2.new(1,-14,1,0); l.Position=UDim2.fromOffset(14,0); l.BackgroundTransparency=1; l.TextColor3=Color3.new(0,0,0); l.TextXAlignment=Enum.TextXAlignment.Left; l.Font=UITheme.Font; l.TextSize=11; l.Parent=item; labels[id]=l
+ local items={
+  {id='Food', icon='🥪', name='Food'},
+  {id='Coins', icon='🪙', name='Coins'},
+  {id='BugPoints', icon='🐞', name='BP'},
+  {id='FPS', icon='⏱', name='/sec'},
+  {id='FPC', icon='🖱', name='/click'},
+ }
+ for _,spec in ipairs(items) do
+  local item=Instance.new("Frame"); item.Size=UDim2.fromOffset(72,24); item.BackgroundTransparency=1; item.Parent=frame
+  local iconText=Instance.new('TextLabel'); iconText.Size=UDim2.fromOffset(18,24); iconText.Position=UDim2.fromOffset(0,0); iconText.BackgroundTransparency=1; iconText.Font=UITheme.Font; iconText.TextSize=12; iconText.TextColor3=Color3.new(0,0,0); iconText.Text=spec.icon; iconText.Parent=item
+  local l=Instance.new('TextLabel'); l.Size=UDim2.new(1,-18,1,0); l.Position=UDim2.fromOffset(18,0); l.BackgroundTransparency=1; l.TextColor3=Color3.new(0,0,0); l.TextXAlignment=Enum.TextXAlignment.Left; l.Font=UITheme.Font; l.TextSize=11; l.Parent=item; labels[spec.id]=l
  end
  refresh()
 end

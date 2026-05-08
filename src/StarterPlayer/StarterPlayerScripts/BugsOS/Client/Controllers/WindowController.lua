@@ -10,6 +10,7 @@ local openApps: {[string]: boolean} = {}
 local registryById: {[string]: any} = {}
 local taskbarButtons: {[string]: GuiButton} = {}
 local taskbarSetActive: {[string]: (boolean) -> ()} = {}
+local taskbarHolder: ScrollingFrame? = nil
 local zCounter = 20
 
 function WindowController.Init(c)
@@ -25,6 +26,9 @@ function WindowController.Focus(id: string)
 		return
 	end
 	zCounter += 1
+	for appId, setActive in pairs(taskbarSetActive) do
+		setActive(appId == id)
+	end
 	local app = registryById[id]
 	if app and app.Module and app.Module.SetZIndex then
 		app.Module.SetZIndex(zCounter)
@@ -40,8 +44,16 @@ function WindowController.Open(id: string)
 	end
 	app.Module.Mount(context.UI.AppsLayer, context)
 	openApps[id] = true
-	if taskbarButtons[id] then
-		taskbarSetActive[id](true)
+	if not taskbarButtons[id] and taskbarHolder then
+		local btn, setActive = TaskbarButton.Create(taskbarHolder, app.Title, app.IconImage, false, function()
+			if openApps[app.Id] then
+				WindowController.Focus(app.Id)
+			else
+				WindowController.Open(app.Id)
+			end
+		end)
+		taskbarButtons[id] = btn
+		taskbarSetActive[id] = setActive
 	end
 	WindowController.Focus(id)
 end
@@ -52,37 +64,45 @@ function WindowController.Close(id: string)
 	app.Module.Unmount()
 	openApps[id] = nil
 	if taskbarButtons[id] then
-		taskbarSetActive[id](false)
+		taskbarButtons[id]:Destroy()
+		taskbarButtons[id] = nil
+		taskbarSetActive[id] = nil
 	end
 end
 
 function WindowController.Start()
 	local desktopIcons = Instance.new("Frame")
 	desktopIcons.Name = "DesktopIcons"
-	desktopIcons.Size = UDim2.new(1, -308, 1, -74)
+	desktopIcons.Size = UDim2.new(1, -320, 1, -74)
 	desktopIcons.Position = UDim2.fromOffset(12, 12)
 	desktopIcons.BackgroundTransparency = 1
 	desktopIcons.Parent = context.UI.HUDLayer
 	local iconsLayout = Instance.new("UIGridLayout")
-	iconsLayout.CellSize = UDim2.fromOffset(92, 92)
-	iconsLayout.CellPadding = UDim2.fromOffset(8, 10)
-	iconsLayout.FillDirectionMaxCells = 6
+	iconsLayout.CellSize = UDim2.fromOffset(88, 96)
+	iconsLayout.CellPadding = UDim2.fromOffset(10, 8)
+	iconsLayout.FillDirection = Enum.FillDirection.Vertical
+	iconsLayout.FillDirectionMaxCells = 8
+	iconsLayout.StartCorner = Enum.StartCorner.TopLeft
+	iconsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	iconsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 	iconsLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 	iconsLayout.Parent = desktopIcons
 
 	local holder = Instance.new("ScrollingFrame")
 	holder.Name = "TaskbarButtons"
-	holder.Size = UDim2.new(1, -392, 1, -12)
-	holder.Position = UDim2.fromOffset(88, 6)
+	holder.AnchorPoint = Vector2.new(0, 0.5)
+	holder.Size = UDim2.new(1, -420, 0, 30)
+	holder.Position = UDim2.new(0, 124, 0.5, 0)
 	holder.BackgroundTransparency = 1
 	holder.BorderSizePixel = 0
 	holder.ScrollBarThickness = 4
 	holder.ScrollingDirection = Enum.ScrollingDirection.X
 	holder.Parent = context.UI.Taskbar
+	taskbarHolder = holder
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.Padding = UDim.new(0, 3)
+	layout.Padding = UDim.new(0, 4)
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.Parent = holder
 	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		holder.CanvasSize = UDim2.fromOffset(layout.AbsoluteContentSize.X + 8, 0)
@@ -94,15 +114,6 @@ function WindowController.Start()
 				WindowController.Open(app.Id)
 			end)
 		end
-		local btn, setActive = TaskbarButton.Create(holder, app.Title, function()
-			if openApps[app.Id] then
-				WindowController.Focus(app.Id)
-			else
-				WindowController.Open(app.Id)
-			end
-		end)
-		taskbarButtons[app.Id] = btn
-		taskbarSetActive[app.Id] = setActive
 	end
 end
 

@@ -29,7 +29,9 @@ local AMBIENT_PARTICLE_COUNT = 14
 local rng = Random.new()
 local latestClickMousePosition = Vector2.zero
 
-local function createTaskbarImageButton(parent: Instance, name: string, buttonSize: UDim2, buttonPosition: UDim2, text: string, iconImage: string?)
+local warnedWallpaper = false
+
+local function createTaskbarImageButton(parent: Instance, name: string, buttonSize: UDim2, buttonPosition: UDim2, text: string)
 	local button = Instance.new("ImageButton")
 	button.Name = name
 	button.Size = buttonSize
@@ -41,24 +43,15 @@ local function createTaskbarImageButton(parent: Instance, name: string, buttonSi
 	button.AutoButtonColor = false
 	button.Parent = parent
 
-	if type(iconImage) == "string" and iconImage ~= "" and iconImage ~= "rbxassetid://0" then
-		local icon = Instance.new("ImageLabel")
-		icon.Name = "Icon"
-		icon.Size = UDim2.fromOffset(14, 14)
-		icon.Position = UDim2.fromOffset(8, 7)
-		icon.BackgroundTransparency = 1
-		icon.Image = iconImage
-		icon.Parent = button
-	end
-
 	local label = Instance.new("TextLabel")
 	label.Name = "Label"
-	label.Size = UDim2.new(1, -16, 1, 0)
-	label.Position = UDim2.fromOffset(8, 0)
+	label.Size = UDim2.new(1, -8, 1, 0)
+	label.Position = UDim2.fromOffset(4, 0)
 	label.BackgroundTransparency = 1
 	label.Text = text
 	label.TextColor3 = Color3.new(0, 0, 0)
-	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextXAlignment = Enum.TextXAlignment.Center
+	label.TextYAlignment = Enum.TextYAlignment.Center
 	label.Font = UITheme.Font
 	label.TextSize = 14
 	label.Parent = button
@@ -146,11 +139,20 @@ function DesktopController.Start(): ()
 
 	local wallpaper = Instance.new("ImageLabel")
 	wallpaper.Name = "Wallpaper"
-	wallpaper.Size = UDim2.fromScale(1, 1)
+	wallpaper.Size = UDim2.new(1, 0, 1, -46)
+	wallpaper.Position = UDim2.fromOffset(0, 0)
 	wallpaper.BackgroundTransparency = 1
-	wallpaper.Image = UIAssets.DesktopWallpaperImage
 	wallpaper.ScaleType = Enum.ScaleType.Crop
 	wallpaper.ZIndex = 0
+	local wallpaperImage = UIAssets.DesktopWallpaperImage
+	if type(wallpaperImage) == "string" and wallpaperImage ~= "" and wallpaperImage ~= "rbxassetid://0" then
+		wallpaper.Image = wallpaperImage
+	else
+		if not warnedWallpaper then
+			warn("[BugsOS] Missing or invalid wallpaper asset id. Using fallback background color.")
+			warnedWallpaper = true
+		end
+	end
 	wallpaper.Parent = desktopBackground
 
 	local worldLayer = Instance.new("Frame")
@@ -220,15 +222,13 @@ function DesktopController.Start(): ()
 	taskbarSkin.SliceCenter = UIAssets.SliceCenter
 	taskbarSkin.Parent = taskbar
 
-	local startButton, startLabel = createTaskbarImageButton(
+	local startButton, _startLabel = createTaskbarImageButton(
 		taskbar,
 		"StartButton",
-		UDim2.fromOffset(72, 28),
-		UDim2.fromOffset(8, 9),
-		"Start",
-		(UIAssets :: any).StartButtonIconImage
+		UDim2.fromOffset(108, 30),
+		UDim2.fromOffset(8, 8),
+		"🐞 Start"
 	)
-	startLabel.TextXAlignment = Enum.TextXAlignment.Center
 	startButton.MouseButton1Down:Connect(function()
 		startButton.Image = UIAssets.TaskbarTabPressedImage
 	end)
