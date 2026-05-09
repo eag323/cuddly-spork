@@ -43,7 +43,14 @@ function WindowController.Open(id: string)
 		return
 	end
 	context.AppDependencies = { Root = context.UI.AppsLayer, Services = context.Services or {}, State = context.State, Controllers = context.Controllers or {}, Remotes = context.Remotes }
-	app.Module.Mount(context.UI.AppsLayer, context.AppDependencies)
+	local ok, err = pcall(function()
+		app.Module.Mount(context.UI.AppsLayer, context.AppDependencies)
+	end)
+	if not ok then
+		warn(string.format("[BugsOS] Failed to mount app '%s': %s", id, tostring(err)))
+		openApps[id] = nil
+		return
+	end
 	openApps[id] = true
 	if not taskbarButtons[id] and taskbarHolder then
 		local btn, setActive = TaskbarButton.Create(taskbarHolder, app.Title, app.IconImage, false, function()

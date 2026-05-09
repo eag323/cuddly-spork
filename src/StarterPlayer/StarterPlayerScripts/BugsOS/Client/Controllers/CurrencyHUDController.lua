@@ -33,25 +33,17 @@ local function refresh()
  local data=context.State.PlayerData; if type(data)~='table' then return end
  labels.Food.Text=NumberUtil.FormatNumber((data.Currencies or {}).Food or 0)
  labels.Coins.Text=NumberUtil.FormatNumber((data.Currencies or {}).Coins or 0)
- local bugPoints = data.BugPoints
- if type(bugPoints) ~= 'number' then
-  bugPoints = ((data.LeaderboardStats or {}).BugPoints) or 0
- end
- labels.BugPoints.Text=NumberUtil.FormatNumber(bugPoints)
- labels.FPS.Text=NumberUtil.FormatNumber(calcFPS(data))
- labels.FPC.Text=NumberUtil.FormatNumber(calcFPC(data))
+ labels.Nectar.Text=NumberUtil.FormatNumber((data.Currencies or {}).Nectar or 0)
 end
 function CurrencyHUDController.Init(c) context=c; for _,e in ClickToolConfig.Tools do clickToolBonusById[e.id]=e.foodPerClickPerLevel end for _,e in GeneratorConfig.Generators do if e.classId=='snack' then generatorById[e.id]=e end end end
 function CurrencyHUDController.Start()
- local frame=Instance.new('ImageLabel'); frame.Name='CurrencyTray'; frame.AnchorPoint=Vector2.new(1,0.5); frame.Position=UDim2.new(1,-8,0.5,0); frame.Size=UDim2.fromOffset(404,30); frame.BackgroundTransparency=1; frame.Image=UIAssets.TaskbarTabPressedImage; frame.ScaleType=Enum.ScaleType.Slice; frame.SliceCenter=UIAssets.SliceCenter; frame.Parent=context.UI.Taskbar
+ local frame=Instance.new('ImageLabel'); frame.Name='CurrencyTray'; frame.AnchorPoint=Vector2.new(1,0.5); frame.Position=UDim2.new(1,-8,0.5,0); frame.Size=UDim2.fromOffset(252,30); frame.BackgroundTransparency=1; frame.Image=UIAssets.TaskbarTabPressedImage; frame.ScaleType=Enum.ScaleType.Slice; frame.SliceCenter=UIAssets.SliceCenter; frame.Parent=context.UI.Taskbar
  local list=Instance.new("UIListLayout"); list.FillDirection=Enum.FillDirection.Horizontal; list.Padding=UDim.new(0,10); list.VerticalAlignment=Enum.VerticalAlignment.Center; list.Parent=frame
  local pad=Instance.new("UIPadding"); pad.PaddingLeft=UDim.new(0,8); pad.PaddingRight=UDim.new(0,8); pad.Parent=frame
  local items={
   {id='Food', icon='🥪', name='Food'},
   {id='Coins', icon='🪙', name='Coins'},
-  {id='BugPoints', icon='🐞', name='BP'},
-  {id='FPS', icon='⏱', name='/sec'},
-  {id='FPC', icon='🖱', name='/click'},
+  {id='Nectar', icon='💧', name='Nectar'},
  }
  for _,spec in ipairs(items) do
   local item=Instance.new("Frame"); item.Size=UDim2.fromOffset(72,24); item.BackgroundTransparency=1; item.Parent=frame
