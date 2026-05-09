@@ -34,13 +34,14 @@ local function isComplete(player: Player, def): boolean
 	return StatsService.Get(player, def.stat) >= def.required
 end
 
-local function pushNotification(player: Player, message: string, notificationType: string): ()
+local function pushNotification(player: Player, message: string, notificationType: string, eventId: string?): ()
 	if not notificationPushRemote then
 		return
 	end
 	notificationPushRemote:FireClient(player, {
 		Message = message,
 		Type = notificationType,
+		EventId = eventId,
 	})
 end
 
@@ -68,7 +69,7 @@ local function notifyCompletedAchievements(player: Player): ()
 		if isComplete(player, def) and claimed[def.id] ~= true and notifiedCompleted[def.id] ~= true then
 			notifiedCompleted[def.id] = true
 			ProfileService.PatchPlayerState(player, { "Achievements", "NotifiedCompleted", def.id }, true)
-			pushNotification(player, string.format("Achievement complete: %s. Reward ready.", tostring(def.name)), "Success")
+			pushNotification(player, string.format("Achievement complete: %s. Reward ready.", tostring(def.name)), "Success", string.format("achievement_complete_%s", def.id))
 		end
 	end
 end
@@ -100,7 +101,7 @@ local function claimOne(player: Player, achievementId: string, notifyRewardClaim
 	ProfileService.PatchPlayerState(player, { "Achievements", "Claimed", achievementId }, true)
 	grantReward(player, def.reward)
 	if notifyRewardClaimed ~= false then
-		pushNotification(player, string.format("Achievement reward claimed: %s", formatRewardSummary(def.reward)), "Success")
+		pushNotification(player, string.format("Achievement reward claimed: %s", formatRewardSummary(def.reward)), "Success", string.format("achievement_claim_%s", achievementId))
 	end
 	return true
 end
@@ -122,7 +123,7 @@ local function onClaim(player: Player, payload)
 			if #rewardSummary > 0 and #rewardSummary <= 3 then
 				summaryMessage = string.format("%s Rewards: %s", summaryMessage, table.concat(rewardSummary, ", "))
 			end
-			pushNotification(player, summaryMessage, "Success")
+			pushNotification(player, summaryMessage, "Success", string.format("achievement_claim_all_%d", os.time()))
 		end
 		return
 	end

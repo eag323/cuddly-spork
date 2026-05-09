@@ -34,6 +34,10 @@ end
 function ProfileApp.Init(c) context = c end
 
 function ProfileApp.Mount(target: Instance, deps)
+	if windowRef and windowRef.Content and windowRef.Content.Parent then
+		return
+	end
+	windowRef = nil
 	local summary = buildSummary(deps)
 	windowRef = Window.Create({
 		Title = "Profile.exe", Size = UDim2.fromOffset(820, 600), Position = UDim2.fromScale(0.1, 0.08), Parent = target,

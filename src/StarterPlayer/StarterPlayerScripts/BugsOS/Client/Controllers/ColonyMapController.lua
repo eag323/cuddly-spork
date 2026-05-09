@@ -73,21 +73,23 @@ end
 local function CreateNameplate(player: Player): Frame
 	local plate = Instance.new("Frame")
 	plate.Name = "NameplateFrame"
-	plate.Size = UDim2.fromOffset(132, 20)
-	plate.Position = UDim2.fromOffset(0, 38)
+	plate.Size = UDim2.fromOffset(154, 24)
+	plate.Position = UDim2.fromOffset(-9, 58)
 	plate.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 	plate.BackgroundTransparency = 0.18
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 5)
+	corner.CornerRadius = UDim.new(0, 4)
 	corner.Parent = plate
 
 	local label = Instance.new("TextLabel")
 	label.Name = "NameplateLabel"
-	label.Size = UDim2.new(1, -12, 1, 0)
-	label.Position = UDim2.fromOffset(6, 0)
+	label.Size = UDim2.new(1, -14, 1, 0)
+	label.Position = UDim2.fromOffset(7, 0)
 	label.BackgroundTransparency = 1
-	label.TextScaled = true
+	label.TextScaled = false
+	label.TextSize = 13
+	label.TextXAlignment = Enum.TextXAlignment.Center
 	label.Font = Enum.Font.GothamSemibold
 	label.TextColor3 = Color3.fromRGB(255, 255, 255)
 	label.Text = player.DisplayName
@@ -99,13 +101,13 @@ end
 local function CreateColonyMarker(player: Player): Frame
 	local marker = Instance.new("Frame")
 	marker.Name = "ColonyFrame"
-	marker.Size = UDim2.fromOffset(136, 60)
+	marker.Size = UDim2.fromOffset(170, 88)
 	marker.BackgroundTransparency = 1
 
 	local icon = Instance.new("TextButton")
 	icon.Name = "ColonyIcon"
-	icon.Size = UDim2.fromOffset(38, 38)
-	icon.Position = UDim2.fromOffset(49, 0)
+	icon.Size = UDim2.fromOffset(57, 57)
+	icon.Position = UDim2.fromOffset(56, 0)
 	icon.Text = ""
 	icon.BackgroundTransparency = 1
 	icon.Parent = marker
@@ -166,7 +168,9 @@ local function UpdateMarkerPosition(userId: number, index: number)
 	if not marker then
 		return
 	end
-	marker.Position = UDim2.fromOffset(120 + (index * 90) % 600, 120 + math.floor(index / 7) * 80)
+	local x = math.clamp(120 + (index * 100) % 600, 80, 760)
+	local y = math.clamp(120 + math.floor(index / 7) * 96, 80, 500)
+	marker.Position = UDim2.fromOffset(x, y)
 end
 
 local function DestroyMarker(userId: number)

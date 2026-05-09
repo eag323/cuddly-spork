@@ -69,8 +69,13 @@ end
 function WindowController.Close(id: string)
 	local app = registryById[id]
 	if not app then return end
-	app.Module.Unmount()
 	openApps[id] = nil
+	local ok, err = pcall(function()
+		app.Module.Unmount()
+	end)
+	if not ok then
+		warn(string.format("[BugsOS] Failed to unmount app '%s': %s", id, tostring(err)))
+	end
 	if taskbarButtons[id] then
 		taskbarButtons[id]:Destroy()
 		taskbarButtons[id] = nil
