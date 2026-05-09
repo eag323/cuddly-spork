@@ -127,7 +127,7 @@ local DEFAULT_PLAYER_DATA: PlayerData = {
 			NotificationSkins = {},
 			DesktopEffects = {},
 			ColonySkins = { Default = true },
-			ColonyAuras = {},
+			ColonyAuras = { None = true },
 			ProfileFrames = {},
 			Titles = {},
 		},
@@ -138,8 +138,8 @@ local DEFAULT_PLAYER_DATA: PlayerData = {
 			Cursor = "DefaultCursor",
 			NotificationSkin = "DefaultNotification",
 			DesktopEffect = nil,
-			ColonySkin = "DefaultColony",
-			ColonyAura = nil,
+			ColonySkin = "Default",
+			ColonyAura = "None",
 			ProfileFrame = "DefaultProfileFrame",
 			Title = nil,
 		},
@@ -191,6 +191,28 @@ local function loadDefaultPlayerData(_player: Player): PlayerData
 	return deepCopy(DEFAULT_PLAYER_DATA)
 end
 
+local function normalizeCosmetics(playerData: PlayerData): ()
+	playerData.Cosmetics = playerData.Cosmetics or {}
+	playerData.Cosmetics.Owned = playerData.Cosmetics.Owned or {}
+	playerData.Cosmetics.Equipped = playerData.Cosmetics.Equipped or {}
+
+	local owned = playerData.Cosmetics.Owned
+	local equipped = playerData.Cosmetics.Equipped
+
+	owned.ColonySkins = owned.ColonySkins or {}
+	owned.ColonyAuras = owned.ColonyAuras or {}
+
+	owned.ColonySkins.Default = true
+	owned.ColonyAuras.None = true
+
+	if equipped.ColonySkin == nil or equipped.ColonySkin == "DefaultColony" then
+		equipped.ColonySkin = "Default"
+	end
+	if equipped.ColonyAura == nil then
+		equipped.ColonyAura = "None"
+	end
+end
+
 function ProfileService.GetPlayerData(player: Player): PlayerData?
 	return playerDataByUserId[player.UserId]
 end
@@ -208,6 +230,7 @@ end
 
 local function syncPlayer(player: Player): ()
 	local playerData = loadDefaultPlayerData(player)
+	normalizeCosmetics(playerData)
 	playerDataByUserId[player.UserId] = playerData
 
 	if stateFullSyncRemote then

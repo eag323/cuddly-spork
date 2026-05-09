@@ -1,7 +1,10 @@
 --!strict
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Window = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("Window"))
 local BugShowcaseGrid = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("BugShowcaseGrid"))
+local ColonySkinConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Configs"):WaitForChild("ColonySkinConfig"))
+local ColonyAuraConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Configs"):WaitForChild("ColonyAuraConfig"))
 
 local ProfileApp = {}
 local context
@@ -23,6 +26,8 @@ local function buildSummary(deps)
 		Currencies = safeGet(data, "Currencies") or {},
 		Titles = safeGet(data, "Cosmetics", "UnlockedTitles") or {},
 		EquippedBugs = safeGet(data, "Loadout", "EquippedBugs") or {},
+		EquippedColonySkin = safeGet(data, "Cosmetics", "Equipped", "ColonySkin") or "Default",
+		EquippedColonyAura = safeGet(data, "Cosmetics", "Equipped", "ColonyAura") or "None",
 	}
 end
 
@@ -55,8 +60,25 @@ function ProfileApp.Mount(target: Instance, deps)
 	local st=Instance.new("TextLabel"); st.Size=UDim2.new(1,-16,1,-30); st.Position=UDim2.fromOffset(8,26); st.BackgroundTransparency=1; st.TextXAlignment=Enum.TextXAlignment.Left; st.TextYAlignment=Enum.TextYAlignment.Top; st.Font=Enum.Font.Gotham; st.TextSize=13; st.TextColor3=Color3.fromRGB(208,225,247); st.Text=string.format("Lifetime Food: %s\nBugs Caught: %s\nNectar: %s", tostring(summary.Currencies.LifetimeFood or 0), tostring(summary.Stats.BugsCaught or 0), tostring(summary.Currencies.Nectar or 0)); st.Parent=stats
 	local titles=section("Titles Collection",90)
 	local tl=Instance.new("TextLabel"); tl.Size=UDim2.new(1,-16,1,-30); tl.Position=UDim2.fromOffset(8,26); tl.BackgroundTransparency=1; tl.TextXAlignment=Enum.TextXAlignment.Left; tl.TextYAlignment=Enum.TextYAlignment.Top; tl.Font=Enum.Font.Gotham; tl.TextSize=13; tl.TextColor3=Color3.fromRGB(208,225,247); tl.Text=((#summary.Titles>0) and table.concat(summary.Titles, ", ") or "No titles unlocked"); tl.Parent=titles
-	section("Colony Skin Selection",52)
-	section("Aura Selection",52)
+	local colonySection = section("Colony Skin Selection",78)
+	local equippedSkin = ColonySkinConfig[summary.EquippedColonySkin] or ColonySkinConfig.Default
+	local colonyText = Instance.new("TextLabel")
+	colonyText.Size = UDim2.new(1, -16, 1, -30)
+	colonyText.Position = UDim2.fromOffset(8, 26)
+	colonyText.BackgroundTransparency = 1
+	colonyText.TextXAlignment = Enum.TextXAlignment.Left
+	colonyText.TextYAlignment = Enum.TextYAlignment.Top
+	colonyText.Font = Enum.Font.Gotham
+	colonyText.TextSize = 13
+	colonyText.TextColor3 = Color3.fromRGB(208,225,247)
+	colonyText.Text = string.format("Equipped: %s\nRarity: %s", equippedSkin.DisplayName, equippedSkin.Rarity)
+	colonyText.Parent = colonySection
+
+	local auraSection = section("Aura Selection",78)
+	local equippedAura = ColonyAuraConfig[summary.EquippedColonyAura] or ColonyAuraConfig.None
+	local auraText = colonyText:Clone()
+	auraText.Text = string.format("Equipped: %s\nType: %s", equippedAura.DisplayName, equippedAura.EffectType)
+	auraText.Parent = auraSection
 	local bugs=section("Equipped Bug Showcase",172)
 	local grid=BugShowcaseGrid.Create(bugs, UDim2.fromOffset(312,136)); grid.Position=UDim2.fromOffset(16,28); BugShowcaseGrid.Render(grid, summary.EquippedBugs)
 end
