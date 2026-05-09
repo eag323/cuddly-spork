@@ -9,12 +9,16 @@ local Remotes = Shared:WaitForChild("Remotes")
 local ConfigFolder = Shared:WaitForChild("Config")
 local RemoteNames = require(Remotes:WaitForChild("RemoteNames"))
 local BugConfig = require(ConfigFolder:WaitForChild("BugConfig"))
+local ColonySkinConfig = require(Shared:WaitForChild("Configs"):WaitForChild("ColonySkinConfig"))
+local ColonyAuraConfig = require(Shared:WaitForChild("Configs"):WaitForChild("ColonyAuraConfig"))
 local ServicesFolder = ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Server"):WaitForChild("Services")
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 
 local ProfileDisplayService = {}
 local getSummaryRemote: RemoteEvent
 local equipTitleRemote: RemoteEvent
+local equipColonySkinRemote: RemoteEvent
+local equipColonyAuraRemote: RemoteEvent
 
 local function getOrCreateRemoteEvent(name: string): RemoteEvent
 	local existing = Remotes:FindFirstChild(name)
@@ -70,9 +74,9 @@ local function buildSummary(player: Player): {[string]: any}
 		EquippedTitle = equipped.Title,
 		UnlockedTitles = owned.Titles or {},
 		EquippedColonySkin = equipped.ColonySkin or "Default",
-		EquippedColonyAura = equipped.ColonyAura,
+		EquippedColonyAura = equipped.ColonyAura or "None",
 		UnlockedColonySkins = owned.ColonySkins or {Default=true},
-		UnlockedColonyAuras = owned.ColonyAuras or {},
+		UnlockedColonyAuras = owned.ColonyAuras or {None=true},
 		GeneratorCount = #( (((data.Generators or {}).Equipped) or {}) ),
 		FoodPerSec = (lb.BestFoodPerSec or 0),
 		LifetimeFood = (((data.Currencies or {}).LifetimeFood) or 0),
@@ -85,9 +89,47 @@ local function buildSummary(player: Player): {[string]: any}
 	}
 end
 
+local function IsColonySkinUnlocked(player: Player, skinId: string): boolean
+	local data = ProfileService.GetPlayerData(player)
+	if not data then return false end
+	local owned = (((data.Cosmetics or {}).Owned or {}).ColonySkins) or {}
+	return owned[skinId] == true
+end
+
+local function IsColonyAuraUnlocked(player: Player, auraId: string): boolean
+	local data = ProfileService.GetPlayerData(player)
+	if not data then return false end
+	local owned = (((data.Cosmetics or {}).Owned or {}).ColonyAuras) or {}
+	return owned[auraId] == true
+end
+
+local function EquipColonySkin(player: Player, skinId: string): ()
+	if ColonySkinConfig[skinId] == nil then return end
+	if not IsColonySkinUnlocked(player, skinId) then return end
+	local data = ProfileService.GetPlayerData(player)
+	if not data then return end
+	data.Cosmetics = data.Cosmetics or {Owned = {}, Equipped = {}}
+	data.Cosmetics.Equipped = data.Cosmetics.Equipped or {}
+	data.Cosmetics.Equipped.ColonySkin = skinId
+	ProfileService.PatchPlayerState(player, {"Cosmetics", "Equipped", "ColonySkin"}, skinId)
+end
+
+local function EquipColonyAura(player: Player, auraId: string): ()
+	if ColonyAuraConfig[auraId] == nil then return end
+	if not IsColonyAuraUnlocked(player, auraId) then return end
+	local data = ProfileService.GetPlayerData(player)
+	if not data then return end
+	data.Cosmetics = data.Cosmetics or {Owned = {}, Equipped = {}}
+	data.Cosmetics.Equipped = data.Cosmetics.Equipped or {}
+	data.Cosmetics.Equipped.ColonyAura = auraId
+	ProfileService.PatchPlayerState(player, {"Cosmetics", "Equipped", "ColonyAura"}, auraId)
+end
+
 function ProfileDisplayService.Init(): ()
 	getSummaryRemote = getOrCreateRemoteEvent(RemoteNames.Profile_GetSummary)
 	equipTitleRemote = getOrCreateRemoteEvent(RemoteNames.Profile_EquipTitle)
+	equipColonySkinRemote = getOrCreateRemoteEvent(RemoteNames.Profile_EquipColonySkin or "Profile_EquipColonySkin")
+	equipColonyAuraRemote = getOrCreateRemoteEvent(RemoteNames.Profile_EquipColonyAura or "Profile_EquipColonyAura")
 end
 
 function ProfileDisplayService.Start(): ()
@@ -109,6 +151,16 @@ function ProfileDisplayService.Start(): ()
 		if titleId ~= nil and data.Cosmetics.Owned.Titles[titleId] ~= true then return end
 		data.Cosmetics.Equipped.Title = titleId
 		ProfileService.PatchPlayerState(player,{"Cosmetics","Equipped","Title"},titleId)
+		getSummaryRemote:FireClient(player, buildSummary(player))
+	end)
+	equipColonySkinRemote.OnServerEvent:Connect(function(player, skinId)
+		if type(skinId) ~= "string" then return end
+		EquipColonySkin(player, skinId)
+		getSummaryRemote:FireClient(player, buildSummary(player))
+	end)
+	equipColonyAuraRemote.OnServerEvent:Connect(function(player, auraId)
+		if type(auraId) ~= "string" then return end
+		EquipColonyAura(player, auraId)
 		getSummaryRemote:FireClient(player, buildSummary(player))
 	end)
 end

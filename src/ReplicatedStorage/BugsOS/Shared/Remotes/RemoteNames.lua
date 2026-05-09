@@ -51,6 +51,8 @@ local RemoteNames: RemoteNameMap = {
 	ServerEvent_TriggerDevProduct = "ServerEvent_TriggerDevProduct",
 	Profile_GetSummary = "Profile_GetSummary",
 	Profile_EquipTitle = "Profile_EquipTitle",
+	Profile_EquipColonySkin = "Profile_EquipColonySkin",
+	Profile_EquipColonyAura = "Profile_EquipColonyAura",
 
 	-- Server to Client
 	Click_Result = "Click_Result",

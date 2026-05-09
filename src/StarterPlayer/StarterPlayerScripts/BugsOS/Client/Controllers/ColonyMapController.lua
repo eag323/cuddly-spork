@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RemoteNames = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Remotes"):WaitForChild("RemoteNames"))
+local ColonySkinConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Configs"):WaitForChild("ColonySkinConfig"))
 
 local ColonyMapController = {}
 local context: { [string]: any }
@@ -12,6 +13,15 @@ local profileSummaryByUserId: { [number]: any } = {}
 local ProfileCard = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Components"):WaitForChild("ProfileCard"))
 
 local selectedUserId: number? = nil
+local defaultColonySkin = ColonySkinConfig.Default
+
+local function getColonySkinImage(summary: any): string
+	local equippedSkinId = if summary and type(summary.EquippedColonySkin) == "string" then summary.EquippedColonySkin else "Default"
+	local skinConfig = ColonySkinConfig[equippedSkinId] or defaultColonySkin
+	local skinImage = if skinConfig and type(skinConfig.Image) == "string" then skinConfig.Image else nil
+	local defaultImage = if defaultColonySkin and type(defaultColonySkin.Image) == "string" then defaultColonySkin.Image else ""
+	return skinImage or defaultImage
+end
 
 local function ensureRemote(name: string): RemoteEvent?
 	local remotes = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Remotes")
@@ -78,8 +88,15 @@ local function CreateColonyMarker(player: Player): Frame
 	icon.Name = "ColonyIcon"
 	icon.Size = UDim2.fromOffset(28, 28)
 	icon.Position = UDim2.fromOffset(46, 0)
-	icon.Text = "🪹"
+	icon.Text = ""
+	icon.BackgroundTransparency = 1
 	icon.Parent = marker
+	local iconImage = Instance.new("ImageLabel")
+	iconImage.Name = "ColonyIconImage"
+	iconImage.Size = UDim2.fromScale(1, 1)
+	iconImage.BackgroundTransparency = 1
+	iconImage.Image = getColonySkinImage(nil)
+	iconImage.Parent = icon
 
 	local nameplate = CreateNameplate(player)
 	nameplate.Parent = marker
@@ -94,6 +111,16 @@ local function CreateColonyMarker(player: Player): Frame
 	end)
 
 	return marker
+end
+
+local function UpdateMarkerSkin(userId: number)
+	local marker = markerByUserId[userId]
+	if not marker then return end
+	local icon = marker:FindFirstChild("ColonyIcon")
+	if not icon or not icon:IsA("TextButton") then return end
+	local iconImage = icon:FindFirstChild("ColonyIconImage")
+	if not iconImage or not iconImage:IsA("ImageLabel") then return end
+	iconImage.Image = getColonySkinImage(profileSummaryByUserId[userId])
 end
 
 local function UpdateNameplate(userId: number)
@@ -140,6 +167,7 @@ function ColonyMapController.Init(initContext): ()
 			if type(summary) == "table" and summary.UserId then
 				profileSummaryByUserId[summary.UserId] = summary
 				UpdateNameplate(summary.UserId)
+				UpdateMarkerSkin(summary.UserId)
 				if selectedUserId == summary.UserId then
 					if ProfileCard and ProfileCard.Show then
 						ProfileCard.Show(summary)
