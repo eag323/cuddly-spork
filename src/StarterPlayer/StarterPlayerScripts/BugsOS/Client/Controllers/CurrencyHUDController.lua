@@ -48,8 +48,12 @@ function CurrencyHUDController.Start()
  for _,spec in ipairs(items) do
   local item=Instance.new("Frame"); item.Size=UDim2.fromOffset(68,24); item.BackgroundTransparency=1; item.Parent=frame
   if spec.id == "Coins" then
-   local iconImage = Instance.new("ImageLabel"); iconImage.Size=UDim2.fromOffset(14,14); iconImage.Position=UDim2.fromOffset(1,5); iconImage.BackgroundTransparency=1; iconImage.Image=UIAssets.Coins; iconImage.Parent=item
-   local fallback = Instance.new('TextLabel'); fallback.Size=UDim2.fromOffset(16,24); fallback.Position=UDim2.fromOffset(0,0); fallback.BackgroundTransparency=1; fallback.Font=UITheme.Font; fallback.TextSize=12; fallback.TextColor3=Color3.new(0,0,0); fallback.Text='🪙'; fallback.Visible = (UIAssets.Coins == nil or UIAssets.Coins == "" or UIAssets.Coins == "rbxassetid://0"); fallback.Parent=item
+   local coinImage = UIAssets.Coins
+   local hasCoinImage = type(coinImage) == "string" and coinImage ~= "" and coinImage ~= "rbxassetid://0"
+   if hasCoinImage then
+    local iconImage = Instance.new("ImageLabel"); iconImage.Size=UDim2.fromOffset(14,14); iconImage.Position=UDim2.fromOffset(1,5); iconImage.BackgroundTransparency=1; iconImage.Image=coinImage; iconImage.Parent=item
+   end
+   local fallback = Instance.new('TextLabel'); fallback.Size=UDim2.fromOffset(16,24); fallback.Position=UDim2.fromOffset(0,0); fallback.BackgroundTransparency=1; fallback.Font=UITheme.Font; fallback.TextSize=12; fallback.TextColor3=Color3.new(0,0,0); fallback.Text='🪙'; fallback.Visible = not hasCoinImage; fallback.Parent=item
   else
    local iconText=Instance.new('TextLabel'); iconText.Size=UDim2.fromOffset(16,24); iconText.Position=UDim2.fromOffset(0,0); iconText.BackgroundTransparency=1; iconText.Font=UITheme.Font; iconText.TextSize=12; iconText.TextColor3=Color3.new(0,0,0); iconText.Text=spec.icon; iconText.Parent=item
   end
