@@ -75,15 +75,19 @@ function ProfileCard.Show(summary)
 	local life = NumberFormatter.Abbreviate(summary.LifetimeFood or 0)
 	local nectar = NumberFormatter.Abbreviate(summary.CurrentNectar or 0)
 	local generators = tostring(summary.GeneratorsOwned or 0)
-	(root.Header :: TextLabel).Text = string.format("<b>%s</b>\n<font color='%s'>%s</font>\n<font color='#FFD750'>Prestige %s • Prestige %s</font>\nFarm: %s Generators • %s/s\nLifetime Food: %s • Nectar: %s", displayName, titleColor, tostring(summary.EquippedTitle or "No Title"), prestige, prestige, generators, foodPs, life, nectar)
+	local headerLabel = root.Header :: TextLabel
+	headerLabel.Text = string.format("<b>%s</b>\n<font color='%s'>%s</font>\n<font color='#FFD750'>Prestige %s • Prestige %s</font>\nFarm: %s Generators • %s/s\nLifetime Food: %s • Nectar: %s", displayName, titleColor, tostring(summary.EquippedTitle or "No Title"), prestige, prestige, generators, foodPs, life, nectar)
 
 	local footerLines = {}
 	if summary.Guild and summary.Guild.Name then table.insert(footerLines, "Guild: " .. tostring(summary.Guild.Name)) end
 	for _, placement in ipairs(summary.LeaderboardPlacements or {}) do
 		table.insert(footerLines, string.format("🏆 #%s %s", tostring(placement.Rank or "?"), tostring(placement.Name or "Leaderboard")))
 	end
-	(root.Footer :: TextLabel).Text = table.concat(footerLines, "\n")
-	BugShowcaseGrid.Render(bugGrid :: Frame, summary.EquippedBugs)
+	local footerLabel = root.Footer :: TextLabel
+	footerLabel.Text = table.concat(footerLines, "\n")
+
+	local bugGridFrame = bugGrid :: Frame
+	BugShowcaseGrid.Render(bugGridFrame, summary.EquippedBugs)
 
 	root.Visible = true
 	bindCloseHandlers()
