@@ -34,6 +34,23 @@ end
 
 local getSummaryRemote: RemoteEvent? = nil
 
+local function sanitizeSummary(summary: any, fallbackUserId: number?): any
+	if type(summary) ~= "table" then
+		return nil
+	end
+	local normalized = table.clone(summary)
+	normalized.UserId = tonumber(summary.UserId) or fallbackUserId
+	normalized.DisplayName = tostring(summary.DisplayName or summary.Username or "Unknown")
+	normalized.Prestige = tonumber(summary.Prestige) or 0
+	normalized.FoodPerSec = tonumber(summary.FoodPerSec) or 0
+	normalized.LifetimeFood = tonumber(summary.LifetimeFood) or 0
+	normalized.CurrentNectar = tonumber(summary.CurrentNectar) or 0
+	normalized.GeneratorsOwned = tonumber(summary.GeneratorsOwned) or 0
+	normalized.EquippedBugs = if type(summary.EquippedBugs) == "table" then summary.EquippedBugs else {}
+	normalized.LeaderboardPlacements = if type(summary.LeaderboardPlacements) == "table" then summary.LeaderboardPlacements else {}
+	return normalized
+end
+
 local function styleName(label: TextLabel, summary, fallbackDisplayName: string)
 	local displayName = if summary and summary.DisplayName then summary.DisplayName else fallbackDisplayName
 	local isTop = summary and summary.LeaderboardPlacements and #summary.LeaderboardPlacements > 0
@@ -164,13 +181,14 @@ function ColonyMapController.Init(initContext): ()
 	getSummaryRemote = ensureRemote(RemoteNames.Profile_GetSummary)
 	if getSummaryRemote then
 		getSummaryRemote.OnClientEvent:Connect(function(summary)
-			if type(summary) == "table" and summary.UserId then
-				profileSummaryByUserId[summary.UserId] = summary
-				UpdateNameplate(summary.UserId)
-				UpdateMarkerSkin(summary.UserId)
-				if selectedUserId == summary.UserId then
+			local normalizedSummary = sanitizeSummary(summary, selectedUserId)
+			if normalizedSummary and normalizedSummary.UserId then
+				profileSummaryByUserId[normalizedSummary.UserId] = normalizedSummary
+				UpdateNameplate(normalizedSummary.UserId)
+				UpdateMarkerSkin(normalizedSummary.UserId)
+				if selectedUserId == normalizedSummary.UserId then
 					if ProfileCard and ProfileCard.Show then
-						ProfileCard.Show(summary)
+						ProfileCard.Show(normalizedSummary)
 					else
 						warn("[BugsOS] ProfileCard.Show is unavailable")
 					end
