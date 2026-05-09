@@ -15,6 +15,14 @@ local function close()
 	if root then root.Visible = false end
 end
 
+local function safeAbbreviate(value: number?): string
+	local abbreviate = NumberFormatter and NumberFormatter.Abbreviate
+	if type(abbreviate) == "function" then
+		return abbreviate(value)
+	end
+	return tostring(tonumber(value) or 0)
+end
+
 local function bindCloseHandlers()
 	if outsideConn then outsideConn:Disconnect() end
 	outsideConn = UserInputService.InputBegan:Connect(function(input, gp)
@@ -71,25 +79,32 @@ function ProfileCard.Show(summary)
 	local titleColor = "#9DD2FF"
 	local displayName = tostring(summary.DisplayName or summary.Username or "Unknown")
 	local prestige = tostring(summary.Prestige or 0)
-	local foodPs = NumberFormatter.Abbreviate(summary.FoodPerSec or 0)
-	local life = NumberFormatter.Abbreviate(summary.LifetimeFood or 0)
-	local nectar = NumberFormatter.Abbreviate(summary.CurrentNectar or 0)
+	local foodPs = safeAbbreviate(summary.FoodPerSec or 0)
+	local life = safeAbbreviate(summary.LifetimeFood or 0)
+	local nectar = safeAbbreviate(summary.CurrentNectar or 0)
 	local generators = tostring(summary.GeneratorsOwned or 0)
-	local headerLabel = root.Header :: TextLabel
-	headerLabel.Text = string.format("<b>%s</b>\n<font color='%s'>%s</font>\n<font color='#FFD750'>Prestige %s • Prestige %s</font>\nFarm: %s Generators • %s/s\nLifetime Food: %s • Nectar: %s", displayName, titleColor, tostring(summary.EquippedTitle or "No Title"), prestige, prestige, generators, foodPs, life, nectar)
+	local headerLabel = root and root:FindFirstChild("Header")
+	if headerLabel and headerLabel:IsA("TextLabel") then
+		headerLabel.Text = string.format("<b>%s</b>\n<font color='%s'>%s</font>\n<font color='#FFD750'>Prestige %s</font>\nFarm: %s Generators • %s/s\nLifetime Food: %s • Nectar: %s", displayName, titleColor, tostring(summary.EquippedTitle or "No Title"), prestige, generators, foodPs, life, nectar)
+	end
 
 	local footerLines = {}
 	if summary.Guild and summary.Guild.Name then table.insert(footerLines, "Guild: " .. tostring(summary.Guild.Name)) end
 	for _, placement in ipairs(summary.LeaderboardPlacements or {}) do
 		table.insert(footerLines, string.format("🏆 #%s %s", tostring(placement.Rank or "?"), tostring(placement.Name or "Leaderboard")))
 	end
-	local footerLabel = root.Footer :: TextLabel
-	footerLabel.Text = table.concat(footerLines, "\n")
+	local footerLabel = root and root:FindFirstChild("Footer")
+	if footerLabel and footerLabel:IsA("TextLabel") then
+		footerLabel.Text = table.concat(footerLines, "\n")
+	end
 
-	local bugGridFrame = bugGrid :: Frame
-	BugShowcaseGrid.Render(bugGridFrame, summary.EquippedBugs)
+	if bugGrid and bugGrid:IsA("Frame") and type(BugShowcaseGrid.Render) == "function" then
+		BugShowcaseGrid.Render(bugGrid, summary.EquippedBugs)
+	end
 
-	root.Visible = true
+	if root then
+		root.Visible = true
+	end
 	bindCloseHandlers()
 end
 
