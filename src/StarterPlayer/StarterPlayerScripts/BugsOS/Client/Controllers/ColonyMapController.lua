@@ -45,7 +45,7 @@ local function sanitizeSummary(summary: any, fallbackUserId: number?): any
 	normalized.FoodPerSec = tonumber(summary.FoodPerSec) or 0
 	normalized.LifetimeFood = tonumber(summary.LifetimeFood) or 0
 	normalized.CurrentNectar = tonumber(summary.CurrentNectar) or 0
-	normalized.GeneratorsOwned = tonumber(summary.GeneratorsOwned) or 0
+	normalized.GeneratorCount = tonumber(summary.GeneratorCount) or tonumber(summary.GeneratorsOwned) or 0
 	normalized.EquippedBugs = if type(summary.EquippedBugs) == "table" then summary.EquippedBugs else {}
 	normalized.LeaderboardPlacements = if type(summary.LeaderboardPlacements) == "table" then summary.LeaderboardPlacements else {}
 	return normalized
@@ -73,18 +73,19 @@ end
 local function CreateNameplate(player: Player): Frame
 	local plate = Instance.new("Frame")
 	plate.Name = "NameplateFrame"
-	plate.Size = UDim2.fromOffset(116, 16)
-	plate.Position = UDim2.fromOffset(2, 30)
+	plate.Size = UDim2.fromOffset(132, 20)
+	plate.Position = UDim2.fromOffset(0, 38)
 	plate.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 	plate.BackgroundTransparency = 0.18
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
+	corner.CornerRadius = UDim.new(0, 5)
 	corner.Parent = plate
 
 	local label = Instance.new("TextLabel")
 	label.Name = "NameplateLabel"
-	label.Size = UDim2.fromScale(1, 1)
+	label.Size = UDim2.new(1, -12, 1, 0)
+	label.Position = UDim2.fromOffset(6, 0)
 	label.BackgroundTransparency = 1
 	label.TextScaled = true
 	label.Font = Enum.Font.GothamSemibold
@@ -98,13 +99,13 @@ end
 local function CreateColonyMarker(player: Player): Frame
 	local marker = Instance.new("Frame")
 	marker.Name = "ColonyFrame"
-	marker.Size = UDim2.fromOffset(120, 46)
+	marker.Size = UDim2.fromOffset(136, 60)
 	marker.BackgroundTransparency = 1
 
 	local icon = Instance.new("TextButton")
 	icon.Name = "ColonyIcon"
-	icon.Size = UDim2.fromOffset(28, 28)
-	icon.Position = UDim2.fromOffset(46, 0)
+	icon.Size = UDim2.fromOffset(38, 38)
+	icon.Position = UDim2.fromOffset(49, 0)
 	icon.Text = ""
 	icon.BackgroundTransparency = 1
 	icon.Parent = marker

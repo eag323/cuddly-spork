@@ -1,6 +1,7 @@
 --!strict
 
 local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 local NumberFormatter = require(game:GetService("ReplicatedStorage"):WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("NumberFormatter"))
 local BugShowcaseGrid = require(script.Parent:WaitForChild("BugShowcaseGrid"))
 
@@ -48,7 +49,8 @@ function ProfileCard.Show(summary)
 	if not root then
 		root = Instance.new("Frame")
 		root.Name = "ProfileCard"
-		root.Size = UDim2.fromOffset(400, 390)
+		root.Size = UDim2.fromOffset(400, 120)
+		root.AutomaticSize = Enum.AutomaticSize.Y
 		root.Position = UDim2.fromScale(0.57, 0.18)
 		root.BackgroundColor3 = Color3.fromRGB(12, 24, 46)
 		root.ZIndex = 60
@@ -68,12 +70,12 @@ function ProfileCard.Show(summary)
 		Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 		closeBtn.Activated:Connect(close)
 
-		local info = Instance.new("TextLabel"); info.Name="Header"; info.Size=UDim2.fromOffset(330,115); info.Position=UDim2.fromOffset(58,12); info.BackgroundTransparency=1; info.TextXAlignment=Enum.TextXAlignment.Left; info.TextYAlignment=Enum.TextYAlignment.Top; info.RichText=true; info.TextWrapped=true; info.Font=Enum.Font.Gotham; info.TextSize=14; info.TextColor3=Color3.fromRGB(220,234,255); info.Parent=root
-		local avatar = Instance.new("TextLabel"); avatar.Name="Avatar"; avatar.Size=UDim2.fromOffset(46,46); avatar.Position=UDim2.fromOffset(10,14); avatar.Text="👤"; avatar.TextScaled=true; avatar.BackgroundColor3=Color3.fromRGB(26,42,68); avatar.Parent=root; Instance.new("UICorner", avatar).CornerRadius=UDim.new(1,0)
+		local info = Instance.new("TextLabel"); info.Name="Header"; info.Size=UDim2.fromOffset(330,115); info.Position=UDim2.fromOffset(66,12); info.BackgroundTransparency=1; info.TextXAlignment=Enum.TextXAlignment.Left; info.TextYAlignment=Enum.TextYAlignment.Top; info.RichText=true; info.TextWrapped=true; info.Font=Enum.Font.Gotham; info.TextSize=14; info.TextColor3=Color3.fromRGB(220,234,255); info.Parent=root
+		local avatar = Instance.new("ImageLabel"); avatar.Name="Avatar"; avatar.Size=UDim2.fromOffset(52,52); avatar.Position=UDim2.fromOffset(10,14); avatar.BackgroundColor3=Color3.fromRGB(26,42,68); avatar.Parent=root; Instance.new("UICorner", avatar).CornerRadius=UDim.new(0,10)
 		local online = Instance.new("Frame"); online.Size=UDim2.fromOffset(10,10); online.Position=UDim2.fromOffset(50,14); online.BackgroundColor3=Color3.fromRGB(72,230,125); online.Parent=root; Instance.new("UICorner", online).CornerRadius=UDim.new(1,0)
 		local panel = Instance.new("Frame"); panel.Size=UDim2.fromOffset(372,172); panel.Position=UDim2.fromOffset(14,126); panel.BackgroundColor3=Color3.fromRGB(19,34,58); panel.Parent=root; Instance.new("UICorner", panel).CornerRadius=UDim.new(0,12)
 		bugGrid = BugShowcaseGrid.Create(panel, UDim2.fromOffset(312,136)); bugGrid.Position=UDim2.fromOffset(30,18)
-		local footer = Instance.new("TextLabel"); footer.Name="Footer"; footer.Size=UDim2.fromOffset(372,72); footer.Position=UDim2.fromOffset(14,304); footer.BackgroundTransparency=1; footer.TextXAlignment=Enum.TextXAlignment.Left; footer.TextYAlignment=Enum.TextYAlignment.Top; footer.RichText=true; footer.Font=Enum.Font.Gotham; footer.TextSize=13; footer.TextColor3=Color3.fromRGB(198,222,250); footer.TextWrapped=true; footer.Parent=root
+		local footer = Instance.new("TextLabel"); footer.Name="Footer"; footer.Size=UDim2.fromOffset(372,44); footer.Position=UDim2.fromOffset(14,304); footer.BackgroundTransparency=1; footer.TextXAlignment=Enum.TextXAlignment.Left; footer.TextYAlignment=Enum.TextYAlignment.Top; footer.RichText=true; footer.Font=Enum.Font.Gotham; footer.TextSize=13; footer.TextColor3=Color3.fromRGB(198,222,250); footer.TextWrapped=true; footer.Visible=false; footer.Parent=root
 	end
 
 	local titleColor = "#9DD2FF"
@@ -82,10 +84,15 @@ function ProfileCard.Show(summary)
 	local foodPs = safeAbbreviate(summary.FoodPerSec or 0)
 	local life = safeAbbreviate(summary.LifetimeFood or 0)
 	local nectar = safeAbbreviate(summary.CurrentNectar or 0)
-	local generators = tostring(summary.GeneratorsOwned or 0)
+	local generators = tostring(summary.GeneratorCount or summary.GeneratorsOwned or 0)
 	local headerLabel = root and root:FindFirstChild("Header")
 	if headerLabel and headerLabel:IsA("TextLabel") then
 		headerLabel.Text = string.format("<b>%s</b>\n<font color='%s'>%s</font>\n<font color='#FFD750'>Prestige %s</font>\nFarm: %s Generators • %s/s\nLifetime Food: %s • Nectar: %s", displayName, titleColor, tostring(summary.EquippedTitle or "No Title"), prestige, generators, foodPs, life, nectar)
+	end
+	local avatarLabel = root and root:FindFirstChild("Avatar")
+	if avatarLabel and avatarLabel:IsA("ImageLabel") and type(summary.UserId) == "number" then
+		local thumb = Players:GetUserThumbnailAsync(summary.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+		avatarLabel.Image = thumb
 	end
 
 	local footerLines = {}
@@ -96,6 +103,7 @@ function ProfileCard.Show(summary)
 	local footerLabel = root and root:FindFirstChild("Footer")
 	if footerLabel and footerLabel:IsA("TextLabel") then
 		footerLabel.Text = table.concat(footerLines, "\n")
+		footerLabel.Visible = #footerLines > 0
 	end
 
 	if bugGrid and bugGrid:IsA("Frame") and type(BugShowcaseGrid.Render) == "function" then

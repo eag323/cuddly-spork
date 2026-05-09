@@ -9,6 +9,7 @@ local Remotes = Shared:WaitForChild("Remotes")
 local ConfigFolder = Shared:WaitForChild("Config")
 local RemoteNames = require(Remotes:WaitForChild("RemoteNames"))
 local BugConfig = require(ConfigFolder:WaitForChild("BugConfig"))
+local GeneratorConfig = require(ConfigFolder:WaitForChild("GeneratorConfig"))
 local ColonySkinConfig = require(Shared:WaitForChild("Configs"):WaitForChild("ColonySkinConfig"))
 local ColonyAuraConfig = require(Shared:WaitForChild("Configs"):WaitForChild("ColonyAuraConfig"))
 local ServicesFolder = ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Server"):WaitForChild("Services")
@@ -30,6 +31,28 @@ local function getOrCreateRemoteEvent(name: string): RemoteEvent
 end
 
 local rarityRank = {Common=1,Uncommon=2,Rare=3,Epic=4,Legendary=5,Mythic=6}
+local generatorById = {}
+for _, gen in ipairs(GeneratorConfig.Generators or {}) do
+	generatorById[gen.id] = gen
+end
+
+local function calculateFoodPerSec(data): number
+	local progression = (data.Progression or {})
+	local prestige = tonumber(progression.Prestige) or 0
+	local prestigeMult = 1 + (prestige * 0.1)
+	local equipped = (((data.Generators or {}).Equipped) or {})
+	local total = 0
+	for _, slot in pairs(equipped) do
+		if type(slot) == "table" and type(slot.GeneratorId) == "string" then
+			local gen = generatorById[slot.GeneratorId]
+			if gen then
+				local level = math.max(1, math.floor(tonumber(slot.Level) or 1))
+				total += (tonumber(gen.baseFoodPerSec) or 0) * (level ^ 1.55)
+			end
+		end
+	end
+	return total * prestigeMult
+end
 local function topBugs(data): {any}
 	local inv = (((data or {}).Bugs or {}).Inventory) or {}
 	local equippedSet = {}
@@ -78,7 +101,7 @@ local function buildSummary(player: Player): {[string]: any}
 		UnlockedColonySkins = owned.ColonySkins or {Default=true},
 		UnlockedColonyAuras = owned.ColonyAuras or {None=true},
 		GeneratorCount = #( (((data.Generators or {}).Equipped) or {}) ),
-		FoodPerSec = (lb.BestFoodPerSec or 0),
+		FoodPerSec = calculateFoodPerSec(data),
 		LifetimeFood = (((data.Currencies or {}).LifetimeFood) or 0),
 		CurrentNectar = (((data.Currencies or {}).Nectar) or 0),
 		TopBugs = topBugs(data),

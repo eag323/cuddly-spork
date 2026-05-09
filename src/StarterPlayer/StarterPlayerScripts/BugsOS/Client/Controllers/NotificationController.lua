@@ -8,6 +8,7 @@ local contextRef = nil
 local notificationsRoot: Frame? = nil
 local activeCards = {}
 local lastShownByKey = {}
+local shownOnceByKey = {}
 
 local TYPE_COLORS = {
 	Info = Color3.fromRGB(60, 130, 220),
@@ -54,11 +55,17 @@ end
 
 local function showNotification(message: string, notificationType: string): ()
 	local key = notificationType .. "::" .. message
+	if shownOnceByKey[key] then
+		return
+	end
 	local now = os.clock()
 	if lastShownByKey[key] and (now - lastShownByKey[key]) <= 0.75 then
 		return
 	end
 	lastShownByKey[key] = now
+	if string.find(message, "Achievement complete:", 1, true) == 1 or string.find(message, "Discovered ", 1, true) == 1 then
+		shownOnceByKey[key] = true
+	end
 	local root = ensureRootGui()
 	local card = Instance.new("TextLabel")
 	card.BackgroundColor3 = TYPE_COLORS[notificationType] or TYPE_COLORS.Info
