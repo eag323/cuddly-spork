@@ -5,8 +5,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BugsOSFolder = ReplicatedStorage:WaitForChild("BugsOS")
 local SharedFolder = BugsOSFolder:WaitForChild("Shared")
 local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local ConfigFolder = SharedFolder:WaitForChild("Config")
 
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
+local PrestigeConfig = require(ConfigFolder:WaitForChild("PrestigeConfig"))
 
 local ServerScriptService = game:GetService("ServerScriptService")
 local BugsOSServerFolder = ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Server")
@@ -16,8 +18,9 @@ local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 
 local PrestigeService = {}
 
-local PRESTIGE_ONE_REQUIREMENT = 50000000
 local prestigeRequestRemote: RemoteEvent? = nil
+local requestDebounceByUserId: { [number]: number } = {}
+local REQUEST_COOLDOWN_SECONDS = 1.2
 
 local function getOrCreateRemoteEvent(remoteName: string): RemoteEvent
 	local existingRemote = RemotesFolder:FindFirstChild(remoteName)
@@ -31,6 +34,16 @@ local function getOrCreateRemoteEvent(remoteName: string): RemoteEvent
 	return remoteEvent
 end
 
+local function canRequestNow(userId: number): boolean
+	local now = os.clock()
+	local lastAt = requestDebounceByUserId[userId]
+	if lastAt and (now - lastAt) < REQUEST_COOLDOWN_SECONDS then
+		return false
+	end
+	requestDebounceByUserId[userId] = now
+	return true
+end
+
 function PrestigeService.GetPrestigeMultiplier(player: Player): number
 	local playerData = ProfileService.GetPlayerData(player)
 	if not playerData or type(playerData.Progression) ~= "table" then
@@ -42,11 +55,14 @@ function PrestigeService.GetPrestigeMultiplier(player: Player): number
 		return 1
 	end
 
-	return 1 + (prestige * 0.1)
+	return PrestigeConfig.GetMultiplier(prestige)
 end
 
 local function onPrestigeRequest(player: Player, payload: any): ()
 	if type(payload) ~= "table" or payload.Confirm ~= true then
+		return
+	end
+	if not canRequestNow(player.UserId) then
 		return
 	end
 
@@ -55,17 +71,16 @@ local function onPrestigeRequest(player: Player, payload: any): ()
 		return
 	end
 
-	local lifetimeFood = playerData.Currencies.LifetimeFood
-	if type(lifetimeFood) ~= "number" or lifetimeFood < PRESTIGE_ONE_REQUIREMENT then
+	local lifetimeFood = tonumber(playerData.Currencies.LifetimeFood) or 0
+	local prestige = tonumber(playerData.Progression.Prestige) or 0
+	local nextPrestigeLevel = prestige + 1
+	local requiredLifetimeFood = PrestigeConfig.GetRequiredLifetimeFood(nextPrestigeLevel)
+
+	if lifetimeFood < requiredLifetimeFood then
 		return
 	end
 
-	local prestige = playerData.Progression.Prestige
-	if type(prestige) ~= "number" then
-		prestige = 0
-	end
-	playerData.Progression.Prestige = prestige + 1
-
+	playerData.Progression.Prestige = nextPrestigeLevel
 	playerData.Currencies.Food = 0
 	playerData.Currencies.Coins = 0
 	playerData.ClickTools = {}

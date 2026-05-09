@@ -9,6 +9,7 @@ local notificationsRoot: Frame? = nil
 local activeCards = {}
 local lastShownByKey = {}
 local shownOnceByKey = {}
+local shownEventIds = {}
 
 local TYPE_COLORS = {
 	Info = Color3.fromRGB(60, 130, 220),
@@ -53,7 +54,13 @@ local function ensureRootGui(): Frame
 	return root
 end
 
-local function showNotification(message: string, notificationType: string): ()
+local function showNotification(message: string, notificationType: string, eventId: string?): ()
+	if type(eventId) == "string" and eventId ~= "" then
+		if shownEventIds[eventId] then
+			return
+		end
+		shownEventIds[eventId] = true
+	end
 	local key = notificationType .. "::" .. message
 	if shownOnceByKey[key] then
 		return
@@ -105,7 +112,7 @@ function NotificationController.Init(context): ()
 end
 
 function NotificationController.Show(message: string, notificationType: string): ()
-	showNotification(message, notificationType)
+	showNotification(message, notificationType, nil)
 end
 
 function NotificationController.Start(): ()
@@ -128,7 +135,7 @@ function NotificationController.Start(): ()
 			notificationType = "Info"
 		end
 
-		showNotification(message, notificationType)
+		showNotification(message, notificationType, payload.EventId)
 	end)
 end
 
