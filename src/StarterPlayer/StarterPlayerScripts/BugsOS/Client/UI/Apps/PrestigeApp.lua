@@ -14,8 +14,9 @@ function PrestigeApp.Mount(target, context)
  confirm.Activated:Connect(function()
   local lf=((((context.State.PlayerData or {}).Currencies or {}).LifetimeFood) or 0)
   if lf<PRESTIGE_REQUIREMENT or not prestigeRequestRemote then return end
-  if type(context.UI.ShowConfirmPopup)=="function" then
-   context.UI.ShowConfirmPopup("Prestige and reset current run progress?", function()
+  local showConfirmPopup = context.UI and context.UI.ShowConfirmPopup
+  if type(showConfirmPopup)=="function" then
+   showConfirmPopup("Prestige and reset current run progress?", function()
     prestigeRequestRemote:FireServer({Confirm=true})
    end)
   else
