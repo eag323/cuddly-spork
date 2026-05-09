@@ -28,4 +28,8 @@ function NumberFormatter.Abbreviate(value: number?): string
 	return sign .. formatted .. SUFFIXES[suffixIndex]
 end
 
+function NumberFormatter.FormatCompact(value: number?): string
+	return NumberFormatter.Abbreviate(value)
+end
+
 return NumberFormatter
