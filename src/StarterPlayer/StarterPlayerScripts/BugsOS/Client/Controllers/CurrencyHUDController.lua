@@ -37,8 +37,8 @@ local function refresh()
 end
 function CurrencyHUDController.Init(c) context=c; for _,e in ClickToolConfig.Tools do clickToolBonusById[e.id]=e.foodPerClickPerLevel end for _,e in GeneratorConfig.Generators do if e.classId=='snack' then generatorById[e.id]=e end end end
 function CurrencyHUDController.Start()
- local frame=Instance.new('ImageLabel'); frame.Name='CurrencyTray'; frame.AnchorPoint=Vector2.new(1,0.5); frame.Position=UDim2.new(1,-8,0.5,0); frame.Size=UDim2.fromOffset(252,30); frame.BackgroundTransparency=1; frame.Image=UIAssets.TaskbarTabPressedImage; frame.ScaleType=Enum.ScaleType.Slice; frame.SliceCenter=UIAssets.SliceCenter; frame.Parent=context.UI.Taskbar
- local list=Instance.new("UIListLayout"); list.FillDirection=Enum.FillDirection.Horizontal; list.Padding=UDim.new(0,10); list.VerticalAlignment=Enum.VerticalAlignment.Center; list.Parent=frame
+ local frame=Instance.new('ImageLabel'); frame.Name='CurrencyTray'; frame.AnchorPoint=Vector2.new(1,0.5); frame.Position=UDim2.new(1,-8,0.5,0); frame.Size=UDim2.fromOffset(236,30); frame.BackgroundTransparency=1; frame.Image=UIAssets.TaskbarTabPressedImage; frame.ScaleType=Enum.ScaleType.Slice; frame.SliceCenter=UIAssets.SliceCenter; frame.Parent=context.UI.Taskbar
+ local list=Instance.new("UIListLayout"); list.FillDirection=Enum.FillDirection.Horizontal; list.Padding=UDim.new(0,4); list.VerticalAlignment=Enum.VerticalAlignment.Center; list.Parent=frame
  local pad=Instance.new("UIPadding"); pad.PaddingLeft=UDim.new(0,8); pad.PaddingRight=UDim.new(0,8); pad.Parent=frame
  local items={
   {id='Food', icon='🥪', name='Food'},
@@ -46,9 +46,14 @@ function CurrencyHUDController.Start()
   {id='Nectar', icon='💧', name='Nectar'},
  }
  for _,spec in ipairs(items) do
-  local item=Instance.new("Frame"); item.Size=UDim2.fromOffset(72,24); item.BackgroundTransparency=1; item.Parent=frame
-  local iconText=Instance.new('TextLabel'); iconText.Size=UDim2.fromOffset(18,24); iconText.Position=UDim2.fromOffset(0,0); iconText.BackgroundTransparency=1; iconText.Font=UITheme.Font; iconText.TextSize=12; iconText.TextColor3=Color3.new(0,0,0); iconText.Text=spec.icon; iconText.Parent=item
-  local l=Instance.new('TextLabel'); l.Size=UDim2.new(1,-18,1,0); l.Position=UDim2.fromOffset(18,0); l.BackgroundTransparency=1; l.TextColor3=Color3.new(0,0,0); l.TextXAlignment=Enum.TextXAlignment.Left; l.Font=UITheme.Font; l.TextSize=11; l.Parent=item; labels[spec.id]=l
+  local item=Instance.new("Frame"); item.Size=UDim2.fromOffset(68,24); item.BackgroundTransparency=1; item.Parent=frame
+  if spec.id == "Coins" then
+   local iconImage = Instance.new("ImageLabel"); iconImage.Size=UDim2.fromOffset(14,14); iconImage.Position=UDim2.fromOffset(1,5); iconImage.BackgroundTransparency=1; iconImage.Image=UIAssets.Coins; iconImage.Parent=item
+   local fallback = Instance.new('TextLabel'); fallback.Size=UDim2.fromOffset(16,24); fallback.Position=UDim2.fromOffset(0,0); fallback.BackgroundTransparency=1; fallback.Font=UITheme.Font; fallback.TextSize=12; fallback.TextColor3=Color3.new(0,0,0); fallback.Text='🪙'; fallback.Visible = (UIAssets.Coins == nil or UIAssets.Coins == "" or UIAssets.Coins == "rbxassetid://0"); fallback.Parent=item
+  else
+   local iconText=Instance.new('TextLabel'); iconText.Size=UDim2.fromOffset(16,24); iconText.Position=UDim2.fromOffset(0,0); iconText.BackgroundTransparency=1; iconText.Font=UITheme.Font; iconText.TextSize=12; iconText.TextColor3=Color3.new(0,0,0); iconText.Text=spec.icon; iconText.Parent=item
+  end
+  local l=Instance.new('TextLabel'); l.Size=UDim2.new(1,-16,1,0); l.Position=UDim2.fromOffset(16,0); l.BackgroundTransparency=1; l.TextColor3=Color3.new(0,0,0); l.TextXAlignment=Enum.TextXAlignment.Left; l.Font=UITheme.Font; l.TextSize=11; l.Parent=item; labels[spec.id]=l
  end
  refresh()
 end
