@@ -126,7 +126,13 @@ function Window.Create(props: WindowProps)
 	end
 
 	closeButton.Activated:Connect(function()
-		if props.OnClose then props.OnClose(); return end
+		if props.OnClose then
+			props.OnClose()
+			if rootFrame.Parent then
+				destroyWindow()
+			end
+			return
+		end
 		destroyWindow()
 	end)
 

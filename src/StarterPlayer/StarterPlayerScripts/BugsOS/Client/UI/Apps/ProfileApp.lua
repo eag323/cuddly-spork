@@ -1,126 +1,68 @@
 --!strict
 local Players = game:GetService("Players")
 local Window = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("Window"))
+local BugShowcaseGrid = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("BugShowcaseGrid"))
 
 local ProfileApp = {}
 local context
 local windowRef
 
-local warnedMissingState = false
-
-local STAT_FIELDS = {
-	{ "Lifetime Food", "LifetimeFood" },
-	{ "Bugs Caught", "BugsCaught" },
-	{ "Unique Bugs Discovered", "UniqueBugsDiscovered" },
-	{ "Total Clicks", "TotalClicks" },
-	{ "Market Sales", "MarketSales" },
-	{ "Current Nectar", "CurrentNectar" },
-	{ "Bug Points", "BugPoints" },
-}
-
 local function safeGet(tbl, ...)
 	local cur = tbl
-	for _, key in ipairs({ ... }) do
-		if type(cur) ~= "table" then return nil end
-		cur = cur[key]
-	end
+	for _, key in ipairs({ ... }) do if type(cur) ~= "table" then return nil end cur = cur[key] end
 	return cur
 end
 
 local function buildSummary(deps)
-	local localPlayer = Players.LocalPlayer
-	local data = if deps then deps.State and deps.State.PlayerData else nil
-	if not deps or not deps.State then
-		if not warnedMissingState then
-			warnedMissingState = true
-			warn("[BugsOS] ProfileApp missing State dependency")
-		end
-	end
+	local data = deps and deps.State and deps.State.PlayerData or {}
 	return {
-		DisplayName = localPlayer and localPlayer.DisplayName or "Player",
+		DisplayName = Players.LocalPlayer.DisplayName,
 		EquippedTitle = safeGet(data, "Cosmetics", "Equipped", "Title") or "None",
 		Prestige = safeGet(data, "Progression", "Prestige") or 0,
-		Stats = {
-			LifetimeFood = safeGet(data, "Currencies", "LifetimeFood") or 0,
-			BugsCaught = safeGet(data, "Stats", "BugsCaught") or 0,
-			UniqueBugsDiscovered = safeGet(data, "Stats", "UniqueBugsDiscovered") or 0,
-			TotalClicks = safeGet(data, "Stats", "TotalClicks") or 0,
-			MarketSales = safeGet(data, "Stats", "MarketSales") or 0,
-			CurrentNectar = safeGet(data, "Currencies", "Nectar") or 0,
-			BugPoints = safeGet(data, "Currencies", "BugPoints") or 0,
-		},
+		Stats = safeGet(data, "Stats") or {},
+		Currencies = safeGet(data, "Currencies") or {},
 		Titles = safeGet(data, "Cosmetics", "UnlockedTitles") or {},
+		EquippedBugs = safeGet(data, "Loadout", "EquippedBugs") or {},
 	}
 end
 
-function ProfileApp.Init(c)
-	context = c
-end
+function ProfileApp.Init(c) context = c end
 
-function ProfileApp.Mount(target: Instance, depsArg): ()
-	local deps = depsArg or (context and context.AppDependencies or nil)
+function ProfileApp.Mount(target: Instance, deps)
 	local summary = buildSummary(deps)
-
 	windowRef = Window.Create({
-		Title = "Profile.exe",
-		Size = UDim2.fromOffset(760, 560),
-		Position = UDim2.fromScale(0.12, 0.08),
-		Parent = target,
+		Title = "Profile.exe", Size = UDim2.fromOffset(820, 600), Position = UDim2.fromScale(0.1, 0.08), Parent = target,
 		OnClose = function()
 			if context and context.Controllers and context.Controllers.Window then
 				context.Controllers.Window.Close("Profile")
 			end
 		end,
 	})
-
 	local content = windowRef.Content
-	local y = 8
-	local function addLabel(text, h, bold)
-		local l = Instance.new("TextLabel")
-		l.Size = UDim2.new(1, -16, 0, h)
-		l.Position = UDim2.fromOffset(8, y)
-		y += h + 4
-		l.BackgroundTransparency = 1
-		l.TextXAlignment = Enum.TextXAlignment.Left
-		l.TextYAlignment = Enum.TextYAlignment.Top
-		l.Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham
-		l.TextSize = bold and 16 or 14
-		l.TextWrapped = true
-		l.Text = text
-		l.Parent = content
-		return l
+	content.BackgroundColor3 = Color3.fromRGB(10, 22, 40)
+	content.BorderSizePixel = 0
+	local layout = Instance.new("UIListLayout", content); layout.Padding=UDim.new(0,8); layout.SortOrder=Enum.SortOrder.LayoutOrder
+
+	local function section(title, h)
+		local s=Instance.new("Frame"); s.Size=UDim2.new(1,0,0,h); s.BackgroundColor3=Color3.fromRGB(15,31,55); s.Parent=content; Instance.new("UICorner", s).CornerRadius=UDim.new(0,10); Instance.new("UIStroke", s).Color=Color3.fromRGB(63,96,140)
+		local t=Instance.new("TextLabel"); t.Size=UDim2.new(1,-16,0,20); t.Position=UDim2.fromOffset(8,6); t.BackgroundTransparency=1; t.TextXAlignment=Enum.TextXAlignment.Left; t.Font=Enum.Font.GothamBold; t.TextSize=14; t.TextColor3=Color3.fromRGB(236,244,255); t.Text=title; t.Parent=s
+		return s
 	end
+	local header=section("Profile",92)
+	local body=(Instance.new("TextLabel")); body.Size=UDim2.new(1,-16,1,-30); body.Position=UDim2.fromOffset(8,26); body.BackgroundTransparency=1; body.TextXAlignment=Enum.TextXAlignment.Left; body.TextYAlignment=Enum.TextYAlignment.Top; body.Font=Enum.Font.Gotham; body.TextSize=14; body.TextColor3=Color3.fromRGB(214,231,255); body.RichText=true; body.Text=string.format("<b>%s</b>\n<font color='#8AC8FF'>%s</font>\n<font color='#FFD750'>Prestige %s</font>", summary.DisplayName, summary.EquippedTitle, tostring(summary.Prestige)); body.Parent=header
 
-	addLabel("Player: " .. summary.DisplayName, 24, true)
-	addLabel("Equipped Title: " .. tostring(summary.EquippedTitle), 20, false)
-	addLabel("Prestige: " .. tostring(summary.Prestige), 20, false)
-	addLabel("Stats", 22, true)
-
-	for _, entry in ipairs(STAT_FIELDS) do
-		local label = entry[1]
-		local key = entry[2]
-		addLabel(string.format("- %s: %s", label, tostring(summary.Stats[key] or "0")), 18, false)
-	end
-
-	addLabel("Titles", 22, true)
-	if #summary.Titles == 0 then
-		addLabel("No titles unlocked yet", 18, false)
-	else
-		for _, title in ipairs(summary.Titles) do
-			local equipped = (title == summary.EquippedTitle) and " (Equipped)" or ""
-			addLabel("- " .. tostring(title) .. equipped, 18, false)
-		end
-		addLabel("Title equip is read-only until server remote support is available.", 18, false)
-	end
-
-	addLabel("Colony Skin", 22, true)
-	addLabel("Default skin equipped", 18, false)
-	addLabel("Colony Aura", 22, true)
-	addLabel("No aura equipped", 18, false)
+	local stats=section("Stats",120)
+	local st=Instance.new("TextLabel"); st.Size=UDim2.new(1,-16,1,-30); st.Position=UDim2.fromOffset(8,26); st.BackgroundTransparency=1; st.TextXAlignment=Enum.TextXAlignment.Left; st.TextYAlignment=Enum.TextYAlignment.Top; st.Font=Enum.Font.Gotham; st.TextSize=13; st.TextColor3=Color3.fromRGB(208,225,247); st.Text=string.format("Lifetime Food: %s\nBugs Caught: %s\nNectar: %s", tostring(summary.Currencies.LifetimeFood or 0), tostring(summary.Stats.BugsCaught or 0), tostring(summary.Currencies.Nectar or 0)); st.Parent=stats
+	local titles=section("Titles Collection",90)
+	local tl=Instance.new("TextLabel"); tl.Size=UDim2.new(1,-16,1,-30); tl.Position=UDim2.fromOffset(8,26); tl.BackgroundTransparency=1; tl.TextXAlignment=Enum.TextXAlignment.Left; tl.TextYAlignment=Enum.TextYAlignment.Top; tl.Font=Enum.Font.Gotham; tl.TextSize=13; tl.TextColor3=Color3.fromRGB(208,225,247); tl.Text=((#summary.Titles>0) and table.concat(summary.Titles, ", ") or "No titles unlocked"); tl.Parent=titles
+	section("Colony Skin Selection",52)
+	section("Aura Selection",52)
+	local bugs=section("Equipped Bug Showcase",172)
+	local grid=BugShowcaseGrid.Create(bugs, UDim2.fromOffset(312,136)); grid.Position=UDim2.fromOffset(16,28); BugShowcaseGrid.Render(grid, summary.EquippedBugs)
 end
 
-function ProfileApp.Unmount(): ()
-	if windowRef then windowRef.Root:Destroy() windowRef=nil end
+function ProfileApp.Unmount()
+	if windowRef then windowRef.Destroy(); windowRef=nil end
 end
 
 return ProfileApp
