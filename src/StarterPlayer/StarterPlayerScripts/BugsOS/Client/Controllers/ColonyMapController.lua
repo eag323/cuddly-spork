@@ -74,7 +74,7 @@ local function CreateNameplate(player: Player): Frame
 	local plate = Instance.new("Frame")
 	plate.Name = "NameplateFrame"
 	plate.Size = UDim2.fromOffset(154, 24)
-	plate.Position = UDim2.fromOffset(-9, 58)
+	plate.Position = UDim2.new(0.5, -77, 0, 60)
 	plate.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 	plate.BackgroundTransparency = 0.18
 
@@ -107,7 +107,7 @@ local function CreateColonyMarker(player: Player): Frame
 	local icon = Instance.new("TextButton")
 	icon.Name = "ColonyIcon"
 	icon.Size = UDim2.fromOffset(57, 57)
-	icon.Position = UDim2.fromOffset(56, 0)
+	icon.Position = UDim2.new(0.5, -28, 0, 0)
 	icon.Text = ""
 	icon.BackgroundTransparency = 1
 	icon.Parent = marker

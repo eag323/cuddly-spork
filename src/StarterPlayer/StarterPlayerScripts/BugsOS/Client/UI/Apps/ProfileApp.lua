@@ -9,6 +9,7 @@ local ColonyAuraConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitFo
 local ProfileApp = {}
 local context
 local windowRef
+local activeDeps
 
 local function safeGet(tbl, ...)
 	local cur = tbl
@@ -38,12 +39,19 @@ function ProfileApp.Mount(target: Instance, deps)
 		return
 	end
 	windowRef = nil
+	activeDeps = deps
 	local summary = buildSummary(deps)
 	windowRef = Window.Create({
 		Title = "Profile.exe", Size = UDim2.fromOffset(820, 600), Position = UDim2.fromScale(0.1, 0.08), Parent = target,
 		OnClose = function()
-			if context and context.Controllers and context.Controllers.Window then
-				context.Controllers.Window.Close("Profile")
+			local windowController = nil
+			if context and context.Controllers then
+				windowController = context.Controllers.Window
+			elseif activeDeps and activeDeps.Controllers then
+				windowController = activeDeps.Controllers.Window
+			end
+			if windowController then
+				windowController.Close("Profile")
 			end
 		end,
 	})
@@ -89,6 +97,7 @@ end
 
 function ProfileApp.Unmount()
 	if windowRef then windowRef.Destroy(); windowRef=nil end
+	activeDeps = nil
 end
 
 return ProfileApp

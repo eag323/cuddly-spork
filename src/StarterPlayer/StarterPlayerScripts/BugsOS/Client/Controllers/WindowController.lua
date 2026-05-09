@@ -8,6 +8,7 @@ local WindowController = {}
 local context
 local openApps: {[string]: boolean} = {}
 local registryById: {[string]: any} = {}
+local initializedById: {[string]: boolean} = {}
 local taskbarButtons: {[string]: GuiButton} = {}
 local taskbarSetActive: {[string]: (boolean) -> ()} = {}
 local taskbarHolder: ScrollingFrame? = nil
@@ -43,6 +44,10 @@ function WindowController.Open(id: string)
 		return
 	end
 	context.AppDependencies = { Root = context.UI.AppsLayer, Services = context.Services or {}, State = context.State, Controllers = context.Controllers or {}, Remotes = context.Remotes }
+	if not initializedById[id] and app.Module and app.Module.Init then
+		app.Module.Init(context)
+		initializedById[id] = true
+	end
 	local ok, err = pcall(function()
 		app.Module.Mount(context.UI.AppsLayer, context.AppDependencies)
 	end)

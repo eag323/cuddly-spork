@@ -356,7 +356,7 @@ function DesktopController.Start(): ()
 	local startButton, _startLabel = createTaskbarImageButton(
 		taskbar,
 		"StartButton",
-		UDim2.fromOffset(108, 30),
+		UDim2.fromOffset(76, 30),
 		UDim2.fromOffset(8, 8),
 		"🐞 Start"
 	)
