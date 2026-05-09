@@ -8,7 +8,6 @@ local RemoteNames = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChil
 local ColonyMapController = {}
 local context: { [string]: any }
 local markerByUserId: { [number]: Frame } = {}
-local warnedMissingNameplateByUserId: { [number]: boolean } = {}
 local profileSummaryByUserId: { [number]: any } = {}
 local ProfileCard = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Components"):WaitForChild("ProfileCard"))
 
@@ -25,18 +24,23 @@ end
 
 local getSummaryRemote: RemoteEvent? = nil
 
-local function styleName(label: TextLabel, summary)
-	local display = if summary and summary.DisplayName then summary.DisplayName else label.Text
-	local textColor = Color3.fromRGB(255, 255, 255)
-	if summary and summary.LeaderboardPlacements and #summary.LeaderboardPlacements > 0 then
-		display = "🏆 " .. display
-		textColor = Color3.fromRGB(255, 215, 80)
+local function styleName(label: TextLabel, summary, fallbackDisplayName: string)
+	local displayName = if summary and summary.DisplayName then summary.DisplayName else fallbackDisplayName
+	local isTop = summary and summary.LeaderboardPlacements and #summary.LeaderboardPlacements > 0
+	local guildTag = summary and summary.Guild and summary.Guild.Tag
+	local guildColor = if summary and summary.Guild and summary.Guild.Color then summary.Guild.Color else nil
+	local prefix = guildTag and ("[" .. guildTag .. "] ") or ""
+	local trophy = isTop and "🏆 " or ""
+	local nameColor = isTop and "#FFD750" or "#FFFFFF"
+	if guildTag then
+		local tagColor = (typeof(guildColor) == "Color3") and string.format("#%02X%02X%02X", math.floor(guildColor.R * 255), math.floor(guildColor.G * 255), math.floor(guildColor.B * 255)) or "#8FC2FF"
+		label.RichText = true
+		label.Text = string.format('<font color="%s">%s</font><font color="#FFFFFF">%s</font><font color="%s">%s</font>', tagColor, prefix, trophy, nameColor, displayName)
+	else
+		label.RichText = false
+		label.Text = trophy .. displayName
+		label.TextColor3 = isTop and Color3.fromRGB(255, 215, 80) or Color3.fromRGB(255, 255, 255)
 	end
-	if summary and summary.Guild and summary.Guild.Tag then
-		display = "[" .. summary.Guild.Tag .. "] " .. display
-	end
-	label.Text = display
-	label.TextColor3 = textColor
 end
 
 local function CreateNameplate(player: Player): Frame
@@ -45,7 +49,7 @@ local function CreateNameplate(player: Player): Frame
 	plate.Size = UDim2.fromOffset(116, 16)
 	plate.Position = UDim2.fromOffset(2, 30)
 	plate.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-	plate.BackgroundTransparency = 0.25
+	plate.BackgroundTransparency = 0.18
 
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 8)
@@ -57,7 +61,8 @@ local function CreateNameplate(player: Player): Frame
 	label.BackgroundTransparency = 1
 	label.TextScaled = true
 	label.Font = Enum.Font.GothamSemibold
-	label.Text = player == Players.LocalPlayer and "My Colony" or player.DisplayName
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.Text = player.DisplayName
 	label.Parent = plate
 
 	return plate
@@ -98,30 +103,17 @@ local function UpdateNameplate(userId: number)
 	end
 
 	local nameplate = marker:FindFirstChild("NameplateFrame")
-	if not nameplate or not nameplate:IsA("Frame") then
-		nameplate = CreateNameplate(Players:GetPlayerByUserId(userId) or Players.LocalPlayer)
-		nameplate.Parent = marker
+	local player = Players:GetPlayerByUserId(userId)
+	if not nameplate or not nameplate:IsA("Frame") or not player then
+		return
 	end
 
 	local label = nameplate:FindFirstChild("NameplateLabel")
 	if not label or not label:IsA("TextLabel") then
-		if not warnedMissingNameplateByUserId[userId] then
-			warn("[BugsOS] Missing NameplateLabel for colony marker")
-			warnedMissingNameplateByUserId[userId] = true
-		end
-		label = Instance.new("TextLabel")
-		label.Name = "NameplateLabel"
-		label.Size = UDim2.fromScale(1, 1)
-		label.BackgroundTransparency = 1
-		label.TextScaled = true
-		label.Font = Enum.Font.GothamSemibold
-		label.Parent = nameplate
+		return
 	end
 
-	local summary = profileSummaryByUserId[userId]
-	if summary then
-		styleName(label, summary)
-	end
+	styleName(label, profileSummaryByUserId[userId], player.DisplayName)
 end
 
 local function UpdateMarkerPosition(userId: number, index: number)
@@ -138,8 +130,7 @@ local function DestroyMarker(userId: number)
 		marker:Destroy()
 	end
 	markerByUserId[userId] = nil
-	warnedMissingNameplateByUserId[userId] = nil
-end
+	end
 
 function ColonyMapController.Init(initContext): ()
 	context = initContext
