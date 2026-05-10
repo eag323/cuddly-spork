@@ -21,16 +21,33 @@ export type WindowProps = {
 }
 
 function Window.Create(props: WindowProps)
-	local rootFrame = Instance.new("ImageLabel")
+	local rootFrame = Instance.new("Frame")
 	rootFrame.Name = "WindowRoot"
 	rootFrame.Size = props.Size or UDim2.fromOffset(560, 380)
 	rootFrame.Position = props.Position or UDim2.fromScale(0.2, 0.18)
 	rootFrame.BackgroundTransparency = 1
-	rootFrame.Image = UITheme.Assets.WindowFrame
-	rootFrame.ScaleType = Enum.ScaleType.Slice
-	rootFrame.SliceCenter = UITheme.Window.FrameSlice
 	rootFrame.Active = true
 	rootFrame.Parent = props.Parent
+
+	local contentClipFrame = Instance.new("Frame")
+	contentClipFrame.Name = "ContentClipFrame"
+	contentClipFrame.Size = UDim2.new(1, -12, 1, -UITheme.Window.TitleBarHeight - 13)
+	contentClipFrame.Position = UDim2.fromOffset(6, UITheme.Window.TitleBarHeight + 7)
+	contentClipFrame.BackgroundTransparency = 1
+	contentClipFrame.BorderSizePixel = 0
+	contentClipFrame.ClipsDescendants = true
+	contentClipFrame.ZIndex = 1
+	contentClipFrame.Parent = rootFrame
+
+	local windowFrameImage = Instance.new("ImageLabel")
+	windowFrameImage.Name = "WindowFrameImage"
+	windowFrameImage.Size = UDim2.fromScale(1, 1)
+	windowFrameImage.BackgroundTransparency = 1
+	windowFrameImage.Image = UITheme.Assets.WindowFrame
+	windowFrameImage.ScaleType = Enum.ScaleType.Slice
+	windowFrameImage.SliceCenter = UITheme.Window.FrameSlice
+	windowFrameImage.ZIndex = 2
+	windowFrameImage.Parent = rootFrame
 
 	local titleBar = Instance.new("TextButton")
 	titleBar.Name = "TitleBar"
@@ -135,17 +152,16 @@ function Window.Create(props: WindowProps)
 	end
 
 	local minimizeButton = createCaptionButton("MinimizeButton", "-", -26)
-	local closeButton = createCaptionButton("CloseButton", "X", -6)
+	local closeButton = createCaptionButton("CloseButton", "x", -6)
 
-	local borderPadding = 6
 	local contentFrame = Instance.new("Frame")
 	contentFrame.Name = "ContentFrame"
-	contentFrame.Size = UDim2.new(1, -(borderPadding * 2), 1, -UITheme.Window.TitleBarHeight - borderPadding * 2)
-	contentFrame.Position = UDim2.fromOffset(borderPadding, UITheme.Window.TitleBarHeight + borderPadding)
+	contentFrame.Size = UDim2.fromScale(1, 1)
+	contentFrame.Position = UDim2.fromOffset(0, 0)
 	contentFrame.BackgroundColor3 = UITheme.Colors.AppBackground
 	contentFrame.BorderSizePixel = 0
 	contentFrame.ZIndex = 1
-	contentFrame.Parent = rootFrame
+	contentFrame.Parent = contentClipFrame
 
 	local contentPadding = Instance.new("UIPadding")
 	contentPadding.PaddingLeft = UDim.new(0, UITheme.Window.ContentPadding)
@@ -199,10 +215,25 @@ function Window.Create(props: WindowProps)
 	end)
 
 	return { Root = rootFrame, Content = contentFrame, Destroy = destroyWindow, SetVisible = function(visible: boolean) rootFrame.Visible = visible end, SetZIndex = function(z)
-		for _, gui in ipairs(rootFrame:GetDescendants()) do
-			if gui:IsA("GuiObject") then gui.ZIndex = z end
+		local function setIfGui(instance: Instance, zIndex: number)
+			if instance:IsA("GuiObject") then
+				instance.ZIndex = zIndex
+			end
 		end
 		rootFrame.ZIndex = z
+		setIfGui(contentClipFrame, z)
+		setIfGui(contentFrame, z)
+		setIfGui(windowFrameImage, z + 1)
+		setIfGui(titleBar, z + 2)
+		for _, gui in ipairs(titleBar:GetDescendants()) do
+			if gui:IsA("GuiObject") then
+				if gui.Name == "TitleBarGradient" or gui.Name:match("^Slice%d+$") then
+					gui.ZIndex = z + 2
+				else
+					gui.ZIndex = z + 3
+				end
+			end
+		end
 		rootFrame.Visible = true
 	end }
 end

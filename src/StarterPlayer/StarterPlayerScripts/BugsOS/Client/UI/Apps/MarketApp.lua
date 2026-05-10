@@ -13,6 +13,7 @@ local tickerLabel
 local alertAboveStepper, alertBelowStepper, alertStatusLabel
 local tickerConn
 local tickerOffset = 0
+local DEFAULT_TICKER_TEXT = "ANTX ▲ 2.4% | HIVECO ▼ 1.1% | NECTR ▲ 5.8% | BUGMART ▲ 3.2% | WEBNET ▼ 0.8% | LARVA-LABS ▲ 4.4% | BEETL ▼ 1.9% | MOTHCO ▲ 0.7% | CRICKETCOM ▲ 2.1% | TERMITECH ▼ 3.5% | WASPWAY ▲ 6.2% | FLEABAY ▼ 1.4% | SILKNET ▲ 2.8% | POLLENEX ▲ 5.0% | GRUBHUBS ▼ 2.2% | STINGR ▲ 3.7% | ROACHCO ▼ 0.5% | FIREFLY ENERGY ▲ 4.9% | BugMart reports record crumb demand. | BeetleBay trading volume spikes overnight. | Queen Futures steady after colony expansion. | Larva Labs announces new hatchery upgrade. | SpiderWeb Networks misses web traffic estimates. | Ant workers increase food transport capacity. | Nectar markets rise after backyard bloom. | TermiteTech shares fall after wood shortage. | Firefly Energy glows after sunset demand surge. | WaspWay warns of volatile flight conditions. | MothCo rallies on lamp season optimism. | PollenEx reports strong spring guidance. | FleaBay listings jump after rare bug demand. | RoachCo remains resilient despite kitchen cleanup fears. | HiveCo expands into picnic territory."
 local GREEN_CANDLE_ASSET = "rbxassetid://132096679740132"
 local RED_CANDLE_ASSET = "rbxassetid://133082519022540"
 
@@ -51,20 +52,15 @@ local function renderChart(history, marketCap)
 		line.Parent = chartFrame
 	end
 
-	local startIndex = math.max(2, #history - 19)
+	local startIndex = math.max(2, #history - 9)
 	local candleCount = #history - startIndex + 1
 	if candleCount <= 0 then return end
 
-	local candleWidth = math.clamp(math.floor(usableWidth / math.max(candleCount, 16) * 0.72), 22, 28)
-	local candleHeight = 42
-	local minGap = 8
-	local maxGap = 16
-	local gap
-	if candleCount >= 20 then
-		gap = math.clamp((usableWidth - (candleCount * candleWidth)) / math.max(candleCount - 1, 1), minGap, maxGap)
-	else
-		gap = math.clamp(math.floor(candleWidth * 0.45), minGap, 14)
-	end
+	local candleWidth = 38
+	local candleHeight = 62
+	local minGap = 10
+	local maxGap = 18
+	local gap = math.clamp((usableWidth - (candleCount * candleWidth)) / math.max(candleCount - 1, 1), minGap, maxGap)
 	local totalCandlesWidth = (candleCount * candleWidth) + ((candleCount - 1) * gap)
 	local startX = leftPadding + math.max(0, (usableWidth - totalCandlesWidth) * (candleCount <= 8 and 0.25 or 0.5))
 
@@ -78,13 +74,8 @@ local function renderChart(history, marketCap)
 		local openPrice = history[historyIndex - 1]
 		local closePrice = history[historyIndex]
 		if type(openPrice) == "number" and type(closePrice) == "number" then
-			local highPrice = math.max(openPrice, closePrice)
-			local lowPrice = math.min(openPrice, closePrice)
 			local up = closePrice >= openPrice
 			local candleX = startX + (index * (candleWidth + gap)) + (candleWidth * 0.5)
-
-			local yHigh = yForPrice(highPrice)
-			local yLow = yForPrice(lowPrice)
 			local yMid = (yForPrice(openPrice) + yForPrice(closePrice)) * 0.5
 			local bodyY = math.clamp(yMid - (candleHeight * 0.5), topPadding, topPadding + usableHeight - candleHeight)
 
@@ -99,15 +90,6 @@ local function renderChart(history, marketCap)
 			candle.ZIndex = 3
 			candle.Parent = chartFrame
 
-			local wick = Instance.new("Frame")
-			wick.Name = "ChartCandle"
-			wick.AnchorPoint = Vector2.new(0.5, 0)
-			wick.Position = UDim2.fromOffset(candleX, yHigh)
-			wick.Size = UDim2.fromOffset(4, math.max(4, yLow - yHigh))
-			wick.BackgroundColor3 = up and Color3.fromRGB(70, 220, 125) or Color3.fromRGB(230, 90, 95)
-			wick.BorderSizePixel = 0
-			wick.ZIndex = 2
-			wick.Parent = chartFrame
 		end
 	end
 end
@@ -153,7 +135,7 @@ function MarketApp.Refresh(context)
 	renderChart(history, marketState.MarketCap)
 	updateAutoSellUi(context)
 	if tickerLabel then
-		tickerLabel.Text = tostring(marketState.TickerHeadline or "ANTX ▲ 2.4%  |  HIVECO ▼ 1.1%  |  NECTR ▲ 5.8%  |  BugMart reports record larva demand")
+		tickerLabel.Text = tostring(marketState.TickerHeadline or DEFAULT_TICKER_TEXT)
 	end
 	if alertStatusLabel then
 		local alerts = marketState.Alerts or { Above = 2.5, Below = 0.75 }
@@ -168,10 +150,16 @@ function MarketApp.Mount(target, context)
 	contentFrame.BackgroundColor3 = Color3.fromRGB(10, 22, 40)
 	contentFrame.ClipsDescendants = true
 
-	local contentRoot = Instance.new("Frame")
+	local contentRoot = Instance.new("ScrollingFrame")
 	contentRoot.Name = "ContentRoot"
 	contentRoot.Size = UDim2.fromScale(1, 1)
 	contentRoot.BackgroundTransparency = 1
+	contentRoot.BorderSizePixel = 0
+	contentRoot.ScrollBarThickness = 12
+	contentRoot.ScrollBarImageColor3 = Color3.fromRGB(88, 150, 220)
+	contentRoot.CanvasSize = UDim2.fromOffset(0, 0)
+	contentRoot.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	contentRoot.ScrollingDirection = Enum.ScrollingDirection.Y
 	contentRoot.Parent = contentFrame
 
 	local contentPadding = Instance.new("UIPadding")
@@ -197,14 +185,14 @@ function MarketApp.Mount(target, context)
 	tickerFrame.Parent = contentRoot
 
 	tickerLabel = Instance.new("TextLabel")
-	tickerLabel.Size = UDim2.new(2, 0, 1, 0)
+	tickerLabel.Size = UDim2.new(4, 0, 1, 0)
 	tickerLabel.Position = UDim2.fromOffset(0, 0)
 	tickerLabel.BackgroundTransparency = 1
 	tickerLabel.TextXAlignment = Enum.TextXAlignment.Left
 	tickerLabel.TextColor3 = Color3.fromRGB(74, 255, 97)
 	tickerLabel.Font = Enum.Font.RobotoMono
 	tickerLabel.TextSize = 15
-	tickerLabel.Text = "ANTX ▲ 2.4%  |  HIVECO ▼ 1.1%  |  NECTR ▲ 5.8%  |  BugMart reports record larva demand"
+	tickerLabel.Text = DEFAULT_TICKER_TEXT
 	tickerLabel.Parent = tickerFrame
 
 	local intro = Instance.new("TextLabel")
