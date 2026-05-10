@@ -31,6 +31,7 @@ local NotificationController = require(ControllersFolder:WaitForChild("Notificat
 local BugMinigameController = require(ControllersFolder:WaitForChild("BugMinigameController"))
 local BugFarmController = require(ControllersFolder:WaitForChild("BugFarmController"))
 local ColonyMapController = require(ControllersFolder:WaitForChild("ColonyMapController"))
+local BootSequenceController = require(ControllersFolder:WaitForChild("BootSequenceController"))
 
 local requiredRemoteNames = {
 	ClickRequest = RemoteNames.Click_Request,
@@ -78,11 +79,14 @@ context.Controllers.Notification = NotificationController
 context.Controllers.BugMinigame = BugMinigameController
 context.Controllers.BugFarm = BugFarmController
 context.Controllers.ColonyMap = ColonyMapController
+context.Controllers.BootSequence = BootSequenceController
 
 DesktopController.Init(context); WindowController.Init(context); CurrencyHUDController.Init(context); MarketController.Init(context)
 UpgradeController.Init(context); GeneratorController.Init(context); NotificationController.Init(context); BugMinigameController.Init(context); BugFarmController.Init(context)
 ColonyMapController.Init(context)
+BootSequenceController.Init(context)
 
 DesktopController.Start(); WindowController.Start(); CurrencyHUDController.Start(); MarketController.Start()
 UpgradeController.Start(); GeneratorController.Start(); NotificationController.Start(); BugMinigameController.Start(); BugFarmController.Start()
 ColonyMapController.Start()
+BootSequenceController.Start()
