@@ -7,6 +7,7 @@ local TaskbarButton = require(script.Parent.Parent:WaitForChild("UI"):WaitForChi
 local WindowController = {}
 local context
 local openApps: {[string]: boolean} = {}
+local minimizedApps: {[string]: boolean} = {}
 local registryById: {[string]: any} = {}
 local initializedById: {[string]: boolean} = {}
 local taskbarButtons: {[string]: GuiButton} = {}
@@ -26,6 +27,7 @@ function WindowController.Focus(id: string)
 	if not openApps[id] then
 		return
 	end
+	minimizedApps[id] = nil
 	zCounter += 1
 	for appId, setActive in pairs(taskbarSetActive) do
 		setActive(appId == id)
@@ -40,6 +42,9 @@ function WindowController.Open(id: string)
 	local app = registryById[id]
 	if not app then return end
 	if openApps[id] and not app.AllowDuplicate then
+		if app.Module and app.Module.SetVisible and minimizedApps[id] then
+			app.Module.SetVisible(true)
+		end
 		WindowController.Focus(id)
 		return
 	end
@@ -54,12 +59,18 @@ function WindowController.Open(id: string)
 	if not ok then
 		warn(string.format("[BugsOS] Failed to mount app '%s': %s", id, tostring(err)))
 		openApps[id] = nil
+	minimizedApps[id] = nil
 		return
 	end
 	openApps[id] = true
+	minimizedApps[id] = nil
 	if not taskbarButtons[id] and taskbarHolder then
 		local btn, setActive = TaskbarButton.Create(taskbarHolder, app.Title, app.IconImage, false, function()
 			if openApps[app.Id] then
+				if minimizedApps[app.Id] and app.Module and app.Module.SetVisible then
+					app.Module.SetVisible(true)
+					minimizedApps[app.Id] = nil
+				end
 				WindowController.Focus(app.Id)
 			else
 				WindowController.Open(app.Id)
@@ -75,6 +86,7 @@ function WindowController.Close(id: string)
 	local app = registryById[id]
 	if not app then return end
 	openApps[id] = nil
+	minimizedApps[id] = nil
 	local ok, err = pcall(function()
 		app.Module.Unmount()
 	end)
@@ -85,6 +97,19 @@ function WindowController.Close(id: string)
 		taskbarButtons[id]:Destroy()
 		taskbarButtons[id] = nil
 		taskbarSetActive[id] = nil
+	end
+end
+
+function WindowController.Minimize(id: string)
+	if not openApps[id] then return end
+	minimizedApps[id] = true
+	openApps[id] = nil
+	local app = registryById[id]
+	if app and app.Module and app.Module.SetVisible then
+		app.Module.SetVisible(false)
+	end
+	for appId, setActive in pairs(taskbarSetActive) do
+		setActive(false)
 	end
 end
 

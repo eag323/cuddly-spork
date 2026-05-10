@@ -63,7 +63,7 @@ end
 
 function PrestigeApp.Mount(target, context)
 	if root then return end
-	windowRef = Window.Create({Title="Prestige.exe", Size=UDim2.fromOffset(620,480), Position=UDim2.fromScale(0.2,0.12), Parent=target, OnClose=function() context.Controllers.Window.Close("Prestige") end})
+	windowRef = Window.Create({Title="Prestige.exe", Size=UDim2.fromOffset(620,480), Position=UDim2.fromScale(0.2,0.12), Parent=target, OnClose=function() context.Controllers.Window.Close("Prestige") end, OnMinimize=function() context.Controllers.Window.Minimize("Prestige") end, OnFocus=function() context.Controllers.Window.Focus("Prestige") end})
 	root = windowRef.Content
 	root.BackgroundColor3 = Color3.fromRGB(9, 20, 40)
 	refs.level = makeLabel(root, "", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 8))
