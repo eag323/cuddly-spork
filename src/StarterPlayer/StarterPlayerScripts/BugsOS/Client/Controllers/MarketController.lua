@@ -12,6 +12,33 @@ local passiveFlushAt = 0
 
 local PASSIVE_FEEDBACK_WINDOW = 1
 local ACTIVE_CLICK_GRACE_SECONDS = 0.25
+local lastEventEndsAt: number? = nil
+
+local function checkPriceAlerts()
+	local marketState = context.State.Market or {}
+	local alerts = marketState.Alerts or {}
+	local alertState = marketState.AlertState or {}
+	marketState.AlertState = alertState
+	local price = tonumber(marketState.Price) or 0
+	local above = tonumber(alerts.Above)
+	local below = tonumber(alerts.Below)
+	if above then
+		if price >= above and alertState.AboveTriggered ~= true then
+			alertState.AboveTriggered = true
+			context.Controllers.Notification.Show(string.format("Market alert: price is above $%.2f", above), "Success")
+		elseif price < above then
+			alertState.AboveTriggered = false
+		end
+	end
+	if below then
+		if price <= below and alertState.BelowTriggered ~= true then
+			alertState.BelowTriggered = true
+			context.Controllers.Notification.Show(string.format("Market alert: price is below $%.2f", below), "Warning")
+		elseif price > below then
+			alertState.BelowTriggered = false
+		end
+	end
+end
 
 local function patchAtPath(root: { [any]: any }, path: { string }, value: any): ()
 	local node = root
@@ -97,6 +124,18 @@ function MarketController.Start(): ()
 		end
 		context.State.Market.Price = payload.Price or context.State.Market.Price
 		context.State.Market.History = payload.History or context.State.Market.History
+		context.State.Market.ActiveEvent = payload.ActiveEvent
+		context.State.Market.MarketCap = payload.MarketCap or context.State.Market.MarketCap
+		context.State.Market.TickerHeadline = payload.TickerHeadline or context.State.Market.TickerHeadline
+		if type(payload.ActiveEvent) == "table" and payload.ActiveEvent.EndsAt ~= lastEventEndsAt then
+			lastEventEndsAt = payload.ActiveEvent.EndsAt
+			if payload.ActiveEvent.Rare == true then
+				context.Controllers.Notification.Show("Rare market event started: Golden Picnic", "Warning")
+			else
+				context.Controllers.Notification.Show(string.format("Market event started: %s", payload.ActiveEvent.Name or "Market Event"), "Info")
+			end
+		end
+		checkPriceAlerts()
 		MarketApp.Refresh(context)
 	end)
 end
