@@ -116,18 +116,17 @@ local function runAutoSell()
 end
 
 local function updatePrice()
-	local direction = (math.random() < 0.5) and -1 or 1
-	local changeMagnitude = MIN_TICK_CHANGE + (math.random() * (MAX_TICK_CHANGE - MIN_TICK_CHANGE))
-	currentTrend = math.clamp((currentTrend * 0.35) + (direction * changeMagnitude * 0.65), -MAX_TICK_CHANGE, MAX_TICK_CHANGE)
-	local effectiveChange = math.clamp(currentTrend, -MAX_TICK_CHANGE, MAX_TICK_CHANGE)
-	if math.abs(effectiveChange) < MIN_TICK_CHANGE then
-		effectiveChange = direction * MIN_TICK_CHANGE
-	end
-	local nextPrice = roundToCents(clampPrice(currentPrice + effectiveChange))
+	local direction = math.random(0, 1) == 1 and 1 or -1
+	local move = math.random(5, 50) / 100
+	local nextPrice = roundToCents(clampPrice(currentPrice + direction * move))
 	if nextPrice == currentPrice then
-		local forcedDirection = (currentPrice >= MAX_PRICE) and -1 or 1
-		nextPrice = roundToCents(clampPrice(currentPrice + (forcedDirection * MIN_TICK_CHANGE)))
+		if currentPrice <= MIN_PRICE then
+			nextPrice = roundToCents(clampPrice(currentPrice + move))
+		elseif currentPrice >= MAX_PRICE then
+			nextPrice = roundToCents(clampPrice(currentPrice - move))
+		end
 	end
+	currentTrend = nextPrice - currentPrice
 	currentPrice = nextPrice
 	pushPriceHistory(currentPrice)
 	runAutoSell()
