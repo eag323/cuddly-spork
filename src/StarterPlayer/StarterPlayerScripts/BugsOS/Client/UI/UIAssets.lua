@@ -37,4 +37,9 @@ UIAssets.CurrencyIconImages = {
 	Prestige = "rbxassetid://0",
 }
 
+UIAssets.Boot = {
+	StartupSound = "rbxassetid://140087576547396",
+	TypingSound = "rbxassetid://9116157889",
+}
+
 return UIAssets

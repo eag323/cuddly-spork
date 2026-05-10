@@ -4,6 +4,8 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local UIAssets = require(script.Parent.Parent.UI.UIAssets)
+
 local BootSequenceController = {}
 
 local context: { [string]: any }
@@ -13,6 +15,12 @@ local BootSequenceEnabled = true
 local SkipBootSequenceInStudio = false
 local SkipInputEnabled = true
 local MinimumSkipDelaySeconds = 1
+local BootTerminalFont = Enum.Font.Code
+local BootTerminalColor = Color3.fromRGB(0, 255, 70)
+local BootTerminalShadowColor = Color3.fromRGB(0, 80, 25)
+local StartupSoundVolume = 0.5
+local TypingSoundVolume = 0.3
+local TypingSoundThrottleSeconds = 0.05
 
 local BIOS_LINES = {
 	"Bugs OS BIOS v1.0.0",
@@ -41,6 +49,44 @@ local function createFullScreenFrame(parent: Instance, name: string, bgColor: Co
 	frame.ZIndex = zIndex
 	frame.Parent = parent
 	return frame
+end
+
+local function resolveBootTerminalFont(): Enum.Font
+	local preferred = {
+		BootTerminalFont,
+		Enum.Font.Code,
+		Enum.Font.RobotoMono,
+		Enum.Font.Legacy,
+		Enum.Font.Arcade,
+	}
+	for _, font in ipairs(preferred) do
+		if font ~= nil then
+			return font
+		end
+	end
+	return Enum.Font.Code
+end
+
+local function createBootSound(parent: Instance, name: string, soundId: any, volume: number): Sound?
+	if type(soundId) ~= "string" then
+		return nil
+	end
+	local trimmed = soundId:gsub("%s+", "")
+	if trimmed == "" or trimmed == "rbxassetid://0" then
+		return nil
+	end
+	local existing = parent:FindFirstChild(name)
+	if existing and existing:IsA("Sound") then
+		return existing
+	end
+	local sound = Instance.new("Sound")
+	sound.Name = name
+	sound.SoundId = trimmed
+	sound.Volume = volume
+	sound.Looped = false
+	sound.RollOffMaxDistance = 20
+	sound.Parent = parent
+	return sound
 end
 
 local function runSequence()
@@ -105,6 +151,12 @@ local function runSequence()
 	end)
 
 	local statusText: TextLabel? = nil
+	local soundContainer = Instance.new("Folder")
+	soundContainer.Name = "BootSequenceSounds"
+	soundContainer.Parent = bootGui
+	local startupSound = createBootSound(soundContainer, "StartupSound", UIAssets.Boot and UIAssets.Boot.StartupSound, StartupSoundVolume)
+	local typingSound = createBootSound(soundContainer, "TypingSound", UIAssets.Boot and UIAssets.Boot.TypingSound, TypingSoundVolume)
+	local lastTypingSoundTime = 0
 
 	local function shouldSkip(): boolean
 		return skipRequested
@@ -118,6 +170,11 @@ local function runSequence()
 
 	local ok, err = pcall(function()
 		local biosFrame = createFullScreenFrame(bootGui, "BIOSFrame", Color3.fromRGB(0, 0, 0), 10001)
+		if startupSound then
+			pcall(function()
+				startupSound:Play()
+			end)
+		end
 		local biosLog = Instance.new("TextLabel")
 		biosLog.Name = "BIOSLog"
 		biosLog.Size = UDim2.new(1, -40, 1, -40)
@@ -125,13 +182,19 @@ local function runSequence()
 		biosLog.BackgroundTransparency = 1
 		biosLog.TextXAlignment = Enum.TextXAlignment.Left
 		biosLog.TextYAlignment = Enum.TextYAlignment.Top
-		biosLog.TextColor3 = Color3.fromRGB(75, 200, 75)
-		biosLog.Font = Enum.Font.Code
-		biosLog.TextSize = 22
+		biosLog.TextColor3 = BootTerminalColor
+		biosLog.Font = resolveBootTerminalFont()
+		biosLog.TextSize = 20
 		biosLog.TextWrapped = true
 		biosLog.RichText = false
 		biosLog.ZIndex = 10002
 		biosLog.Parent = biosFrame
+		local biosGlow = biosLog:Clone()
+		biosGlow.Name = "BIOSLogGlow"
+		biosGlow.Position = biosLog.Position + UDim2.fromOffset(1, 1)
+		biosGlow.TextColor3 = BootTerminalShadowColor
+		biosGlow.ZIndex = 10001
+		biosGlow.Parent = biosFrame
 
 		local built = ""
 		for _, line in ipairs(BIOS_LINES) do
@@ -144,6 +207,7 @@ local function runSequence()
 				built = built .. "\n" .. line
 			end
 			biosLog.Text = built
+			biosGlow.Text = built
 			task.wait(0.35)
 		end
 		task.wait(0.45)
@@ -340,6 +404,16 @@ local function runSequence()
 				break
 			end
 			passwordBox.Text = string.rep("*", i)
+			if typingSound then
+				local nowTime = os.clock()
+				if nowTime - lastTypingSoundTime >= TypingSoundThrottleSeconds then
+					lastTypingSoundTime = nowTime
+					pcall(function()
+						typingSound.TimePosition = 0
+						typingSound:Play()
+					end)
+				end
+			end
 			task.wait(0.1)
 		end
 
