@@ -9,6 +9,10 @@ local MarketplaceConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitF
 local MarketApp = {}
 local windowRef, priceValueLabel, deltaLabel, chartFrame
 local autoSellBody, autoSellButton, autoSellStatus, targetLabel, sliderBar, sliderKnob
+local tickerLabel
+local alertAboveStepper, alertBelowStepper, alertStatusLabel
+local tickerConn
+local tickerOffset = 0
 local GREEN_CANDLE_ASSET = "rbxassetid://132096679740132"
 local RED_CANDLE_ASSET = "rbxassetid://133082519022540"
 
@@ -20,12 +24,12 @@ local function clearChart(frame: Frame)
 	end
 end
 
-local function renderChart(history)
+local function renderChart(history, marketCap)
 	if not chartFrame then return end
 	clearChart(chartFrame)
 	if type(history) ~= "table" or #history < 2 then return end
 
-	local minP, maxP = 0.5, 3.0
+	local minP, maxP = 0.5, math.max(3.0, tonumber(marketCap) or 3.0)
 	local chartHeight = math.max(180, chartFrame.AbsoluteSize.Y)
 	local chartWidth = math.max(520, chartFrame.AbsoluteSize.X)
 	local topPadding = 10
@@ -146,8 +150,15 @@ function MarketApp.Refresh(context)
 		elseif delta < 0 then deltaLabel.Text = string.format("▼ -$%.2f", math.abs(delta)); deltaLabel.TextColor3=Color3.fromRGB(235,90,90)
 		else deltaLabel.Text = "$0.00"; deltaLabel.TextColor3=Color3.fromRGB(170,170,170) end
 	else deltaLabel.Text = "n/a"; deltaLabel.TextColor3=Color3.fromRGB(170,170,170) end
-	renderChart(history)
+	renderChart(history, marketState.MarketCap)
 	updateAutoSellUi(context)
+	if tickerLabel then
+		tickerLabel.Text = tostring(marketState.TickerHeadline or "ANTX ▲ 2.4%  |  HIVECO ▼ 1.1%  |  NECTR ▲ 5.8%  |  BugMart reports record larva demand")
+	end
+	if alertStatusLabel then
+		local alerts = marketState.Alerts or { Above = 2.5, Below = 0.75 }
+		alertStatusLabel.Text = string.format("Above: $%.2f    Below: $%.2f", alerts.Above or 2.5, alerts.Below or 0.75)
+	end
 end
 
 function MarketApp.Mount(target, context)
@@ -175,6 +186,26 @@ function MarketApp.Mount(target, context)
 	contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	contentLayout.Padding = UDim.new(0, 12)
 	contentLayout.Parent = contentRoot
+
+	local tickerFrame = Instance.new("Frame")
+	tickerFrame.Name = "NewsTicker"
+	tickerFrame.LayoutOrder = 0
+	tickerFrame.Size = UDim2.new(1, 0, 0, 28)
+	tickerFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	tickerFrame.BorderColor3 = Color3.fromRGB(35, 75, 35)
+	tickerFrame.ClipsDescendants = true
+	tickerFrame.Parent = contentRoot
+
+	tickerLabel = Instance.new("TextLabel")
+	tickerLabel.Size = UDim2.new(2, 0, 1, 0)
+	tickerLabel.Position = UDim2.fromOffset(0, 0)
+	tickerLabel.BackgroundTransparency = 1
+	tickerLabel.TextXAlignment = Enum.TextXAlignment.Left
+	tickerLabel.TextColor3 = Color3.fromRGB(74, 255, 97)
+	tickerLabel.Font = Enum.Font.RobotoMono
+	tickerLabel.TextSize = 15
+	tickerLabel.Text = "ANTX ▲ 2.4%  |  HIVECO ▼ 1.1%  |  NECTR ▲ 5.8%  |  BugMart reports record larva demand"
+	tickerLabel.Parent = tickerFrame
 
 	local intro = Instance.new("TextLabel")
 	intro.Name = "IntroLabel"
@@ -349,9 +380,70 @@ function MarketApp.Mount(target, context)
 		local passId = MarketplaceConfig.AutoSellGamepassId or 0
 		if passId > 0 then MarketplaceService:PromptGamePassPurchase(Players.LocalPlayer, passId) end
 	end)
+
+	local priceAlertsSection = Instance.new("Frame")
+	priceAlertsSection.Name = "PriceAlertsSection"
+	priceAlertsSection.LayoutOrder = 4
+	priceAlertsSection.Size = UDim2.new(1, 0, 0, 120)
+	priceAlertsSection.BackgroundColor3 = Color3.fromRGB(18,34,58)
+	priceAlertsSection.BorderColor3 = Color3.fromRGB(65,140,200)
+	priceAlertsSection.Parent = contentRoot
+
+	local alertsTitle = Instance.new("TextLabel")
+	alertsTitle.Size = UDim2.new(1, -20, 0, 22)
+	alertsTitle.Position = UDim2.fromOffset(10, 8)
+	alertsTitle.BackgroundTransparency = 1
+	alertsTitle.Text = "Price Alerts"
+	alertsTitle.Font = Enum.Font.GothamBold
+	alertsTitle.TextSize = 18
+	alertsTitle.TextColor3 = Color3.fromRGB(120,170,255)
+	alertsTitle.TextXAlignment = Enum.TextXAlignment.Left
+	alertsTitle.Parent = priceAlertsSection
+
+	local function makeStepper(yPos: number, prefix: string, defaultValue: number, onChanged)
+		local row = Instance.new("Frame")
+		row.Size = UDim2.new(1, -20, 0, 30)
+		row.Position = UDim2.fromOffset(10, yPos)
+		row.BackgroundTransparency = 1
+		row.Parent = priceAlertsSection
+		local minus = Instance.new("TextButton")
+		minus.Size = UDim2.fromOffset(28, 28); minus.Text = "-"; minus.Parent = row
+		local plus = Instance.new("TextButton")
+		plus.Size = UDim2.fromOffset(28, 28); plus.Position = UDim2.new(1, -28, 0, 0); plus.Text = "+"; plus.Parent = row
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, -70, 1, 0); label.Position = UDim2.fromOffset(35, 0); label.BackgroundTransparency = 1
+		label.TextColor3 = Color3.fromRGB(235,235,235); label.Font = Enum.Font.Gotham; label.TextSize = 14; label.TextXAlignment = Enum.TextXAlignment.Left; label.Parent = row
+		local value = defaultValue
+		local function syncLabel() label.Text = string.format("%s $%.2f", prefix, value) end
+		local function updateValue(delta)
+			value = math.clamp(math.round((value + delta) * 100) / 100, 0.5, 5.0)
+			syncLabel()
+			onChanged(value)
+		end
+		minus.Activated:Connect(function() updateValue(-0.05) end)
+		plus.Activated:Connect(function() updateValue(0.05) end)
+		syncLabel()
+		return row
+	end
+	makeStepper(34, "Alert me above:", 2.5, function(v) context.State.Market.Alerts.Above = v end)
+	makeStepper(66, "Alert me below:", 0.75, function(v) context.State.Market.Alerts.Below = v end)
+	alertStatusLabel = Instance.new("TextLabel")
+	alertStatusLabel.Size = UDim2.new(1, -20, 0, 16); alertStatusLabel.Position = UDim2.fromOffset(10, 98); alertStatusLabel.BackgroundTransparency = 1
+	alertStatusLabel.TextXAlignment = Enum.TextXAlignment.Left; alertStatusLabel.Font = Enum.Font.Code; alertStatusLabel.TextSize = 13; alertStatusLabel.TextColor3 = Color3.fromRGB(156, 235, 162)
+	alertStatusLabel.Parent = priceAlertsSection
+
+	if tickerConn then tickerConn:Disconnect() end
+	tickerConn = game:GetService("RunService").RenderStepped:Connect(function(dt)
+		if not tickerLabel or not tickerLabel.Parent then return end
+		tickerOffset -= dt * 70
+		if tickerOffset < -tickerLabel.TextBounds.X then
+			tickerOffset = tickerFrame.AbsoluteSize.X
+		end
+		tickerLabel.Position = UDim2.fromOffset(tickerOffset, 0)
+	end)
 	MarketApp.Refresh(context)
 end
 function MarketApp.SetZIndex(z) if windowRef and windowRef.SetZIndex then windowRef.SetZIndex(z) end end
-function MarketApp.Unmount() if windowRef then windowRef.Destroy() end; windowRef=nil end
+function MarketApp.Unmount() if tickerConn then tickerConn:Disconnect(); tickerConn = nil end; if windowRef then windowRef.Destroy() end; windowRef=nil end
 
 return MarketApp

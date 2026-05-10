@@ -68,7 +68,7 @@ for key, remoteName in pairs(requiredRemoteNames) do
 	remotes[key] = remote
 end
 
-local context = { State = { PlayerData = nil, Market = { Price = 1, History = { 1 } } }, UI = {}, Remotes = remotes, Controllers = {}, Events = {} }
+local context = { State = { PlayerData = nil, Market = { Price = 1, History = { 1 }, MarketCap = 3.0, Alerts = { Above = 2.5, Below = 0.75 }, AlertState = { AboveTriggered = false, BelowTriggered = false } } }, UI = {}, Remotes = remotes, Controllers = {}, Events = {} }
 
 context.Events.StateChanged = Instance.new("BindableEvent")
 

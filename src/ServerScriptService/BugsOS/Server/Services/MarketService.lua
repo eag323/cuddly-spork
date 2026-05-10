@@ -9,12 +9,14 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local BugsOSFolder = ReplicatedStorage:WaitForChild("BugsOS")
 local SharedFolder = BugsOSFolder:WaitForChild("Shared")
 local ConfigFolder = SharedFolder:WaitForChild("Config")
+local ConfigsFolder = SharedFolder:WaitForChild("Configs")
 local RemotesFolder = SharedFolder:WaitForChild("Remotes")
 
 local ServerFolder = ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Server")
 local ServicesFolder = ServerFolder:WaitForChild("Services")
 
 local MarketplaceConfig = require(ConfigFolder:WaitForChild("MarketplaceConfig"))
+local MarketEventConfig = require(ConfigsFolder:WaitForChild("MarketEventConfig"))
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 local BuffService = require(ServicesFolder:WaitForChild("BuffService"))
 local StatsService = require(ServicesFolder:WaitForChild("StatsService"))
@@ -25,8 +27,6 @@ local MIN_PRICE = 0.50
 local MAX_PRICE = 3.00
 local START_PRICE = 1.00
 local HISTORY_LIMIT = 120
-local MIN_TICK_CHANGE = 0.05
-local MAX_TICK_CHANGE = 0.50
 
 type PlayerData = { [string]: any }
 
@@ -36,6 +36,9 @@ local MarketService = {}
 local currentPrice = START_PRICE
 local currentTrend = 0
 local priceHistory: { number } = { START_PRICE }
+local activeMarketEvent: { [string]: any }? = nil
+local nextEventRollAt = os.time() + MarketEventConfig.RollIntervalSeconds
+local lastAnnouncedEventEndsAt: number? = nil
 
 local marketSellFoodRemote: RemoteEvent? = nil
 local marketSetAutoSellEnabledRemote: RemoteEvent? = nil
@@ -44,6 +47,11 @@ local marketPriceUpdatedRemote: RemoteEvent? = nil
 
 local function roundToCents(value: number): number return math.round(value * 100) / 100 end
 local function clampPrice(value: number): number return math.clamp(value, MIN_PRICE, MAX_PRICE) end
+local function getCurrentCap(): number
+	if activeMarketEvent and type(activeMarketEvent.MaxCap) == "number" then return activeMarketEvent.MaxCap end
+	return MAX_PRICE
+end
+local function clampPriceWithActiveCap(value: number): number return math.clamp(value, MIN_PRICE, getCurrentCap()) end
 
 local function getOrCreateRemoteEvent(remoteName: string): RemoteEvent
 	local existingRemote = RemotesFolder:FindFirstChild(remoteName)
@@ -115,23 +123,92 @@ local function runAutoSell()
 	end
 end
 
+local function chooseRandomEvent()
+	local events = MarketEventConfig.Events
+	local totalWeight = 0
+	for _, eventDef in ipairs(events) do
+		totalWeight += (eventDef.Weight or 1)
+	end
+	local roll = math.random() * totalWeight
+	local running = 0
+	for _, eventDef in ipairs(events) do
+		running += (eventDef.Weight or 1)
+		if roll <= running then return eventDef end
+	end
+	return events[1]
+end
+
+local function getActiveEventState()
+	if not activeMarketEvent then return nil end
+	return {
+		Id = activeMarketEvent.Id,
+		Name = activeMarketEvent.Name,
+		Description = activeMarketEvent.Description,
+		EndsAt = activeMarketEvent.EndsAt,
+		TickerHeadline = activeMarketEvent.Description,
+		MaxCap = getCurrentCap(),
+		Rare = activeMarketEvent.Rare == true,
+	}
+end
+
+local function maybeStartEvent()
+	local now = os.time()
+	if activeMarketEvent and now < (activeMarketEvent.EndsAt or 0) then return end
+	if now < nextEventRollAt then return end
+	nextEventRollAt = now + MarketEventConfig.RollIntervalSeconds
+	local eventDef = chooseRandomEvent()
+	if not eventDef then return end
+	activeMarketEvent = table.clone(eventDef)
+	activeMarketEvent.EndsAt = now + (eventDef.DurationSeconds or 180)
+end
+
 local function updatePrice()
-	local direction = math.random(0, 1) == 1 and 1 or -1
-	local move = math.random(5, 50) / 100
-	local nextPrice = roundToCents(clampPrice(currentPrice + direction * move))
+	maybeStartEvent()
+	if activeMarketEvent and os.time() >= (activeMarketEvent.EndsAt or 0) then
+		activeMarketEvent = nil
+	end
+	local eventState = activeMarketEvent
+	local upChance = 0.5
+	local downChance = 0.5
+	local moveMin = MarketEventConfig.NormalMoveMin
+	local moveMax = MarketEventConfig.NormalMoveMax
+	if eventState then
+		upChance = eventState.UpChance or upChance
+		downChance = eventState.DownChance or downChance
+		moveMin = eventState.MoveMin or moveMin
+		moveMax = eventState.MoveMax or moveMax
+	end
+	local direction = math.random() < upChance and 1 or -1
+	if downChance > upChance then
+		direction = math.random() < downChance and -1 or 1
+	end
+	local move = math.random(math.floor(moveMin * 100), math.floor(moveMax * 100)) / 100
+	local nextPrice = roundToCents(clampPriceWithActiveCap(currentPrice + direction * move))
 	if nextPrice == currentPrice then
 		if currentPrice <= MIN_PRICE then
-			nextPrice = roundToCents(clampPrice(currentPrice + move))
-		elseif currentPrice >= MAX_PRICE then
-			nextPrice = roundToCents(clampPrice(currentPrice - move))
+			nextPrice = roundToCents(clampPriceWithActiveCap(currentPrice + move))
+		elseif currentPrice >= getCurrentCap() then
+			nextPrice = roundToCents(clampPriceWithActiveCap(currentPrice - move))
 		end
+	end
+	if not eventState and nextPrice > MAX_PRICE then
+		nextPrice = roundToCents(math.max(MAX_PRICE, currentPrice - move))
 	end
 	currentTrend = nextPrice - currentPrice
 	currentPrice = nextPrice
 	pushPriceHistory(currentPrice)
 	runAutoSell()
 	if marketPriceUpdatedRemote then
-		marketPriceUpdatedRemote:FireAllClients({ Price = currentPrice, History = table.clone(priceHistory), ServerTime = os.time() })
+		local payload = { Price = currentPrice, History = table.clone(priceHistory), ServerTime = os.time(), ActiveEvent = getActiveEventState(), MarketCap = getCurrentCap(), TickerHeadline = (getActiveEventState() and getActiveEventState().TickerHeadline) or MarketEventConfig.DefaultHeadline }
+		marketPriceUpdatedRemote:FireAllClients(payload)
+		if eventState and lastAnnouncedEventEndsAt ~= eventState.EndsAt then
+			lastAnnouncedEventEndsAt = eventState.EndsAt
+			if eventState.Rare == true then
+				getOrCreateRemoteEvent(RemoteNames.Notification_Push):FireAllClients({ Message = "Rare market event started: Golden Picnic", Type = "Warning", EventId = "market_rare_" .. tostring(eventState.EndsAt) })
+			else
+				getOrCreateRemoteEvent(RemoteNames.Notification_Push):FireAllClients({ Message = string.format("Market event started: %s", eventState.Name), Type = "Info", EventId = "market_evt_" .. tostring(eventState.EndsAt) })
+			end
+		end
 	end
 end
 
@@ -184,7 +261,7 @@ function MarketService.Start()
 	if marketSetAutoSellEnabledRemote then marketSetAutoSellEnabledRemote.OnServerEvent:Connect(onSetAutoSellEnabled) end
 	if marketSetAutoSellTargetRemote then marketSetAutoSellTargetRemote.OnServerEvent:Connect(onSetAutoSellTarget) end
 	task.spawn(function() while true do task.wait(UPDATE_INTERVAL_SECONDS) updatePrice() end end)
-	if marketPriceUpdatedRemote then marketPriceUpdatedRemote:FireAllClients({ Price = currentPrice, History = table.clone(priceHistory), ServerTime = os.time() }) end
+	if marketPriceUpdatedRemote then marketPriceUpdatedRemote:FireAllClients({ Price = currentPrice, History = table.clone(priceHistory), ServerTime = os.time(), ActiveEvent = getActiveEventState(), MarketCap = getCurrentCap(), TickerHeadline = MarketEventConfig.DefaultHeadline }) end
 end
 
 return MarketService
