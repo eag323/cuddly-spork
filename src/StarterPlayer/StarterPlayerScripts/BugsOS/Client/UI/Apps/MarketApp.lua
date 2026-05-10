@@ -57,7 +57,7 @@ end
 
 function MarketApp.Mount(target, context)
 	if windowRef then return end
-	windowRef = Window.Create({Title="Market.exe", Icon="🐟", AppId="Market", Size=UDim2.fromOffset(640,460), Position=UDim2.fromOffset(500,100), Parent=target, OnClose=function() context.Controllers.Window.Close("Market") end, OnFocus=function() context.Controllers.Window.Focus("Market") end})
+	windowRef = Window.Create({Title="Market.exe", Icon="🐟", AppId="Market", Size=UDim2.fromOffset(640,460), Position=UDim2.fromOffset(500,100), Parent=target, OnClose=function() context.Controllers.Window.Close("Market") end, OnMinimize=function() context.Controllers.Window.Minimize("Market") end, OnFocus=function() context.Controllers.Window.Focus("Market") end})
 	local root = windowRef.Content
 	root.BackgroundColor3 = Color3.fromRGB(10, 22, 40)
 	local intro = Instance.new("TextLabel"); intro.Size=UDim2.new(1,-12,0,22); intro.Position=UDim2.fromOffset(6,4); intro.BackgroundTransparency=1; intro.TextXAlignment=Enum.TextXAlignment.Left; intro.TextColor3=Color3.fromRGB(215,230,255); intro.Text="Sell your Food for Coins. Prices change over time. Sell high!"; intro.Parent=root
