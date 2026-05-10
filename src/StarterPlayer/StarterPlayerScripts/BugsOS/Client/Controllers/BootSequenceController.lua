@@ -20,7 +20,6 @@ local BootTerminalColor = Color3.fromRGB(0, 255, 55)
 local BootTerminalShadowColor = Color3.fromRGB(0, 70, 20)
 local StartupSoundVolume = 0.5
 local TypingSoundVolume = 0.3
-local TypingSoundThrottleSeconds = 0.05
 local BIOSTextSize = 12
 local BIOSPosition = UDim2.fromOffset(18, 70)
 local BIOSPadding = UDim2.fromOffset(26, 84)
@@ -189,7 +188,6 @@ local function runSequence()
 	soundContainer.Parent = bootGui
 	local startupSound = createBootSound(soundContainer, "StartupSound", UIAssets.Boot and UIAssets.Boot.StartupSound, StartupSoundVolume)
 	local typingSound = createBootSound(soundContainer, "TypingSound", UIAssets.Boot and UIAssets.Boot.TypingSound, TypingSoundVolume)
-	local lastTypingSoundTime = 0
 
 	local function shouldSkip(): boolean
 		return skipRequested
@@ -209,14 +207,26 @@ local function runSequence()
 		end)
 	end
 
-	local function cleanup()
-		if skipRequested then
+	local function stopAllBootSounds(fadeStartup: boolean)
+		if fadeStartup then
 			stopStartupSound(true)
 		else
 			stopStartupSound(false)
 		end
+		for _, child in ipairs(soundContainer:GetChildren()) do
+			if child:IsA("Sound") then
+				pcall(function()
+					child:Stop()
+				end)
+			end
+		end
+	end
+
+	local function cleanup()
+		stopAllBootSounds(skipRequested)
 		skipButtonConnection:Disconnect()
 		skipInputConnection:Disconnect()
+		safeDestroy(soundContainer)
 		safeDestroy(bootGui)
 	end
 
@@ -287,16 +297,6 @@ local function runSequence()
 				end
 				built = built .. line:sub(i, i)
 				renderWithCursor()
-				if typingSound then
-					local nowTime = os.clock()
-					if nowTime - lastTypingSoundTime >= TypingSoundThrottleSeconds then
-						lastTypingSoundTime = nowTime
-						pcall(function()
-							typingSound.TimePosition = 0
-							typingSound:Play()
-						end)
-					end
-				end
 				task.wait(BIOSCharacterDelay)
 			end
 			renderWithCursor()
@@ -528,14 +528,10 @@ local function runSequence()
 			end
 			passwordBox.Text = string.rep("*", i)
 			if typingSound then
-				local nowTime = os.clock()
-				if nowTime - lastTypingSoundTime >= TypingSoundThrottleSeconds then
-					lastTypingSoundTime = nowTime
-					pcall(function()
-						typingSound.TimePosition = 0
-						typingSound:Play()
-					end)
-				end
+				pcall(function()
+					typingSound.TimePosition = 0
+					typingSound:Play()
+				end)
 			end
 			task.wait(0.1)
 		end
