@@ -9,7 +9,7 @@ local UIAssets = require(script.Parent.Parent:WaitForChild("UIAssets"))
 
 local MarketApp = {}
 local windowRef, priceValueLabel, deltaLabel, chartFrame
-local autoSellBody, autoSellButton, autoSellStatus, targetLabel, sliderBar, sliderKnob
+local autoSellBody, autoSellButton, autoSellStatus, targetLabel, targetStepperRow, targetMinusButton, targetPlusButton, targetValueLabel
 local tickerLabel
 local alertAboveStepper, alertBelowStepper, alertStatusLabel
 local tickerConn
@@ -164,21 +164,25 @@ local function updateAutoSellUi(context)
 	if not autoSellButton or not autoSellStatus or not targetLabel then return end
 	if not owns then
 		autoSellButton.Text = "Unlock Auto-Sell"
+		autoSellButton.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
 		autoSellStatus.Text = "Auto-Sell automatically sells your food when the market reaches your selected price."
 		targetLabel.Text = "Requires Auto-Sell gamepass"
-		if sliderBar then sliderBar.Visible = false end
-		if sliderKnob then sliderKnob.Visible = false end
+		if targetStepperRow then targetStepperRow.Visible = false end
 		return
 	end
-	if sliderBar then sliderBar.Visible = true end
-	if sliderKnob then sliderKnob.Visible = true end
+	if targetStepperRow then targetStepperRow.Visible = true end
 	local enabled = settings.AutoSellEnabled == true
-	local target = tonumber(settings.AutoSellTarget) or 1.5
+	local target = math.clamp(tonumber(settings.AutoSellTarget) or 1.5, 0.5, 3.0)
+	target = math.round(target * 100) / 100
 	autoSellButton.Text = enabled and "ON" or "OFF"
+	autoSellButton.BackgroundColor3 = enabled and Color3.fromRGB(34, 150, 72) or Color3.fromRGB(176, 46, 46)
 	autoSellStatus.Text = enabled and "Auto-Sell enabled" or "Auto-Sell disabled"
-	targetLabel.Text = string.format("Target: $%.2f", target)
-	local alpha = math.clamp((target - 0.5) / 2.5, 0, 1)
-	sliderKnob.Position = UDim2.new(alpha, -6, 0.5, -10)
+	targetLabel.Text = "Target Price:"
+	if targetValueLabel then
+		targetValueLabel.Text = string.format("$%.2f", target)
+	end
+	if targetMinusButton then targetMinusButton.Active = target > 0.5 end
+	if targetPlusButton then targetPlusButton.Active = target < 3.0 end
 end
 
 function MarketApp.Refresh(context)
@@ -360,7 +364,7 @@ function MarketApp.Mount(target, context)
 	local autoSellSection = Instance.new("Frame")
 	autoSellSection.Name = "AutoSellSection"
 	autoSellSection.LayoutOrder = 3
-	autoSellSection.Size = UDim2.new(1,0,0,150)
+	autoSellSection.Size = UDim2.new(1,0,0,170)
 	autoSellSection.BackgroundColor3 = Color3.fromRGB(18,34,58)
 	autoSellSection.BorderColor3 = Color3.fromRGB(65,140,200)
 	autoSellSection.Parent = contentRoot
@@ -410,15 +414,52 @@ function MarketApp.Mount(target, context)
 	autoSellButton=Instance.new("TextButton"); autoSellButton.Size=UDim2.fromOffset(180,34); autoSellButton.BackgroundColor3=Color3.fromRGB(70,70,80); autoSellButton.TextColor3=Color3.new(1,1,1); autoSellButton.Font=Enum.Font.GothamBold; autoSellButton.TextSize=17; autoSellButton.Parent=controlRow
 	targetLabel=Instance.new("TextLabel"); targetLabel.Size=UDim2.new(1,-190,1,0); targetLabel.Position=UDim2.fromOffset(190,0); targetLabel.BackgroundTransparency=1; targetLabel.TextColor3=Color3.new(1,1,1); targetLabel.TextXAlignment=Enum.TextXAlignment.Left; targetLabel.Font=Enum.Font.GothamBold; targetLabel.TextSize=16; targetLabel.Parent=controlRow
 
-	sliderBar=Instance.new("TextButton"); sliderBar.LayoutOrder=4; sliderBar.Size=UDim2.new(1,0,0,18); sliderBar.BackgroundColor3=Color3.fromRGB(24,42,72); sliderBar.BorderColor3=Color3.fromRGB(90,130,180); sliderBar.Text=""; sliderBar.AutoButtonColor=false; sliderBar.Parent=autoSellSection
-	sliderKnob=Instance.new("Frame"); sliderKnob.Size=UDim2.fromOffset(12,20); sliderKnob.AnchorPoint=Vector2.new(0,0.5); sliderKnob.BackgroundColor3=Color3.fromRGB(180,200,255); sliderKnob.BorderColor3=Color3.fromRGB(30,30,30); sliderKnob.Parent=sliderBar
+	targetStepperRow = Instance.new("Frame")
+	targetStepperRow.LayoutOrder = 4
+	targetStepperRow.Size = UDim2.new(1, 0, 0, 34)
+	targetStepperRow.BackgroundTransparency = 1
+	targetStepperRow.Parent = autoSellSection
+	local stepperLayout = Instance.new("UIListLayout")
+	stepperLayout.FillDirection = Enum.FillDirection.Horizontal
+	stepperLayout.Padding = UDim.new(0, 8)
+	stepperLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	stepperLayout.Parent = targetStepperRow
+	targetMinusButton = Instance.new("TextButton")
+	targetMinusButton.Size = UDim2.fromOffset(34, 34)
+	targetMinusButton.Text = "-"
+	targetMinusButton.Font = Enum.Font.GothamBold
+	targetMinusButton.TextSize = 20
+	targetMinusButton.TextColor3 = Color3.new(1, 1, 1)
+	targetMinusButton.BackgroundColor3 = Color3.fromRGB(44, 74, 120)
+	targetMinusButton.Parent = targetStepperRow
+	targetValueLabel = Instance.new("TextLabel")
+	targetValueLabel.Size = UDim2.fromOffset(110, 34)
+	targetValueLabel.Text = "$1.50"
+	targetValueLabel.Font = Enum.Font.GothamBold
+	targetValueLabel.TextSize = 16
+	targetValueLabel.TextColor3 = Color3.fromRGB(190, 245, 255)
+	targetValueLabel.BackgroundColor3 = Color3.fromRGB(8, 16, 30)
+	targetValueLabel.BorderColor3 = Color3.fromRGB(65, 140, 200)
+	targetValueLabel.Parent = targetStepperRow
+	targetPlusButton = Instance.new("TextButton")
+	targetPlusButton.Size = UDim2.fromOffset(34, 34)
+	targetPlusButton.Text = "+"
+	targetPlusButton.Font = Enum.Font.GothamBold
+	targetPlusButton.TextSize = 20
+	targetPlusButton.TextColor3 = Color3.new(1, 1, 1)
+	targetPlusButton.BackgroundColor3 = Color3.fromRGB(44, 74, 120)
+	targetPlusButton.Parent = targetStepperRow
 
-	local function updateTargetFromX(x)
-		local alpha = math.clamp((x - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
-		local target = math.round((0.5 + alpha * 2.5) * 100) / 100
-		context.Remotes.MarketSetAutoSellTarget:FireServer({Target=target})
+	local function stepTarget(delta: number)
+		local settings = (((context.State.PlayerData or {}).Settings) or {})
+		local current = tonumber(settings.AutoSellTarget) or 1.5
+		local nextTarget = math.clamp(math.round((current + delta) * 100) / 100, 0.5, 3.0)
+		context.Remotes.MarketSetAutoSellTarget:FireServer({Target = nextTarget})
+		settings.AutoSellTarget = nextTarget
+		updateAutoSellUi(context)
 	end
-	sliderBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then updateTargetFromX(input.Position.X) end end)
+	targetMinusButton.Activated:Connect(function() stepTarget(-0.05) end)
+	targetPlusButton.Activated:Connect(function() stepTarget(0.05) end)
 	autoSellButton.Activated:Connect(function()
 		local owns = (((context.State.PlayerData or {}).Purchases or {}).AutoSellOwned == true)
 		if owns then
