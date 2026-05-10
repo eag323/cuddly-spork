@@ -51,9 +51,10 @@ local function renderChart(history)
 	local candleCount = #history - startIndex + 1
 	if candleCount <= 0 then return end
 
-	local candleWidth = math.clamp(math.floor(usableWidth / math.max(candleCount, 10) * 0.75), 28, 36)
+	local candleWidth = math.clamp(math.floor(usableWidth / math.max(candleCount, 16) * 0.72), 22, 28)
+	local candleHeight = 42
 	local minGap = 8
-	local maxGap = 18
+	local maxGap = 16
 	local gap
 	if candleCount >= 20 then
 		gap = math.clamp((usableWidth - (candleCount * candleWidth)) / math.max(candleCount - 1, 1), minGap, maxGap)
@@ -62,9 +63,6 @@ local function renderChart(history)
 	end
 	local totalCandlesWidth = (candleCount * candleWidth) + ((candleCount - 1) * gap)
 	local startX = leftPadding + math.max(0, (usableWidth - totalCandlesWidth) * (candleCount <= 8 and 0.25 or 0.5))
-
-	local minBodyHeight = 24
-	local maxBodyHeight = math.floor(usableHeight * 0.92)
 
 	local function yForPrice(price: number): number
 		local alpha = (math.clamp(price, minP, maxP) - minP) / (maxP - minP)
@@ -81,19 +79,16 @@ local function renderChart(history)
 			local up = closePrice >= openPrice
 			local candleX = startX + (index * (candleWidth + gap)) + (candleWidth * 0.5)
 
-			local yOpen = yForPrice(openPrice)
-			local yClose = yForPrice(closePrice)
 			local yHigh = yForPrice(highPrice)
 			local yLow = yForPrice(lowPrice)
-			local yMid = (yOpen + yClose) * 0.5
-			local bodyHeight = math.clamp(math.abs(yClose - yOpen), minBodyHeight, maxBodyHeight)
-			local bodyY = math.clamp(yMid - (bodyHeight * 0.5), topPadding, topPadding + usableHeight - bodyHeight)
+			local yMid = (yForPrice(openPrice) + yForPrice(closePrice)) * 0.5
+			local bodyY = math.clamp(yMid - (candleHeight * 0.5), topPadding, topPadding + usableHeight - candleHeight)
 
 			local candle = Instance.new("ImageLabel")
 			candle.Name = "ChartCandle"
 			candle.AnchorPoint = Vector2.new(0.5, 0)
 			candle.Position = UDim2.fromOffset(candleX, bodyY)
-			candle.Size = UDim2.fromOffset(candleWidth, bodyHeight)
+			candle.Size = UDim2.fromOffset(candleWidth, candleHeight)
 			candle.BackgroundTransparency = 1
 			candle.Image = up and GREEN_CANDLE_ASSET or RED_CANDLE_ASSET
 			candle.ScaleType = Enum.ScaleType.Stretch
@@ -157,15 +152,15 @@ end
 
 function MarketApp.Mount(target, context)
 	if windowRef then return end
-	windowRef = Window.Create({Title="Market.exe", Icon="🐟", AppId="Market", Size=UDim2.fromOffset(760,640), Position=UDim2.fromOffset(460,80), Parent=target, OnClose=function() context.Controllers.Window.Close("Market") end, OnMinimize=function() context.Controllers.Window.Minimize("Market") end, OnFocus=function() context.Controllers.Window.Focus("Market") end})
+	windowRef = Window.Create({Title="Market.exe", Icon="🐟", AppId="Market", Size=UDim2.fromOffset(760,700), Position=UDim2.fromOffset(460,80), Parent=target, OnClose=function() context.Controllers.Window.Close("Market") end, OnMinimize=function() context.Controllers.Window.Minimize("Market") end, OnFocus=function() context.Controllers.Window.Focus("Market") end})
 	local root = windowRef.Content; root.BackgroundColor3 = Color3.fromRGB(10, 22, 40)
 	local container = Instance.new("Frame"); container.Size=UDim2.fromScale(1,1); container.BackgroundTransparency=1; container.Parent=root
 	local padding = Instance.new("UIPadding"); padding.PaddingTop=UDim.new(0,10); padding.PaddingBottom=UDim.new(0,10); padding.PaddingLeft=UDim.new(0,10); padding.PaddingRight=UDim.new(0,10); padding.Parent=container
 	local stack = Instance.new("UIListLayout"); stack.FillDirection=Enum.FillDirection.Vertical; stack.Padding=UDim.new(0,12); stack.Parent=container
 
-	local intro=Instance.new("TextLabel"); intro.Name="IntroLine"; intro.Size=UDim2.new(1,0,0,24); intro.BackgroundTransparency=1; intro.TextXAlignment=Enum.TextXAlignment.Left; intro.TextColor3=Color3.fromRGB(215,230,255); intro.Text="Sell your food for coins. Prices change every 30 seconds. Sell high!"; intro.Font=Enum.Font.GothamBold; intro.TextSize=15; intro.Parent=container
+	local intro=Instance.new("TextLabel"); intro.Name="IntroLine"; intro.Size=UDim2.new(1,0,0,30); intro.BackgroundTransparency=1; intro.TextXAlignment=Enum.TextXAlignment.Left; intro.TextYAlignment=Enum.TextYAlignment.Top; intro.TextColor3=Color3.fromRGB(215,230,255); intro.Text="Sell your food for coins. Prices change every 30 seconds. Sell high!"; intro.Font=Enum.Font.GothamBold; intro.TextSize=15; intro.Parent=container
 
-	local top = Instance.new("Frame"); top.Name="FoodMarketSection"; top.Size=UDim2.new(1,0,0,410); top.BackgroundColor3=Color3.fromRGB(18,34,58); top.BorderColor3=Color3.fromRGB(65,140,200); top.Parent=container
+	local top = Instance.new("Frame"); top.Name="FoodMarketSection"; top.Size=UDim2.new(1,0,0,430); top.BackgroundColor3=Color3.fromRGB(18,34,58); top.BorderColor3=Color3.fromRGB(65,140,200); top.Parent=container
 	local topPad = Instance.new("UIPadding"); topPad.PaddingTop=UDim.new(0,10); topPad.PaddingBottom=UDim.new(0,10); topPad.PaddingLeft=UDim.new(0,10); topPad.PaddingRight=UDim.new(0,10); topPad.Parent=top
 	local topLayout = Instance.new("UIListLayout"); topLayout.FillDirection=Enum.FillDirection.Vertical; topLayout.Padding=UDim.new(0,9); topLayout.Parent=top
 
