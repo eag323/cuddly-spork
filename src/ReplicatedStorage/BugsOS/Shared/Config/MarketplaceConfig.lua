@@ -1,7 +1,7 @@
 --!strict
 
 local MarketplaceConfig = {
-	AutoSellGamepassId = 0,
+	AutoSellGamepassId = 1833023892,
 	MarketPrice = {
 		min = 0.5,
 		max = 3.0,
