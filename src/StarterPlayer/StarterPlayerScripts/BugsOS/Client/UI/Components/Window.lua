@@ -109,10 +109,11 @@ function Window.Create(props: WindowProps)
 	local minimizeButton = createCaptionButton("MinimizeButton", "-", -26)
 	local closeButton = createCaptionButton("CloseButton", "X", -6)
 
+	local borderPadding = 6
 	local contentFrame = Instance.new("Frame")
 	contentFrame.Name = "ContentFrame"
-	contentFrame.Size = UDim2.new(1, -16, 1, -UITheme.Window.TitleBarHeight - 16)
-	contentFrame.Position = UDim2.fromOffset(8, UITheme.Window.TitleBarHeight + 7)
+	contentFrame.Size = UDim2.new(1, -(borderPadding * 2), 1, -UITheme.Window.TitleBarHeight - borderPadding * 2)
+	contentFrame.Position = UDim2.fromOffset(borderPadding, UITheme.Window.TitleBarHeight + borderPadding)
 	contentFrame.BackgroundColor3 = UITheme.Colors.AppBackground
 	contentFrame.BorderSizePixel = 0
 	contentFrame.Parent = rootFrame
