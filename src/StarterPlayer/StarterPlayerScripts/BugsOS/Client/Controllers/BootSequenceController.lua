@@ -28,10 +28,11 @@ local BIOSLineHeight = 1.03
 local BIOSCharacterDelay = 0.012
 local BIOSLineDelay = 0.045
 local CursorBlinkRate = 0.35
-local TOTAL_BOOT_DURATION_SECONDS = 10
-local BIOS_STAGE_DURATION_SECONDS = 4.2
-local LOGO_STAGE_DURATION_SECONDS = 3.0
-local LOGIN_STAGE_DURATION_SECONDS = 2.0
+local BIOS_MIN_STAGE_DURATION_SECONDS = 5.0
+local BIOS_MAX_STAGE_DURATION_SECONDS = 7.0
+local LOGO_STAGE_DURATION_SECONDS = 3.2
+local LOGIN_STAGE_DURATION_SECONDS = 2.4
+local StartupSoundFadeSeconds = 0.35
 
 local BIOS_LINES = {
 	"BUG.OS BIOS v1.0.0",
@@ -183,7 +184,6 @@ local function runSequence()
 		end
 	end)
 
-	local statusText: TextLabel? = nil
 	local soundContainer = Instance.new("Folder")
 	soundContainer.Name = "BootSequenceSounds"
 	soundContainer.Parent = bootGui
@@ -195,11 +195,25 @@ local function runSequence()
 		return skipRequested
 	end
 
+	local function stopStartupSound(fadeOut: boolean)
+		if not startupSound then
+			return
+		end
+		pcall(function()
+			if fadeOut and startupSound.IsPlaying then
+				local fadeTween = TweenService:Create(startupSound, TweenInfo.new(StartupSoundFadeSeconds, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), { Volume = 0 })
+				fadeTween:Play()
+				fadeTween.Completed:Wait()
+			end
+			startupSound:Stop()
+		end)
+	end
+
 	local function cleanup()
-		if skipRequested and startupSound then
-			pcall(function()
-				startupSound:Stop()
-			end)
+		if skipRequested then
+			stopStartupSound(true)
+		else
+			stopStartupSound(false)
 		end
 		skipButtonConnection:Disconnect()
 		skipInputConnection:Disconnect()
@@ -207,14 +221,12 @@ local function runSequence()
 	end
 
 	local ok, err = pcall(function()
-		local sequenceStartTime = os.clock()
-		local function waitUntilStageTime(stageTargetSeconds: number)
-			local elapsed = os.clock() - sequenceStartTime
-			local remaining = stageTargetSeconds - elapsed
+		local function waitRespectSkip(seconds: number)
+			local remaining = seconds
 			while remaining > 0 and not shouldSkip() do
-				task.wait(math.min(0.05, remaining))
-				elapsed = os.clock() - sequenceStartTime
-				remaining = stageTargetSeconds - elapsed
+				local step = math.min(0.05, remaining)
+				task.wait(step)
+				remaining -= step
 			end
 		end
 
@@ -293,7 +305,11 @@ local function runSequence()
 		cursorThreadActive = false
 		biosLog.Text = built
 		biosGlow.Text = built
-		waitUntilStageTime(BIOS_STAGE_DURATION_SECONDS)
+		local biosDuration = math.clamp(math.random() * (BIOS_MAX_STAGE_DURATION_SECONDS - BIOS_MIN_STAGE_DURATION_SECONDS) + BIOS_MIN_STAGE_DURATION_SECONDS, BIOS_MIN_STAGE_DURATION_SECONDS, BIOS_MAX_STAGE_DURATION_SECONDS)
+		local biosElapsed = #built * BIOSCharacterDelay + #BIOS_LINES * BIOSLineDelay
+		if biosElapsed < biosDuration then
+			waitRespectSkip(biosDuration - biosElapsed)
+		end
 
 		if shouldSkip() then
 			cleanup()
@@ -302,19 +318,33 @@ local function runSequence()
 
 		biosFrame.Visible = false
 		local logoFrame = createFullScreenFrame(bootGui, "LogoFrame", Color3.fromRGB(0, 0, 0), 10001)
-		local logoText = Instance.new("TextLabel")
-		logoText.Size = UDim2.fromOffset(420, 160)
-		logoText.AnchorPoint = Vector2.new(0.5, 0.5)
-		logoText.Position = UDim2.fromScale(0.5, 0.43)
-		logoText.BackgroundTransparency = 1
-		logoText.Text = "🐞 BUG.OS"
-		logoText.TextColor3 = Color3.fromRGB(240, 240, 240)
-		logoText.Font = Enum.Font.Arcade
-		logoText.TextScaled = true
-		logoText.ZIndex = 10002
-		logoText.Parent = logoFrame
+		local bootLogoImage = UIAssets.Boot and UIAssets.Boot.LogoImage
+		local hasBootLogo = type(bootLogoImage) == "string" and bootLogoImage:gsub("%s+", "") ~= "" and bootLogoImage ~= "rbxassetid://0"
+		if hasBootLogo then
+			local logoImage = Instance.new("ImageLabel")
+			logoImage.Size = UDim2.fromOffset(380, 140)
+			logoImage.AnchorPoint = Vector2.new(0.5, 0.5)
+			logoImage.Position = UDim2.fromScale(0.5, 0.43)
+			logoImage.BackgroundTransparency = 1
+			logoImage.Image = bootLogoImage
+			logoImage.ScaleType = Enum.ScaleType.Fit
+			logoImage.ZIndex = 10002
+			logoImage.Parent = logoFrame
+		else
+			local logoText = Instance.new("TextLabel")
+			logoText.Size = UDim2.fromOffset(420, 160)
+			logoText.AnchorPoint = Vector2.new(0.5, 0.5)
+			logoText.Position = UDim2.fromScale(0.5, 0.43)
+			logoText.BackgroundTransparency = 1
+			logoText.Text = "🐞 BUG.OS"
+			logoText.TextColor3 = Color3.fromRGB(240, 240, 240)
+			logoText.Font = Enum.Font.Arcade
+			logoText.TextScaled = true
+			logoText.ZIndex = 10002
+			logoText.Parent = logoFrame
+		end
 
-		statusText = Instance.new("TextLabel")
+		local statusText = Instance.new("TextLabel")
 		statusText.Size = UDim2.fromOffset(360, 30)
 		statusText.AnchorPoint = Vector2.new(0.5, 0)
 		statusText.Position = UDim2.fromScale(0.5, 0.58)
@@ -346,7 +376,7 @@ local function runSequence()
 
 		local logoFillTween = TweenService:Create(fill, TweenInfo.new(LOGO_STAGE_DURATION_SECONDS, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), { Size = UDim2.new(1, -4, 1, -4) })
 		logoFillTween:Play()
-		waitUntilStageTime(BIOS_STAGE_DURATION_SECONDS + LOGO_STAGE_DURATION_SECONDS)
+		waitRespectSkip(LOGO_STAGE_DURATION_SECONDS)
 
 		if shouldSkip() then
 			cleanup()
@@ -513,7 +543,7 @@ local function runSequence()
 		okButton.Image = UIAssets.TaskbarTabPressedImage
 		task.wait(0.18)
 		okButton.Image = UIAssets.TaskbarTabDefaultImage
-		waitUntilStageTime(BIOS_STAGE_DURATION_SECONDS + LOGO_STAGE_DURATION_SECONDS + LOGIN_STAGE_DURATION_SECONDS)
+		waitRespectSkip(LOGIN_STAGE_DURATION_SECONDS)
 
 		local fade = Instance.new("Frame")
 		fade.Size = UDim2.fromScale(1, 1)
@@ -523,8 +553,10 @@ local function runSequence()
 		fade.ZIndex = 10010
 		fade.Parent = bootGui
 		TweenService:Create(fade, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0 }):Play()
-		waitUntilStageTime(TOTAL_BOOT_DURATION_SECONDS)
-		task.wait(0.45)
+		waitRespectSkip(0.45)
+		if startupSound and startupSound.IsPlaying then
+			stopStartupSound(true)
+		end
 	end)
 
 	if not ok then

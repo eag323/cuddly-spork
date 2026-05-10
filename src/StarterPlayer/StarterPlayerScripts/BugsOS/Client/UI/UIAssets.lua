@@ -40,6 +40,7 @@ UIAssets.CurrencyIconImages = {
 UIAssets.Boot = {
 	StartupSound = "rbxassetid://140087576547396",
 	TypingSound = "rbxassetid://9116157889",
+	LogoImage = "rbxassetid://0",
 }
 
 return UIAssets
