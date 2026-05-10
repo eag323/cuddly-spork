@@ -153,47 +153,184 @@ end
 function MarketApp.Mount(target, context)
 	if windowRef then return end
 	windowRef = Window.Create({Title="Market.exe", Icon="🐟", AppId="Market", Size=UDim2.fromOffset(760,700), Position=UDim2.fromOffset(460,80), Parent=target, OnClose=function() context.Controllers.Window.Close("Market") end, OnMinimize=function() context.Controllers.Window.Minimize("Market") end, OnFocus=function() context.Controllers.Window.Focus("Market") end})
-	local root = windowRef.Content; root.BackgroundColor3 = Color3.fromRGB(10, 22, 40)
-	local container = Instance.new("Frame"); container.Size=UDim2.fromScale(1,1); container.BackgroundTransparency=1; container.Parent=root
-	local padding = Instance.new("UIPadding"); padding.PaddingTop=UDim.new(0,10); padding.PaddingBottom=UDim.new(0,10); padding.PaddingLeft=UDim.new(0,10); padding.PaddingRight=UDim.new(0,10); padding.Parent=container
-	local stack = Instance.new("UIListLayout"); stack.FillDirection=Enum.FillDirection.Vertical; stack.Padding=UDim.new(0,12); stack.Parent=container
+	local contentFrame = windowRef.Content
+	contentFrame.BackgroundColor3 = Color3.fromRGB(10, 22, 40)
+	contentFrame.ClipsDescendants = true
 
-	local intro=Instance.new("TextLabel"); intro.Name="IntroLine"; intro.Size=UDim2.new(1,0,0,30); intro.BackgroundTransparency=1; intro.TextXAlignment=Enum.TextXAlignment.Left; intro.TextYAlignment=Enum.TextYAlignment.Top; intro.TextColor3=Color3.fromRGB(215,230,255); intro.Text="Sell your food for coins. Prices change every 30 seconds. Sell high!"; intro.Font=Enum.Font.GothamBold; intro.TextSize=15; intro.Parent=container
+	local contentRoot = Instance.new("Frame")
+	contentRoot.Name = "ContentRoot"
+	contentRoot.Size = UDim2.fromScale(1, 1)
+	contentRoot.BackgroundTransparency = 1
+	contentRoot.Parent = contentFrame
 
-	local top = Instance.new("Frame"); top.Name="FoodMarketSection"; top.Size=UDim2.new(1,0,0,430); top.BackgroundColor3=Color3.fromRGB(18,34,58); top.BorderColor3=Color3.fromRGB(65,140,200); top.Parent=container
-	local topPad = Instance.new("UIPadding"); topPad.PaddingTop=UDim.new(0,10); topPad.PaddingBottom=UDim.new(0,10); topPad.PaddingLeft=UDim.new(0,10); topPad.PaddingRight=UDim.new(0,10); topPad.Parent=top
-	local topLayout = Instance.new("UIListLayout"); topLayout.FillDirection=Enum.FillDirection.Vertical; topLayout.Padding=UDim.new(0,9); topLayout.Parent=top
+	local contentPadding = Instance.new("UIPadding")
+	contentPadding.PaddingTop = UDim.new(0, 10)
+	contentPadding.PaddingBottom = UDim.new(0, 10)
+	contentPadding.PaddingLeft = UDim.new(0, 10)
+	contentPadding.PaddingRight = UDim.new(0, 10)
+	contentPadding.Parent = contentRoot
 
-	local cpl=Instance.new("TextLabel"); cpl.Size=UDim2.new(1,0,0,22); cpl.BackgroundTransparency=1; cpl.Text="Current Price Per Food"; cpl.TextXAlignment=Enum.TextXAlignment.Left; cpl.TextColor3=Color3.fromRGB(255,255,255); cpl.Font=Enum.Font.GothamBold; cpl.TextSize=17; cpl.Parent=top
+	local contentLayout = Instance.new("UIListLayout")
+	contentLayout.FillDirection = Enum.FillDirection.Vertical
+	contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	contentLayout.Padding = UDim.new(0, 12)
+	contentLayout.Parent = contentRoot
 
-	local priceRow = Instance.new("Frame"); priceRow.Size=UDim2.new(1,0,0,54); priceRow.BackgroundTransparency=1; priceRow.Parent=top
-	priceValueLabel=Instance.new("TextLabel"); priceValueLabel.Size=UDim2.new(0.55,0,1,0); priceValueLabel.BackgroundTransparency=1; priceValueLabel.TextXAlignment=Enum.TextXAlignment.Left; priceValueLabel.Font=Enum.Font.GothamBold; priceValueLabel.TextSize=40; priceValueLabel.TextColor3=Color3.fromRGB(255,215,90); priceValueLabel.Parent=priceRow
-	deltaLabel=Instance.new("TextLabel"); deltaLabel.Size=UDim2.new(0.45,0,1,0); deltaLabel.Position=UDim2.new(0.55,0,0,0); deltaLabel.BackgroundTransparency=1; deltaLabel.TextXAlignment=Enum.TextXAlignment.Left; deltaLabel.Font=Enum.Font.GothamBold; deltaLabel.TextSize=32; deltaLabel.TextColor3=Color3.fromRGB(170,170,170); deltaLabel.Parent=priceRow
+	local intro = Instance.new("TextLabel")
+	intro.Name = "IntroLabel"
+	intro.LayoutOrder = 1
+	intro.Size = UDim2.new(1, 0, 0, 44)
+	intro.BackgroundTransparency = 1
+	intro.Text = "Sell your food for coins. Prices change every 30 seconds. Sell high!"
+	intro.TextXAlignment = Enum.TextXAlignment.Left
+	intro.TextYAlignment = Enum.TextYAlignment.Top
+	intro.TextWrapped = true
+	intro.TextColor3 = Color3.fromRGB(215,230,255)
+	intro.Font = Enum.Font.GothamBold
+	intro.TextSize = 15
+	intro.Parent = contentRoot
 
-	chartFrame=Instance.new("Frame"); chartFrame.Size=UDim2.new(1,0,0,232); chartFrame.BackgroundColor3=Color3.fromRGB(8,16,30); chartFrame.BorderColor3=Color3.fromRGB(56,90,130); chartFrame.Parent=top
-	local row=Instance.new("Frame"); row.Name="SellButtonsRow"; row.Size=UDim2.new(1,0,0,40); row.BackgroundTransparency=1; row.Parent=top
-	local rowLayout = Instance.new("UIListLayout"); rowLayout.FillDirection=Enum.FillDirection.Horizontal; rowLayout.Padding=UDim.new(0,8); rowLayout.Parent=row
+	local foodMarketSection = Instance.new("Frame")
+	foodMarketSection.Name = "FoodMarketSection"
+	foodMarketSection.LayoutOrder = 2
+	foodMarketSection.Size = UDim2.new(1, 0, 0, 430)
+	foodMarketSection.BackgroundColor3 = Color3.fromRGB(18,34,58)
+	foodMarketSection.BorderColor3 = Color3.fromRGB(65,140,200)
+	foodMarketSection.Parent = contentRoot
+
+	local foodPadding = Instance.new("UIPadding")
+	foodPadding.PaddingTop = UDim.new(0, 10)
+	foodPadding.PaddingBottom = UDim.new(0, 10)
+	foodPadding.PaddingLeft = UDim.new(0, 10)
+	foodPadding.PaddingRight = UDim.new(0, 10)
+	foodPadding.Parent = foodMarketSection
+
+	local foodLayout = Instance.new("UIListLayout")
+	foodLayout.FillDirection = Enum.FillDirection.Vertical
+	foodLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	foodLayout.Padding = UDim.new(0, 9)
+	foodLayout.Parent = foodMarketSection
+
+	local currentPriceLabel = Instance.new("TextLabel")
+	currentPriceLabel.Name = "CurrentPricePerFoodLabel"
+	currentPriceLabel.LayoutOrder = 1
+	currentPriceLabel.Size = UDim2.new(1,0,0,22)
+	currentPriceLabel.BackgroundTransparency = 1
+	currentPriceLabel.Text = "Current Price Per Food"
+	currentPriceLabel.TextXAlignment = Enum.TextXAlignment.Left
+	currentPriceLabel.TextColor3 = Color3.fromRGB(255,255,255)
+	currentPriceLabel.Font = Enum.Font.GothamBold
+	currentPriceLabel.TextSize = 17
+	currentPriceLabel.Parent = foodMarketSection
+
+	local priceRow = Instance.new("Frame")
+	priceRow.Name = "PriceRow"
+	priceRow.LayoutOrder = 2
+	priceRow.Size = UDim2.new(1,0,0,54)
+	priceRow.BackgroundTransparency = 1
+	priceRow.Parent = foodMarketSection
+
+	priceValueLabel = Instance.new("TextLabel")
+	priceValueLabel.Size = UDim2.new(0.55,0,1,0)
+	priceValueLabel.BackgroundTransparency = 1
+	priceValueLabel.TextXAlignment = Enum.TextXAlignment.Left
+	priceValueLabel.Font = Enum.Font.GothamBold
+	priceValueLabel.TextSize = 40
+	priceValueLabel.TextColor3 = Color3.fromRGB(255,215,90)
+	priceValueLabel.Parent = priceRow
+
+	deltaLabel = Instance.new("TextLabel")
+	deltaLabel.Size = UDim2.new(0.45,0,1,0)
+	deltaLabel.Position = UDim2.new(0.55,0,0,0)
+	deltaLabel.BackgroundTransparency = 1
+	deltaLabel.TextXAlignment = Enum.TextXAlignment.Left
+	deltaLabel.Font = Enum.Font.GothamBold
+	deltaLabel.TextSize = 32
+	deltaLabel.TextColor3 = Color3.fromRGB(170,170,170)
+	deltaLabel.Parent = priceRow
+
+	chartFrame = Instance.new("Frame")
+	chartFrame.Name = "CandlestickChart"
+	chartFrame.LayoutOrder = 3
+	chartFrame.Size = UDim2.new(1,0,0,232)
+	chartFrame.BackgroundColor3 = Color3.fromRGB(8,16,30)
+	chartFrame.BorderColor3 = Color3.fromRGB(56,90,130)
+	chartFrame.Parent = foodMarketSection
+
+	local sellButtonsRow = Instance.new("Frame")
+	sellButtonsRow.Name = "SellButtonsRow"
+	sellButtonsRow.LayoutOrder = 4
+	sellButtonsRow.Size = UDim2.new(1,0,0,40)
+	sellButtonsRow.BackgroundTransparency = 1
+	sellButtonsRow.Parent = foodMarketSection
+
+	local rowLayout = Instance.new("UIListLayout")
+	rowLayout.FillDirection = Enum.FillDirection.Horizontal
+	rowLayout.Padding = UDim.new(0,8)
+	rowLayout.Parent = sellButtonsRow
 
 	local function makeButton(t,c)
-		local b=Instance.new("TextButton"); b.Size=UDim2.new(1/3,-6,1,0); b.Text=t; b.BackgroundColor3=c; b.TextColor3=Color3.new(1,1,1); b.BorderSizePixel=0; b.Font=Enum.Font.GothamBold; b.TextSize=18; b.Parent=row; return b end
+		local b=Instance.new("TextButton"); b.Size=UDim2.new(1/3,-6,1,0); b.Text=t; b.BackgroundColor3=c; b.TextColor3=Color3.new(1,1,1); b.BorderSizePixel=0; b.Font=Enum.Font.GothamBold; b.TextSize=18; b.Parent=sellButtonsRow; return b
+	end
 	local sellRemote=context.Remotes.MarketSellFood
 	makeButton("Sell 10%",Color3.fromRGB(15,25,140)).Activated:Connect(function() sellRemote:FireServer({SellPercent=10}) end)
 	makeButton("Sell 50%",Color3.fromRGB(20,130,70)).Activated:Connect(function() sellRemote:FireServer({SellPercent=50}) end)
 	makeButton("Sell All",Color3.fromRGB(230,70,90)).Activated:Connect(function() sellRemote:FireServer({SellPercent=100}) end)
 
-	local bottom = Instance.new("Frame"); bottom.Name="AutoSellSection"; bottom.Size=UDim2.new(1,0,0,150); bottom.BackgroundColor3=Color3.fromRGB(18,34,58); bottom.BorderColor3=Color3.fromRGB(65,140,200); bottom.Parent=container
-	autoSellBody=bottom
-	local bottomPad = Instance.new("UIPadding"); bottomPad.PaddingTop=UDim.new(0,10); bottomPad.PaddingBottom=UDim.new(0,10); bottomPad.PaddingLeft=UDim.new(0,10); bottomPad.PaddingRight=UDim.new(0,10); bottomPad.Parent=bottom
-	local bottomLayout = Instance.new("UIListLayout"); bottomLayout.FillDirection=Enum.FillDirection.Vertical; bottomLayout.Padding=UDim.new(0,8); bottomLayout.Parent=bottom
+	local autoSellSection = Instance.new("Frame")
+	autoSellSection.Name = "AutoSellSection"
+	autoSellSection.LayoutOrder = 3
+	autoSellSection.Size = UDim2.new(1,0,0,150)
+	autoSellSection.BackgroundColor3 = Color3.fromRGB(18,34,58)
+	autoSellSection.BorderColor3 = Color3.fromRGB(65,140,200)
+	autoSellSection.Parent = contentRoot
+	autoSellBody = autoSellSection
 
-	local t=Instance.new("TextLabel"); t.Size=UDim2.new(1,0,0,22); t.BackgroundTransparency=1; t.Text="Auto-Sell"; t.TextColor3=Color3.fromRGB(120,170,255); t.TextXAlignment=Enum.TextXAlignment.Left; t.Font=Enum.Font.GothamBold; t.TextSize=18; t.Parent=bottom
-	autoSellStatus=Instance.new("TextLabel"); autoSellStatus.Size=UDim2.new(1,0,0,38); autoSellStatus.BackgroundTransparency=1; autoSellStatus.TextWrapped=true; autoSellStatus.TextXAlignment=Enum.TextXAlignment.Left; autoSellStatus.TextYAlignment=Enum.TextYAlignment.Top; autoSellStatus.TextColor3=Color3.fromRGB(230,230,230); autoSellStatus.Font=Enum.Font.GothamBold; autoSellStatus.TextSize=14; autoSellStatus.Parent=bottom
+	local autoSellPadding = Instance.new("UIPadding")
+	autoSellPadding.PaddingTop = UDim.new(0,10)
+	autoSellPadding.PaddingBottom = UDim.new(0,10)
+	autoSellPadding.PaddingLeft = UDim.new(0,10)
+	autoSellPadding.PaddingRight = UDim.new(0,10)
+	autoSellPadding.Parent = autoSellSection
 
-	local controlRow=Instance.new("Frame"); controlRow.Size=UDim2.new(1,0,0,34); controlRow.BackgroundTransparency=1; controlRow.Parent=bottom
+	local autoSellLayout = Instance.new("UIListLayout")
+	autoSellLayout.FillDirection = Enum.FillDirection.Vertical
+	autoSellLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	autoSellLayout.Padding = UDim.new(0,8)
+	autoSellLayout.Parent = autoSellSection
+
+	local autoSellTitle = Instance.new("TextLabel")
+	autoSellTitle.LayoutOrder = 1
+	autoSellTitle.Size = UDim2.new(1,0,0,22)
+	autoSellTitle.BackgroundTransparency = 1
+	autoSellTitle.Text = "Auto-Sell"
+	autoSellTitle.TextColor3 = Color3.fromRGB(120,170,255)
+	autoSellTitle.TextXAlignment = Enum.TextXAlignment.Left
+	autoSellTitle.Font = Enum.Font.GothamBold
+	autoSellTitle.TextSize = 18
+	autoSellTitle.Parent = autoSellSection
+
+	autoSellStatus = Instance.new("TextLabel")
+	autoSellStatus.LayoutOrder = 2
+	autoSellStatus.Size = UDim2.new(1,0,0,38)
+	autoSellStatus.BackgroundTransparency = 1
+	autoSellStatus.TextWrapped = true
+	autoSellStatus.TextXAlignment = Enum.TextXAlignment.Left
+	autoSellStatus.TextYAlignment = Enum.TextYAlignment.Top
+	autoSellStatus.TextColor3 = Color3.fromRGB(230,230,230)
+	autoSellStatus.Font = Enum.Font.GothamBold
+	autoSellStatus.TextSize = 14
+	autoSellStatus.Parent = autoSellSection
+
+	local controlRow = Instance.new("Frame")
+	controlRow.LayoutOrder = 3
+	controlRow.Size = UDim2.new(1,0,0,34)
+	controlRow.BackgroundTransparency = 1
+	controlRow.Parent = autoSellSection
 	autoSellButton=Instance.new("TextButton"); autoSellButton.Size=UDim2.fromOffset(180,34); autoSellButton.BackgroundColor3=Color3.fromRGB(70,70,80); autoSellButton.TextColor3=Color3.new(1,1,1); autoSellButton.Font=Enum.Font.GothamBold; autoSellButton.TextSize=17; autoSellButton.Parent=controlRow
 	targetLabel=Instance.new("TextLabel"); targetLabel.Size=UDim2.new(1,-190,1,0); targetLabel.Position=UDim2.fromOffset(190,0); targetLabel.BackgroundTransparency=1; targetLabel.TextColor3=Color3.new(1,1,1); targetLabel.TextXAlignment=Enum.TextXAlignment.Left; targetLabel.Font=Enum.Font.GothamBold; targetLabel.TextSize=16; targetLabel.Parent=controlRow
 
-	sliderBar=Instance.new("TextButton"); sliderBar.Size=UDim2.new(1,0,0,18); sliderBar.BackgroundColor3=Color3.fromRGB(24,42,72); sliderBar.BorderColor3=Color3.fromRGB(90,130,180); sliderBar.Text=""; sliderBar.AutoButtonColor=false; sliderBar.Parent=bottom
+	sliderBar=Instance.new("TextButton"); sliderBar.LayoutOrder=4; sliderBar.Size=UDim2.new(1,0,0,18); sliderBar.BackgroundColor3=Color3.fromRGB(24,42,72); sliderBar.BorderColor3=Color3.fromRGB(90,130,180); sliderBar.Text=""; sliderBar.AutoButtonColor=false; sliderBar.Parent=autoSellSection
 	sliderKnob=Instance.new("Frame"); sliderKnob.Size=UDim2.fromOffset(12,20); sliderKnob.AnchorPoint=Vector2.new(0,0.5); sliderKnob.BackgroundColor3=Color3.fromRGB(180,200,255); sliderKnob.BorderColor3=Color3.fromRGB(30,30,30); sliderKnob.Parent=sliderBar
 
 	local function updateTargetFromX(x)
