@@ -130,7 +130,8 @@ function CurrencyHUDController.Start()
 	frame.Name = "CurrencyTray"
 	frame.AnchorPoint = Vector2.new(1, 0.5)
 	frame.Position = UDim2.new(1, -8, 0.5, 0)
-	frame.Size = UDim2.fromOffset(360, 30)
+	frame.AutomaticSize = Enum.AutomaticSize.X
+	frame.Size = UDim2.fromOffset(0, 30)
 	frame.BackgroundTransparency = 1
 	frame.Image = UIAssets.TaskbarTabPressedImage
 	frame.ScaleType = Enum.ScaleType.Slice
@@ -139,15 +140,29 @@ function CurrencyHUDController.Start()
 
 	local list = Instance.new("UIListLayout")
 	list.FillDirection = Enum.FillDirection.Horizontal
-	list.Padding = UDim.new(0, 2)
+	list.Padding = UDim.new(0, 0)
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Right
 	list.Parent = frame
 
 	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 8)
-	pad.PaddingRight = UDim.new(0, 8)
+	pad.PaddingLeft = UDim.new(0, 6)
+	pad.PaddingRight = UDim.new(0, 6)
 	pad.Parent = frame
+
+	local currencyGroup = Instance.new("Frame")
+	currencyGroup.Name = "CurrencyGroup"
+	currencyGroup.AutomaticSize = Enum.AutomaticSize.X
+	currencyGroup.Size = UDim2.fromOffset(0, 24)
+	currencyGroup.BackgroundTransparency = 1
+	currencyGroup.Parent = frame
+
+	local currencyList = Instance.new("UIListLayout")
+	currencyList.FillDirection = Enum.FillDirection.Horizontal
+	currencyList.Padding = UDim.new(0, 12)
+	currencyList.VerticalAlignment = Enum.VerticalAlignment.Center
+	currencyList.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	currencyList.Parent = currencyGroup
 
 	local items = {
 		{ id = "Food", icon = "🥪" },
@@ -157,9 +172,10 @@ function CurrencyHUDController.Start()
 
 	for _, spec in ipairs(items) do
 		local item = Instance.new("Frame")
-		item.Size = UDim2.fromOffset(72, 24)
+		item.AutomaticSize = Enum.AutomaticSize.X
+		item.Size = UDim2.fromOffset(0, 24)
 		item.BackgroundTransparency = 1
-		item.Parent = frame
+		item.Parent = currencyGroup
 
 		if spec.id == "Coins" then
 			local coinImage = UIAssets.CurrencyIconImages and UIAssets.CurrencyIconImages.Coins
@@ -195,7 +211,8 @@ function CurrencyHUDController.Start()
 		end
 
 		local l = Instance.new("TextLabel")
-		l.Size = UDim2.new(1, -16, 1, 0)
+		l.AutomaticSize = Enum.AutomaticSize.X
+		l.Size = UDim2.fromOffset(0, 24)
 		l.Position = UDim2.fromOffset(16, 0)
 		l.BackgroundTransparency = 1
 		l.TextColor3 = Color3.new(0, 0, 0)
@@ -208,48 +225,63 @@ function CurrencyHUDController.Start()
 	end
 
 	local divider = Instance.new("Frame")
-	divider.Size = UDim2.fromOffset(6, 20)
+	divider.Size = UDim2.fromOffset(8, 20)
 	divider.BackgroundTransparency = 1
 	divider.Parent = frame
 
 	local dividerDark = Instance.new("Frame")
 	dividerDark.Size = UDim2.fromOffset(1, 16)
-	dividerDark.Position = UDim2.fromOffset(2, 2)
+	dividerDark.Position = UDim2.fromOffset(3, 2)
 	dividerDark.BackgroundColor3 = UITheme.Colors.TaskbarBorderDark
 	dividerDark.BorderSizePixel = 0
 	dividerDark.Parent = divider
 
 	local dividerLight = Instance.new("Frame")
 	dividerLight.Size = UDim2.fromOffset(1, 16)
-	dividerLight.Position = UDim2.fromOffset(3, 2)
+	dividerLight.Position = UDim2.fromOffset(4, 2)
 	dividerLight.BackgroundColor3 = UITheme.Colors.TaskbarBorderLight
 	dividerLight.BorderSizePixel = 0
 	dividerLight.Parent = divider
 
+	local systemGroup = Instance.new("Frame")
+	systemGroup.Name = "SystemGroup"
+	systemGroup.AutomaticSize = Enum.AutomaticSize.X
+	systemGroup.Size = UDim2.fromOffset(0, 24)
+	systemGroup.BackgroundTransparency = 1
+	systemGroup.Parent = frame
+
+	local systemList = Instance.new("UIListLayout")
+	systemList.FillDirection = Enum.FillDirection.Horizontal
+	systemList.Padding = UDim.new(0, 6)
+	systemList.VerticalAlignment = Enum.VerticalAlignment.Center
+	systemList.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	systemList.Parent = systemGroup
+
+	local soundIcon = Instance.new("ImageLabel")
+	soundIcon.Name = "SoundIcon"
+	soundIcon.Size = UDim2.fromOffset(16, 16)
+	soundIcon.BackgroundTransparency = 1
+	soundIcon.Image = "rbxassetid://87433514263947"
+	soundIcon.Parent = systemGroup
+
+	local networkIcon = Instance.new("ImageLabel")
+	networkIcon.Name = "NetworkIcon"
+	networkIcon.Size = UDim2.fromOffset(16, 16)
+	networkIcon.BackgroundTransparency = 1
+	networkIcon.Image = "rbxassetid://124732343311481"
+	networkIcon.Parent = systemGroup
+
 	local timeLabel = Instance.new("TextLabel")
-	timeLabel.Size = UDim2.fromOffset(56, 24)
+	timeLabel.AutomaticSize = Enum.AutomaticSize.X
+	timeLabel.Size = UDim2.fromOffset(0, 24)
 	timeLabel.BackgroundTransparency = 1
 	timeLabel.TextColor3 = Color3.new(0, 0, 0)
 	timeLabel.TextXAlignment = Enum.TextXAlignment.Right
-	timeLabel.Font = UITheme.Font
+	timeLabel.Font = Enum.Font.Legacy
 	timeLabel.TextSize = 11
-	timeLabel.Text = "--:--"
-	timeLabel.Parent = frame
+	timeLabel.Text = "12:00 PM"
+	timeLabel.Parent = systemGroup
 	labels.Time = timeLabel
-
-	local soundPlaceholder = Instance.new("Frame")
-	soundPlaceholder.Name = "SoundPlaceholder"
-	soundPlaceholder.Size = UDim2.fromOffset(14, 14)
-	soundPlaceholder.BackgroundTransparency = 1
-	soundPlaceholder.Visible = false
-	soundPlaceholder.Parent = frame
-
-	local networkPlaceholder = Instance.new("Frame")
-	networkPlaceholder.Name = "NetworkPlaceholder"
-	networkPlaceholder.Size = UDim2.fromOffset(14, 14)
-	networkPlaceholder.BackgroundTransparency = 1
-	networkPlaceholder.Visible = false
-	networkPlaceholder.Parent = frame
 
 	refresh()
 
