@@ -53,12 +53,12 @@ function Window.Create(props: WindowProps)
 	titleBarGradient.ZIndex = 3
 	titleBarGradient.Parent = titleBar
 
-	local sliceCount = 32
+	local sliceCount = 256
 	for i = 0, sliceCount - 1 do
 		local t = if sliceCount > 1 then i / (sliceCount - 1) else 0
 		local slice = Instance.new("Frame")
 		slice.Name = string.format("Slice%d", i + 1)
-		slice.Size = UDim2.new(1 / sliceCount, 1, 1, 0)
+		slice.Size = UDim2.new(1 / sliceCount, 0, 1, 0)
 		slice.Position = UDim2.new(i / sliceCount, 0, 0, 0)
 		slice.BackgroundColor3 = TITLE_BAR_LEFT:Lerp(TITLE_BAR_RIGHT, t)
 		slice.BorderSizePixel = 0
