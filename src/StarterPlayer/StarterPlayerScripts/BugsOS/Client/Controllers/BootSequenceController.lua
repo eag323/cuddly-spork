@@ -21,13 +21,17 @@ local BootTerminalShadowColor = Color3.fromRGB(0, 70, 20)
 local StartupSoundVolume = 0.5
 local TypingSoundVolume = 0.3
 local TypingSoundThrottleSeconds = 0.05
-local BIOSTextSize = 14
+local BIOSTextSize = 12
 local BIOSPosition = UDim2.fromOffset(18, 70)
 local BIOSPadding = UDim2.fromOffset(26, 84)
 local BIOSLineHeight = 1.03
 local BIOSCharacterDelay = 0.012
 local BIOSLineDelay = 0.045
 local CursorBlinkRate = 0.35
+local TOTAL_BOOT_DURATION_SECONDS = 10
+local BIOS_STAGE_DURATION_SECONDS = 4.2
+local LOGO_STAGE_DURATION_SECONDS = 3.0
+local LOGIN_STAGE_DURATION_SECONDS = 2.0
 
 local BIOS_LINES = {
 	"BUG.OS BIOS v1.0.0",
@@ -37,11 +41,15 @@ local BIOS_LINES = {
 	"Memory Test: 640K OK",
 	"Extended Memory: 32768K OK",
 	"",
-	"Detecting colony profile............... OK",
-	"Calibrating bug sensors................ OK",
-	"Loading Bugdex database................ 300 species found",
-	"Checking food cache.................... OK",
-	"Initializing backyard map.............. OK",
+	"Initializing BugBus controller.......... OK",
+	"Mounting /colony/profile............... OK",
+	"Scanning backyard sector map........... OK",
+	"Loading Bugdex species index........... 300 entries",
+	"Checking Food cache.................... OK",
+	"Calibrating spawn sensors.............. OK",
+	"Verifying colony skin assets........... OK",
+	"Starting window manager................ OK",
+	"Starting taskbar service............... OK",
 	"",
 	"Starting BUG.OS...",
 }
@@ -138,6 +146,19 @@ local function runSequence()
 	bootBlocker.ZIndex = 10000
 	bootBlocker.Parent = bootGui
 
+	local skipLabel = Instance.new("TextLabel")
+	skipLabel.Name = "SkipLabel"
+	skipLabel.AnchorPoint = Vector2.new(0.5, 1)
+	skipLabel.Position = UDim2.new(0.5, 0, 1, -28)
+	skipLabel.Size = UDim2.fromOffset(380, 24)
+	skipLabel.BackgroundTransparency = 1
+	skipLabel.Text = "Click to skip boot process"
+	skipLabel.TextColor3 = Color3.fromRGB(215, 215, 215)
+	skipLabel.Font = Enum.Font.Code
+	skipLabel.TextSize = 16
+	skipLabel.ZIndex = 10011
+	skipLabel.Parent = bootGui
+
 	local canSkip = false
 	if SkipInputEnabled then
 		task.delay(MinimumSkipDelaySeconds, function()
@@ -175,12 +196,28 @@ local function runSequence()
 	end
 
 	local function cleanup()
+		if skipRequested and startupSound then
+			pcall(function()
+				startupSound:Stop()
+			end)
+		end
 		skipButtonConnection:Disconnect()
 		skipInputConnection:Disconnect()
 		safeDestroy(bootGui)
 	end
 
 	local ok, err = pcall(function()
+		local sequenceStartTime = os.clock()
+		local function waitUntilStageTime(stageTargetSeconds: number)
+			local elapsed = os.clock() - sequenceStartTime
+			local remaining = stageTargetSeconds - elapsed
+			while remaining > 0 and not shouldSkip() do
+				task.wait(math.min(0.05, remaining))
+				elapsed = os.clock() - sequenceStartTime
+				remaining = stageTargetSeconds - elapsed
+			end
+		end
+
 		local biosFrame = createFullScreenFrame(bootGui, "BIOSFrame", Color3.fromRGB(0, 0, 0), 10001)
 		if startupSound then
 			pcall(function()
@@ -208,27 +245,6 @@ local function runSequence()
 		biosGlow.TextColor3 = BootTerminalShadowColor
 		biosGlow.ZIndex = 10001
 		biosGlow.Parent = biosFrame
-		local scanlineOverlay = Instance.new("Frame")
-		scanlineOverlay.Name = "ScanlineOverlay"
-		scanlineOverlay.Size = UDim2.fromScale(1, 1)
-		scanlineOverlay.BackgroundTransparency = 1
-		scanlineOverlay.BorderSizePixel = 0
-		scanlineOverlay.ZIndex = 10003
-		scanlineOverlay.Parent = biosFrame
-		local scanlineLayout = Instance.new("UIListLayout")
-		scanlineLayout.FillDirection = Enum.FillDirection.Vertical
-		scanlineLayout.SortOrder = Enum.SortOrder.LayoutOrder
-		scanlineLayout.Padding = UDim.new(0, 1)
-		scanlineLayout.Parent = scanlineOverlay
-		for _ = 1, 170 do
-			local line = Instance.new("Frame")
-			line.Size = UDim2.new(1, 0, 0, 1)
-			line.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-			line.BackgroundTransparency = 0.93
-			line.BorderSizePixel = 0
-			line.Parent = scanlineOverlay
-		end
-
 		local cursorVisible = true
 		local cursorThreadActive = true
 		task.spawn(function()
@@ -277,7 +293,7 @@ local function runSequence()
 		cursorThreadActive = false
 		biosLog.Text = built
 		biosGlow.Text = built
-		task.wait(0.3)
+		waitUntilStageTime(BIOS_STAGE_DURATION_SECONDS)
 
 		if shouldSkip() then
 			cleanup()
@@ -328,13 +344,9 @@ local function runSequence()
 		fill.ZIndex = 10003
 		fill.Parent = barFrame
 
-		TweenService:Create(fill, TweenInfo.new(2.4, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), { Size = UDim2.new(1, -4, 1, -4) }):Play()
-		for _ = 1, 24 do
-			if shouldSkip() then
-				break
-			end
-			task.wait(0.1)
-		end
+		local logoFillTween = TweenService:Create(fill, TweenInfo.new(LOGO_STAGE_DURATION_SECONDS, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), { Size = UDim2.new(1, -4, 1, -4) })
+		logoFillTween:Play()
+		waitUntilStageTime(BIOS_STAGE_DURATION_SECONDS + LOGO_STAGE_DURATION_SECONDS)
 
 		if shouldSkip() then
 			cleanup()
@@ -440,31 +452,45 @@ local function runSequence()
 		passwordBox.ZIndex = 10003
 		passwordBox.Parent = loginWindow
 
-		local okButton = Instance.new("TextButton")
+		local okButton = Instance.new("ImageButton")
 		okButton.Size = UDim2.fromOffset(84, 28)
 		okButton.Position = UDim2.fromOffset(244, 170)
-		okButton.BackgroundColor3 = Color3.fromRGB(214, 214, 214)
-		okButton.BorderColor3 = Color3.fromRGB(90, 90, 90)
-		okButton.Text = "OK"
-		okButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-		okButton.Font = Enum.Font.Arial
-		okButton.TextSize = 16
+		okButton.BackgroundTransparency = 1
+		okButton.Image = UIAssets.TaskbarTabDefaultImage
+		okButton.ScaleType = Enum.ScaleType.Slice
+		okButton.SliceCenter = UIAssets.SliceCenter
 		okButton.AutoButtonColor = false
 		okButton.ZIndex = 10003
 		okButton.Parent = loginWindow
+		local okLabel = Instance.new("TextLabel")
+		okLabel.Size = UDim2.fromScale(1, 1)
+		okLabel.BackgroundTransparency = 1
+		okLabel.Text = "OK"
+		okLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+		okLabel.Font = Enum.Font.Arial
+		okLabel.TextSize = 16
+		okLabel.ZIndex = 10004
+		okLabel.Parent = okButton
 
-		local cancelButton = Instance.new("TextButton")
+		local cancelButton = Instance.new("ImageButton")
 		cancelButton.Size = UDim2.fromOffset(84, 28)
 		cancelButton.Position = UDim2.fromOffset(336, 170)
-		cancelButton.BackgroundColor3 = Color3.fromRGB(214, 214, 214)
-		cancelButton.BorderColor3 = Color3.fromRGB(90, 90, 90)
-		cancelButton.Text = "Cancel"
-		cancelButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-		cancelButton.Font = Enum.Font.Arial
-		cancelButton.TextSize = 16
+		cancelButton.BackgroundTransparency = 1
+		cancelButton.Image = UIAssets.TaskbarTabDefaultImage
+		cancelButton.ScaleType = Enum.ScaleType.Slice
+		cancelButton.SliceCenter = UIAssets.SliceCenter
 		cancelButton.AutoButtonColor = false
 		cancelButton.ZIndex = 10003
 		cancelButton.Parent = loginWindow
+		local cancelLabel = Instance.new("TextLabel")
+		cancelLabel.Size = UDim2.fromScale(1, 1)
+		cancelLabel.BackgroundTransparency = 1
+		cancelLabel.Text = "Cancel"
+		cancelLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+		cancelLabel.Font = Enum.Font.Arial
+		cancelLabel.TextSize = 16
+		cancelLabel.ZIndex = 10004
+		cancelLabel.Parent = cancelButton
 
 		for i = 1, 8 do
 			if shouldSkip() then
@@ -484,10 +510,10 @@ local function runSequence()
 			task.wait(0.1)
 		end
 
-		okButton.BackgroundColor3 = Color3.fromRGB(188, 188, 188)
+		okButton.Image = UIAssets.TaskbarTabPressedImage
 		task.wait(0.18)
-		okButton.BackgroundColor3 = Color3.fromRGB(214, 214, 214)
-		task.wait(0.1)
+		okButton.Image = UIAssets.TaskbarTabDefaultImage
+		waitUntilStageTime(BIOS_STAGE_DURATION_SECONDS + LOGO_STAGE_DURATION_SECONDS + LOGIN_STAGE_DURATION_SECONDS)
 
 		local fade = Instance.new("Frame")
 		fade.Size = UDim2.fromScale(1, 1)
@@ -497,6 +523,7 @@ local function runSequence()
 		fade.ZIndex = 10010
 		fade.Parent = bootGui
 		TweenService:Create(fade, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0 }):Play()
+		waitUntilStageTime(TOTAL_BOOT_DURATION_SECONDS)
 		task.wait(0.45)
 	end)
 
