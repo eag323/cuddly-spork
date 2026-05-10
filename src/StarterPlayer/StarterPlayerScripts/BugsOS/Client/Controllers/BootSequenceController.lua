@@ -19,7 +19,6 @@ local BootTerminalFont = Enum.Font.Code
 local BootTerminalColor = Color3.fromRGB(0, 255, 55)
 local BootTerminalShadowColor = Color3.fromRGB(0, 70, 20)
 local StartupSoundVolume = 0.5
-local TypingSoundVolume = 0.3
 local BIOSTextSize = 12
 local BIOSPosition = UDim2.fromOffset(18, 70)
 local BIOSPadding = UDim2.fromOffset(26, 84)
@@ -106,6 +105,9 @@ local function createBootSound(parent: Instance, name: string, soundId: any, vol
 	sound.Looped = false
 	sound.RollOffMaxDistance = 20
 	sound.Parent = parent
+	if name == "StartupSound" then
+		print("[Boot] Startup sound created")
+	end
 	return sound
 end
 
@@ -127,6 +129,11 @@ local function runSequence()
 	local playerGui = player:FindFirstChild("PlayerGui")
 	if not playerGui then
 		return
+	end
+
+	local existingBootGui = playerGui:FindFirstChild("BugsOSBootSequence")
+	if existingBootGui then
+		safeDestroy(existingBootGui)
 	end
 
 	local bootGui = Instance.new("ScreenGui")
@@ -187,8 +194,7 @@ local function runSequence()
 	soundContainer.Name = "BootSequenceSounds"
 	soundContainer.Parent = bootGui
 	local startupSound = createBootSound(soundContainer, "StartupSound", UIAssets.Boot and UIAssets.Boot.StartupSound, StartupSoundVolume)
-	local typingSound = createBootSound(soundContainer, "TypingSound", UIAssets.Boot and UIAssets.Boot.TypingSound, TypingSoundVolume)
-
+	
 	local function shouldSkip(): boolean
 		return skipRequested
 	end
@@ -203,7 +209,10 @@ local function runSequence()
 				fadeTween:Play()
 				fadeTween.Completed:Wait()
 			end
-			startupSound:Stop()
+			if startupSound.IsPlaying then
+				startupSound:Stop()
+				print("[Boot] Startup sound stopped")
+			end
 		end)
 	end
 
@@ -227,6 +236,9 @@ local function runSequence()
 		skipButtonConnection:Disconnect()
 		skipInputConnection:Disconnect()
 		safeDestroy(soundContainer)
+		if startupSound then
+			print("[Boot] Startup sound destroyed")
+		end
 		safeDestroy(bootGui)
 	end
 
@@ -244,6 +256,7 @@ local function runSequence()
 		if startupSound then
 			pcall(function()
 				startupSound:Play()
+				print("[Boot] Startup sound playing")
 			end)
 		end
 		local biosLog = Instance.new("TextLabel")
@@ -527,12 +540,6 @@ local function runSequence()
 				break
 			end
 			passwordBox.Text = string.rep("*", i)
-			if typingSound then
-				pcall(function()
-					typingSound.TimePosition = 0
-					typingSound:Play()
-				end)
-			end
 			task.wait(0.1)
 		end
 
