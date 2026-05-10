@@ -4,6 +4,8 @@ local UserInputService = game:GetService("UserInputService")
 local UITheme = require(script.Parent.Parent:WaitForChild("UITheme"))
 
 local Window = {}
+local TITLE_BAR_LEFT = Color3.fromRGB(0, 3, 129)
+local TITLE_BAR_RIGHT = Color3.fromRGB(15, 131, 207)
 
 export type WindowProps = {
 	Title: string?,
@@ -36,12 +38,15 @@ function Window.Create(props: WindowProps)
 	titleBar.AutoButtonColor = false
 	titleBar.Size = UDim2.new(1, -12, 0, UITheme.Window.TitleBarHeight)
 	titleBar.Position = UDim2.fromOffset(6, 6)
-	titleBar.BackgroundColor3 = UITheme.Colors.TitleBarDark
+	titleBar.BackgroundColor3 = TITLE_BAR_LEFT
+	titleBar.BackgroundTransparency = 0
 	titleBar.BorderSizePixel = 0
+	titleBar.ZIndex = 3
 	titleBar.Parent = rootFrame
 	local titleGradient = Instance.new("UIGradient")
-	titleGradient.Color = ColorSequence.new(UITheme.Colors.TitleBarDark, UITheme.Colors.TitleBarLight)
+	titleGradient.Color = ColorSequence.new(TITLE_BAR_LEFT, TITLE_BAR_RIGHT)
 	titleGradient.Rotation = 0
+	titleGradient.Transparency = NumberSequence.new(0)
 	titleGradient.Parent = titleBar
 
 	local titleBottomLine = Instance.new("Frame")
@@ -116,6 +121,7 @@ function Window.Create(props: WindowProps)
 	contentFrame.Position = UDim2.fromOffset(borderPadding, UITheme.Window.TitleBarHeight + borderPadding)
 	contentFrame.BackgroundColor3 = UITheme.Colors.AppBackground
 	contentFrame.BorderSizePixel = 0
+	contentFrame.ZIndex = 1
 	contentFrame.Parent = rootFrame
 
 	local contentPadding = Instance.new("UIPadding")

@@ -126,6 +126,11 @@ function CurrencyHUDController.Init(c)
 end
 
 function CurrencyHUDController.Start()
+	local existingTray = context.UI.Taskbar:FindFirstChild("CurrencyTray")
+	if existingTray then
+		existingTray:Destroy()
+	end
+
 	local frame = Instance.new("ImageLabel")
 	frame.Name = "CurrencyTray"
 	frame.AnchorPoint = Vector2.new(1, 0.5)
@@ -136,6 +141,7 @@ function CurrencyHUDController.Start()
 	frame.Image = UIAssets.TaskbarTabPressedImage
 	frame.ScaleType = Enum.ScaleType.Slice
 	frame.SliceCenter = UIAssets.SliceCenter
+	frame.ZIndex = 25
 	frame.Parent = context.UI.Taskbar
 
 	local list = Instance.new("UIListLayout")
@@ -143,6 +149,7 @@ function CurrencyHUDController.Start()
 	list.Padding = UDim.new(0, 0)
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	list.Name = "TrayLayout"
 	list.Parent = frame
 
 	local pad = Instance.new("UIPadding")
