@@ -19,8 +19,8 @@ UITheme.Colors = {
 	WindowBorderLight = Color3.fromRGB(233, 238, 252),
 	WindowBorderDark = Color3.fromRGB(54, 70, 106),
 	WindowInnerBorder = Color3.fromRGB(20, 34, 64),
-	TitleBarDark = Color3.fromRGB(0, 18, 130),
-	TitleBarLight = Color3.fromRGB(0, 115, 210),
+	TitleBarDark = Color3.fromRGB(0, 3, 129),
+	TitleBarLight = Color3.fromRGB(15, 131, 207),
 	TitleText = Color3.fromRGB(243, 248, 255),
 }
 
@@ -31,7 +31,7 @@ UITheme.Assets = {
 
 UITheme.Window = {
 	TitleBarHeight = 28,
-	ContentPadding = 8,
+	ContentPadding = 4,
 	FrameSlice = Rect.new(10, 10, 54, 54),
 }
 
