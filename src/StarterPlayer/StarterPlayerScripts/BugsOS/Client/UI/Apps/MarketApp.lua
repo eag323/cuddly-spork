@@ -76,17 +76,22 @@ local function renderChart(history, marketCap)
 		line.Parent = chartFrame
 	end
 
-	local startIndex = math.max(2, #history - 9)
+	local startIndex = math.max(2, #history - 19)
 	local candleCount = #history - startIndex + 1
 	if candleCount <= 0 then return end
 
-	local candleWidth = 38
-	local candleHeight = 62
-	local minGap = 10
-	local maxGap = 18
-	local gap = math.clamp((usableWidth - (candleCount * candleWidth)) / math.max(candleCount - 1, 1), minGap, maxGap)
+	local candleWidth = 32
+	local candleHeight = 64
+	local preferredGap = 26
+	local minGap = 20
+	local maxGap = 30
+	local gap = preferredGap
+	if candleCount > 1 then
+		local maxFitGap = (usableWidth - (candleCount * candleWidth)) / (candleCount - 1)
+		gap = math.clamp(maxFitGap, minGap, maxGap)
+	end
 	local totalCandlesWidth = (candleCount * candleWidth) + ((candleCount - 1) * gap)
-	local startX = leftPadding + math.max(0, (usableWidth - totalCandlesWidth) * (candleCount <= 8 and 0.25 or 0.5))
+	local startX = leftPadding + math.max(0, (usableWidth - totalCandlesWidth) * 0.5)
 
 	local function yForPrice(price: number): number
 		local alpha = (math.clamp(price, minP, maxP) - minP) / (maxP - minP)

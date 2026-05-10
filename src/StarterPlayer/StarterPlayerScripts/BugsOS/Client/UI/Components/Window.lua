@@ -31,8 +31,8 @@ function Window.Create(props: WindowProps)
 
 	local contentClipFrame = Instance.new("Frame")
 	contentClipFrame.Name = "ContentClipFrame"
-	contentClipFrame.Size = UDim2.new(1, -12, 1, -UITheme.Window.TitleBarHeight - 13)
-	contentClipFrame.Position = UDim2.fromOffset(6, UITheme.Window.TitleBarHeight + 7)
+	contentClipFrame.Size = UDim2.new(1, -12, 1, -UITheme.Window.TitleBarHeight - 12)
+	contentClipFrame.Position = UDim2.fromOffset(6, UITheme.Window.TitleBarHeight + 6)
 	contentClipFrame.BackgroundTransparency = 1
 	contentClipFrame.BorderSizePixel = 0
 	contentClipFrame.ClipsDescendants = true
@@ -94,7 +94,7 @@ function Window.Create(props: WindowProps)
 	local appIcon = Instance.new("ImageLabel")
 	appIcon.Name = "AppIcon"
 	appIcon.Size = UDim2.fromOffset(16, 16)
-	appIcon.Position = UDim2.fromOffset(6, 5)
+	appIcon.Position = UDim2.fromOffset(8, 5)
 	appIcon.BackgroundTransparency = 1
 	appIcon.Image = props.IconImage or ""
 	appIcon.ZIndex = 4
@@ -102,7 +102,7 @@ function Window.Create(props: WindowProps)
 
 	local fallbackIcon = Instance.new("TextLabel")
 	fallbackIcon.Size = UDim2.fromOffset(16, 16)
-	fallbackIcon.Position = UDim2.fromOffset(6, 5)
+	fallbackIcon.Position = UDim2.fromOffset(8, 5)
 	fallbackIcon.BackgroundTransparency = 1
 	fallbackIcon.Font = Enum.Font.ArialBold
 	fallbackIcon.TextSize = 14
@@ -115,7 +115,7 @@ function Window.Create(props: WindowProps)
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Name = "TitleText"
 	titleLabel.Size = UDim2.new(1, -96, 1, 0)
-	titleLabel.Position = UDim2.fromOffset(26, 0)
+	titleLabel.Position = UDim2.fromOffset(29, 0)
 	titleLabel.BackgroundTransparency = 1
 	titleLabel.Text = props.Title or "Window.exe"
 	titleLabel.TextColor3 = UITheme.Colors.TitleText
@@ -134,7 +134,7 @@ function Window.Create(props: WindowProps)
 		button.Name = name
 		button.AnchorPoint = Vector2.new(1, 0)
 		button.Size = UDim2.fromOffset(23, 23)
-		button.Position = UDim2.new(1, xOffset, 0, 2)
+		button.Position = UDim2.new(1, xOffset, 0, 3)
 		button.BackgroundTransparency = 1
 		button.Image = UITheme.Assets.WindowButton
 		button.ZIndex = 4
