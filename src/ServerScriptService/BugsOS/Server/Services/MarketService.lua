@@ -25,6 +25,8 @@ local MIN_PRICE = 0.50
 local MAX_PRICE = 3.00
 local START_PRICE = 1.00
 local HISTORY_LIMIT = 120
+local MIN_TICK_CHANGE = 0.05
+local MAX_TICK_CHANGE = 0.50
 
 type PlayerData = { [string]: any }
 
@@ -114,9 +116,18 @@ local function runAutoSell()
 end
 
 local function updatePrice()
-	currentTrend = math.clamp(currentTrend + (math.random() - 0.5) * 0.04, -0.08, 0.08)
-	local nextPrice = roundToCents(clampPrice(currentPrice + currentTrend + (math.random() - 0.5) * 0.06))
-	if nextPrice == currentPrice then return end
+	local direction = (math.random() < 0.5) and -1 or 1
+	local changeMagnitude = MIN_TICK_CHANGE + (math.random() * (MAX_TICK_CHANGE - MIN_TICK_CHANGE))
+	currentTrend = math.clamp((currentTrend * 0.35) + (direction * changeMagnitude * 0.65), -MAX_TICK_CHANGE, MAX_TICK_CHANGE)
+	local effectiveChange = math.clamp(currentTrend, -MAX_TICK_CHANGE, MAX_TICK_CHANGE)
+	if math.abs(effectiveChange) < MIN_TICK_CHANGE then
+		effectiveChange = direction * MIN_TICK_CHANGE
+	end
+	local nextPrice = roundToCents(clampPrice(currentPrice + effectiveChange))
+	if nextPrice == currentPrice then
+		local forcedDirection = (currentPrice >= MAX_PRICE) and -1 or 1
+		nextPrice = roundToCents(clampPrice(currentPrice + (forcedDirection * MIN_TICK_CHANGE)))
+	end
 	currentPrice = nextPrice
 	pushPriceHistory(currentPrice)
 	runAutoSell()
