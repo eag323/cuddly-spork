@@ -6,6 +6,8 @@ local RemoteNames: RemoteNameMap = {
 	-- Client to Server
 	Click_Request = "Click_Request",
 	Market_SellFood = "Market_SellFood",
+	Market_SetAutoSellEnabled = "Market_SetAutoSellEnabled",
+	Market_SetAutoSellTarget = "Market_SetAutoSellTarget",
 	Upgrade_BuyClickTool = "Upgrade_BuyClickTool",
 	Generator_Equip = "Generator_Equip",
 	Generator_Upgrade = "Generator_Upgrade",
