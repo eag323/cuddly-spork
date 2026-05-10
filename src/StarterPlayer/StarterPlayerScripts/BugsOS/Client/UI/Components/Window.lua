@@ -43,17 +43,35 @@ function Window.Create(props: WindowProps)
 	titleBar.BorderSizePixel = 0
 	titleBar.ZIndex = 3
 	titleBar.Parent = rootFrame
-	local titleGradient = Instance.new("UIGradient")
-	titleGradient.Color = ColorSequence.new(TITLE_BAR_LEFT, TITLE_BAR_RIGHT)
-	titleGradient.Rotation = 0
-	titleGradient.Transparency = NumberSequence.new(0)
-	titleGradient.Parent = titleBar
+
+	local titleBarGradient = Instance.new("Frame")
+	titleBarGradient.Name = "TitleBarGradient"
+	titleBarGradient.Size = UDim2.fromScale(1, 1)
+	titleBarGradient.Position = UDim2.fromScale(0, 0)
+	titleBarGradient.BackgroundTransparency = 1
+	titleBarGradient.BorderSizePixel = 0
+	titleBarGradient.ZIndex = 3
+	titleBarGradient.Parent = titleBar
+
+	local sliceCount = 32
+	for i = 0, sliceCount - 1 do
+		local t = if sliceCount > 1 then i / (sliceCount - 1) else 0
+		local slice = Instance.new("Frame")
+		slice.Name = string.format("Slice%d", i + 1)
+		slice.Size = UDim2.new(1 / sliceCount, 1, 1, 0)
+		slice.Position = UDim2.new(i / sliceCount, 0, 0, 0)
+		slice.BackgroundColor3 = TITLE_BAR_LEFT:Lerp(TITLE_BAR_RIGHT, t)
+		slice.BorderSizePixel = 0
+		slice.ZIndex = 3
+		slice.Parent = titleBarGradient
+	end
 
 	local titleBottomLine = Instance.new("Frame")
 	titleBottomLine.Size = UDim2.new(1, 0, 0, 1)
 	titleBottomLine.Position = UDim2.new(0, 0, 1, -1)
 	titleBottomLine.BorderSizePixel = 0
 	titleBottomLine.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	titleBottomLine.ZIndex = 4
 	titleBottomLine.Parent = titleBar
 
 	local appIcon = Instance.new("ImageLabel")
@@ -62,6 +80,7 @@ function Window.Create(props: WindowProps)
 	appIcon.Position = UDim2.fromOffset(6, 5)
 	appIcon.BackgroundTransparency = 1
 	appIcon.Image = props.IconImage or ""
+	appIcon.ZIndex = 4
 	appIcon.Parent = titleBar
 
 	local fallbackIcon = Instance.new("TextLabel")
@@ -73,6 +92,7 @@ function Window.Create(props: WindowProps)
 	fallbackIcon.TextColor3 = Color3.new(1, 1, 1)
 	fallbackIcon.Text = props.Icon or "■"
 	fallbackIcon.Visible = appIcon.Image == ""
+	fallbackIcon.ZIndex = 4
 	fallbackIcon.Parent = titleBar
 
 	local titleLabel = Instance.new("TextLabel")
@@ -85,6 +105,7 @@ function Window.Create(props: WindowProps)
 	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 	titleLabel.Font = Enum.Font.ArialBold
 	titleLabel.TextSize = 14
+	titleLabel.ZIndex = 4
 	titleLabel.Parent = titleBar
 	local titleStroke = Instance.new("UIStroke")
 	titleStroke.Thickness = 1
@@ -99,6 +120,7 @@ function Window.Create(props: WindowProps)
 		button.Position = UDim2.new(1, xOffset, 0, 4)
 		button.BackgroundTransparency = 1
 		button.Image = UITheme.Assets.WindowButton
+		button.ZIndex = 4
 		button.Parent = titleBar
 		local symbolLabel = Instance.new("TextLabel")
 		symbolLabel.Size = UDim2.fromScale(1, 1)
@@ -107,6 +129,7 @@ function Window.Create(props: WindowProps)
 		symbolLabel.TextColor3 = Color3.fromRGB(30, 30, 30)
 		symbolLabel.Font = Enum.Font.ArialBold
 		symbolLabel.TextSize = 14
+		symbolLabel.ZIndex = 5
 		symbolLabel.Parent = button
 		return button
 	end

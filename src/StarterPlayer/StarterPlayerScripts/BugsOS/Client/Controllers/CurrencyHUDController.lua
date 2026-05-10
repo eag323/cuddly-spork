@@ -237,16 +237,18 @@ function CurrencyHUDController.Start()
 	divider.Parent = frame
 
 	local dividerDark = Instance.new("Frame")
+	local dark = UITheme.Colors.TaskbarBorderDark or Color3.fromRGB(128, 128, 128)
+	local light = UITheme.Colors.TaskbarBorderLight or Color3.fromRGB(255, 255, 255)
 	dividerDark.Size = UDim2.fromOffset(1, 16)
 	dividerDark.Position = UDim2.fromOffset(3, 2)
-	dividerDark.BackgroundColor3 = UITheme.Colors.TaskbarBorderDark
+	dividerDark.BackgroundColor3 = dark
 	dividerDark.BorderSizePixel = 0
 	dividerDark.Parent = divider
 
 	local dividerLight = Instance.new("Frame")
 	dividerLight.Size = UDim2.fromOffset(1, 16)
 	dividerLight.Position = UDim2.fromOffset(4, 2)
-	dividerLight.BackgroundColor3 = UITheme.Colors.TaskbarBorderLight
+	dividerLight.BackgroundColor3 = light
 	dividerLight.BorderSizePixel = 0
 	dividerLight.Parent = divider
 
