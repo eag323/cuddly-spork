@@ -133,8 +133,8 @@ function Window.Create(props: WindowProps)
 		local button = Instance.new("ImageButton")
 		button.Name = name
 		button.AnchorPoint = Vector2.new(1, 0)
-		button.Size = UDim2.fromOffset(18, 18)
-		button.Position = UDim2.new(1, xOffset, 0, 4)
+		button.Size = UDim2.fromOffset(23, 23)
+		button.Position = UDim2.new(1, xOffset, 0, 2)
 		button.BackgroundTransparency = 1
 		button.Image = UITheme.Assets.WindowButton
 		button.ZIndex = 4
@@ -145,13 +145,13 @@ function Window.Create(props: WindowProps)
 		symbolLabel.Text = symbol
 		symbolLabel.TextColor3 = Color3.fromRGB(30, 30, 30)
 		symbolLabel.Font = Enum.Font.ArialBold
-		symbolLabel.TextSize = 14
+		symbolLabel.TextSize = 15
 		symbolLabel.ZIndex = 5
 		symbolLabel.Parent = button
 		return button
 	end
 
-	local minimizeButton = createCaptionButton("MinimizeButton", "-", -26)
+	local minimizeButton = createCaptionButton("MinimizeButton", "-", -31)
 	local closeButton = createCaptionButton("CloseButton", "x", -6)
 
 	local contentFrame = Instance.new("Frame")
@@ -223,14 +223,14 @@ function Window.Create(props: WindowProps)
 		rootFrame.ZIndex = z
 		setIfGui(contentClipFrame, z)
 		setIfGui(contentFrame, z)
-		setIfGui(windowFrameImage, z + 1)
-		setIfGui(titleBar, z + 2)
+		setIfGui(titleBar, z + 1)
+		setIfGui(windowFrameImage, z + 2)
 		for _, gui in ipairs(titleBar:GetDescendants()) do
 			if gui:IsA("GuiObject") then
 				if gui.Name == "TitleBarGradient" or gui.Name:match("^Slice%d+$") then
-					gui.ZIndex = z + 2
+					gui.ZIndex = z + 1
 				else
-					gui.ZIndex = z + 3
+					gui.ZIndex = z + 4
 				end
 			end
 		end

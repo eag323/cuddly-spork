@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Window = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("Window"))
 local MarketplaceConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("MarketplaceConfig"))
+local UIAssets = require(script.Parent.Parent:WaitForChild("UIAssets"))
 
 local MarketApp = {}
 local windowRef, priceValueLabel, deltaLabel, chartFrame
@@ -13,7 +14,30 @@ local tickerLabel
 local alertAboveStepper, alertBelowStepper, alertStatusLabel
 local tickerConn
 local tickerOffset = 0
-local DEFAULT_TICKER_TEXT = "ANTX ▲ 2.4% | HIVECO ▼ 1.1% | NECTR ▲ 5.8% | BUGMART ▲ 3.2% | WEBNET ▼ 0.8% | LARVA-LABS ▲ 4.4% | BEETL ▼ 1.9% | MOTHCO ▲ 0.7% | CRICKETCOM ▲ 2.1% | TERMITECH ▼ 3.5% | WASPWAY ▲ 6.2% | FLEABAY ▼ 1.4% | SILKNET ▲ 2.8% | POLLENEX ▲ 5.0% | GRUBHUBS ▼ 2.2% | STINGR ▲ 3.7% | ROACHCO ▼ 0.5% | FIREFLY ENERGY ▲ 4.9% | BugMart reports record crumb demand. | BeetleBay trading volume spikes overnight. | Queen Futures steady after colony expansion. | Larva Labs announces new hatchery upgrade. | SpiderWeb Networks misses web traffic estimates. | Ant workers increase food transport capacity. | Nectar markets rise after backyard bloom. | TermiteTech shares fall after wood shortage. | Firefly Energy glows after sunset demand surge. | WaspWay warns of volatile flight conditions. | MothCo rallies on lamp season optimism. | PollenEx reports strong spring guidance. | FleaBay listings jump after rare bug demand. | RoachCo remains resilient despite kitchen cleanup fears. | HiveCo expands into picnic territory."
+local DEFAULT_TICKER_SYMBOLS = {"ANTX", "HIVECO", "NECTR", "BUGMART", "WEBNET", "LARVA-LABS", "BEETL", "MOTHCO", "CRICKETCOM", "TERMITECH", "WASPWAY", "FLEABAY", "SILKNET", "POLLENEX", "GRUBHUBS", "STINGR", "ROACHCO", "FIREFLY", "QUEENX", "ANTBIT"}
+local DEFAULT_TICKER_NEWS = {
+	"BugMart reports record crumb demand.",
+	"BeetleBay trading volume spikes overnight.",
+	"Queen Futures steady after colony expansion.",
+	"Larva Labs announces new hatchery upgrade.",
+	"SpiderWeb Networks misses web traffic estimates.",
+	"Ant workers increase food transport capacity.",
+	"Nectar markets rise after backyard bloom.",
+	"TermiteTech shares fall after wood shortage.",
+	"Firefly Energy glows after sunset demand surge.",
+	"WaspWay warns of volatile flight conditions.",
+	"MothCo rallies on lamp season optimism.",
+	"PollenEx reports strong spring guidance.",
+	"FleaBay listings jump after rare bug demand.",
+	"RoachCo remains resilient despite kitchen cleanup fears.",
+	"HiveCo expands into picnic territory.",
+}
+local tickerRng = Random.new()
+local tickerSnapshot = ""
+local tickerRefreshAt = 0
+local TICKER_REFRESH_MIN_SECONDS = 120
+local TICKER_REFRESH_MAX_SECONDS = 180
+
 local GREEN_CANDLE_ASSET = "rbxassetid://132096679740132"
 local RED_CANDLE_ASSET = "rbxassetid://133082519022540"
 
@@ -94,6 +118,38 @@ local function renderChart(history, marketCap)
 	end
 end
 
+
+local function buildDefaultTickerText(): string
+	local entries = table.create(#DEFAULT_TICKER_SYMBOLS + #DEFAULT_TICKER_NEWS)
+	for _, symbol in ipairs(DEFAULT_TICKER_SYMBOLS) do
+		local up = tickerRng:NextNumber() >= 0.5
+		local delta = tickerRng:NextNumber(0.2, 6.9)
+		table.insert(entries, string.format("%s %s %.1f%%", symbol, up and "▲" or "▼", delta))
+	end
+	for _, headline in ipairs(DEFAULT_TICKER_NEWS) do
+		table.insert(entries, headline)
+	end
+	return table.concat(entries, " | ")
+end
+
+local function getTickerText(marketState): string
+	local now = os.clock()
+	if tickerSnapshot == "" or now >= tickerRefreshAt then
+		tickerSnapshot = buildDefaultTickerText()
+		tickerRefreshAt = now + tickerRng:NextInteger(TICKER_REFRESH_MIN_SECONDS, TICKER_REFRESH_MAX_SECONDS)
+	end
+	local text = tickerSnapshot
+	local activeEvent = marketState.ActiveEvent
+	local headline = ""
+	if type(activeEvent) == "table" then
+		headline = tostring(activeEvent.TickerHeadline or activeEvent.Description or "")
+	end
+	if headline ~= "" then
+		text = string.format("%s | BREAKING: %s", text, headline)
+	end
+	return text
+end
+
 local function updateAutoSellUi(context)
 	local playerData = context.State.PlayerData or {}
 	local purchases = playerData.Purchases or {}
@@ -135,7 +191,7 @@ function MarketApp.Refresh(context)
 	renderChart(history, marketState.MarketCap)
 	updateAutoSellUi(context)
 	if tickerLabel then
-		tickerLabel.Text = tostring(marketState.TickerHeadline or DEFAULT_TICKER_TEXT)
+		tickerLabel.Text = getTickerText(marketState)
 	end
 	if alertStatusLabel then
 		local alerts = marketState.Alerts or { Above = 2.5, Below = 0.75 }
@@ -145,7 +201,7 @@ end
 
 function MarketApp.Mount(target, context)
 	if windowRef then return end
-	windowRef = Window.Create({Title="Market.exe", Icon="🐟", AppId="Market", Size=UDim2.fromOffset(760,700), Position=UDim2.fromOffset(460,80), Parent=target, OnClose=function() context.Controllers.Window.Close("Market") end, OnMinimize=function() context.Controllers.Window.Minimize("Market") end, OnFocus=function() context.Controllers.Window.Focus("Market") end})
+	windowRef = Window.Create({Title="Market.exe", IconImage=UIAssets.AppIconImages.Market, AppId="Market", Size=UDim2.fromOffset(760,700), Position=UDim2.fromOffset(460,80), Parent=target, OnClose=function() context.Controllers.Window.Close("Market") end, OnMinimize=function() context.Controllers.Window.Minimize("Market") end, OnFocus=function() context.Controllers.Window.Focus("Market") end})
 	local contentFrame = windowRef.Content
 	contentFrame.BackgroundColor3 = Color3.fromRGB(10, 22, 40)
 	contentFrame.ClipsDescendants = true
@@ -192,7 +248,7 @@ function MarketApp.Mount(target, context)
 	tickerLabel.TextColor3 = Color3.fromRGB(74, 255, 97)
 	tickerLabel.Font = Enum.Font.RobotoMono
 	tickerLabel.TextSize = 15
-	tickerLabel.Text = DEFAULT_TICKER_TEXT
+	tickerLabel.Text = buildDefaultTickerText()
 	tickerLabel.Parent = tickerFrame
 
 	local intro = Instance.new("TextLabel")
