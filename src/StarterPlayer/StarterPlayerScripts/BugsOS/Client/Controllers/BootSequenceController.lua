@@ -16,22 +16,34 @@ local SkipBootSequenceInStudio = false
 local SkipInputEnabled = true
 local MinimumSkipDelaySeconds = 1
 local BootTerminalFont = Enum.Font.Code
-local BootTerminalColor = Color3.fromRGB(0, 255, 70)
-local BootTerminalShadowColor = Color3.fromRGB(0, 80, 25)
+local BootTerminalColor = Color3.fromRGB(0, 255, 55)
+local BootTerminalShadowColor = Color3.fromRGB(0, 70, 20)
 local StartupSoundVolume = 0.5
 local TypingSoundVolume = 0.3
 local TypingSoundThrottleSeconds = 0.05
+local BIOSTextSize = 14
+local BIOSPosition = UDim2.fromOffset(18, 70)
+local BIOSPadding = UDim2.fromOffset(26, 84)
+local BIOSLineHeight = 1.03
+local BIOSCharacterDelay = 0.012
+local BIOSLineDelay = 0.045
+local CursorBlinkRate = 0.35
 
 local BIOS_LINES = {
-	"Bugs OS BIOS v1.0.0",
-	"Copyright (c) 2026 BugSoft Inc.",
+	"BUG.OS BIOS v1.0.0",
+	"Copyright (C) 2026 BugSoft Inc.",
 	"",
-	"Detecting colony profile........ OK",
-	"Calibrating bug sensors......... OK",
-	"Loading Bugdex database......... 300 species found",
-	"Checking food cache............. OK",
-	"Initializing backyard map....... OK",
-	"Starting Bugs.OS...",
+	"CPU: ColonyCore 486DX",
+	"Memory Test: 640K OK",
+	"Extended Memory: 32768K OK",
+	"",
+	"Detecting colony profile............... OK",
+	"Calibrating bug sensors................ OK",
+	"Loading Bugdex database................ 300 species found",
+	"Checking food cache.................... OK",
+	"Initializing backyard map.............. OK",
+	"",
+	"Starting BUG.OS...",
 }
 
 local function safeDestroy(instance: Instance?)
@@ -177,15 +189,16 @@ local function runSequence()
 		end
 		local biosLog = Instance.new("TextLabel")
 		biosLog.Name = "BIOSLog"
-		biosLog.Size = UDim2.new(1, -40, 1, -40)
-		biosLog.Position = UDim2.fromOffset(20, 20)
+		biosLog.Size = UDim2.new(1, -BIOSPadding.X.Offset, 1, -BIOSPadding.Y.Offset)
+		biosLog.Position = BIOSPosition
 		biosLog.BackgroundTransparency = 1
 		biosLog.TextXAlignment = Enum.TextXAlignment.Left
 		biosLog.TextYAlignment = Enum.TextYAlignment.Top
 		biosLog.TextColor3 = BootTerminalColor
 		biosLog.Font = resolveBootTerminalFont()
-		biosLog.TextSize = 20
-		biosLog.TextWrapped = true
+		biosLog.TextSize = BIOSTextSize
+		biosLog.LineHeight = BIOSLineHeight
+		biosLog.TextWrapped = false
 		biosLog.RichText = false
 		biosLog.ZIndex = 10002
 		biosLog.Parent = biosFrame
@@ -195,22 +208,76 @@ local function runSequence()
 		biosGlow.TextColor3 = BootTerminalShadowColor
 		biosGlow.ZIndex = 10001
 		biosGlow.Parent = biosFrame
+		local scanlineOverlay = Instance.new("Frame")
+		scanlineOverlay.Name = "ScanlineOverlay"
+		scanlineOverlay.Size = UDim2.fromScale(1, 1)
+		scanlineOverlay.BackgroundTransparency = 1
+		scanlineOverlay.BorderSizePixel = 0
+		scanlineOverlay.ZIndex = 10003
+		scanlineOverlay.Parent = biosFrame
+		local scanlineLayout = Instance.new("UIListLayout")
+		scanlineLayout.FillDirection = Enum.FillDirection.Vertical
+		scanlineLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		scanlineLayout.Padding = UDim.new(0, 1)
+		scanlineLayout.Parent = scanlineOverlay
+		for _ = 1, 170 do
+			local line = Instance.new("Frame")
+			line.Size = UDim2.new(1, 0, 0, 1)
+			line.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+			line.BackgroundTransparency = 0.93
+			line.BorderSizePixel = 0
+			line.Parent = scanlineOverlay
+		end
+
+		local cursorVisible = true
+		local cursorThreadActive = true
+		task.spawn(function()
+			while cursorThreadActive and biosFrame.Parent do
+				cursorVisible = not cursorVisible
+				task.wait(CursorBlinkRate)
+			end
+		end)
 
 		local built = ""
+		local function renderWithCursor()
+			local cursor = cursorVisible and "█" or " "
+			local rendered = built .. cursor
+			biosLog.Text = rendered
+			biosGlow.Text = rendered
+		end
+
 		for _, line in ipairs(BIOS_LINES) do
 			if shouldSkip() then
 				break
 			end
-			if built == "" then
-				built = line
-			else
-				built = built .. "\n" .. line
+			if built ~= "" then
+				built = built .. "\n"
 			end
-			biosLog.Text = built
-			biosGlow.Text = built
-			task.wait(0.35)
+			for i = 1, #line do
+				if shouldSkip() then
+					break
+				end
+				built = built .. line:sub(i, i)
+				renderWithCursor()
+				if typingSound then
+					local nowTime = os.clock()
+					if nowTime - lastTypingSoundTime >= TypingSoundThrottleSeconds then
+						lastTypingSoundTime = nowTime
+						pcall(function()
+							typingSound.TimePosition = 0
+							typingSound:Play()
+						end)
+					end
+				end
+				task.wait(BIOSCharacterDelay)
+			end
+			renderWithCursor()
+			task.wait(BIOSLineDelay)
 		end
-		task.wait(0.45)
+		cursorThreadActive = false
+		biosLog.Text = built
+		biosGlow.Text = built
+		task.wait(0.3)
 
 		if shouldSkip() then
 			cleanup()
