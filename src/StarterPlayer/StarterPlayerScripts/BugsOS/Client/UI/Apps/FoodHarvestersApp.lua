@@ -193,7 +193,7 @@ local function refresh(context, resetScroll: boolean?)
 		return
 	end
 
-	local scroll = mk(contentFrame, "ScrollingFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 8 })
+	local scroll = mk(contentFrame, "ScrollingFrame", { Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, 0), BackgroundColor3 = Color3.fromRGB(5, 17, 33), BackgroundTransparency = 0, BorderSizePixel = 0, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 8, ClipsDescendants = true })
 	mainScrollRef = scroll
 	local list = mk(scroll, "UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })
 	mk(scroll, "UIPadding", { PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 10) })
@@ -222,11 +222,11 @@ local function refresh(context, resetScroll: boolean?)
 				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 18), Position = UDim2.fromOffset(6, 84), BackgroundTransparency = 1, Text = "+" .. NumberUtil.FormatNumber(slotOutput(slot)) .. "/s", TextColor3 = COLORS.positive, Font = Enum.Font.GothamBold, TextSize = 15 })
 				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 16), Position = UDim2.fromOffset(6, 102), BackgroundTransparency = 1, Text = string.format("%d/%d condiment slots", #(slot.Condiments or {}), h.condimentSlots or 0), TextColor3 = COLORS.muted, Font = Enum.Font.Gotham, TextSize = 13 })
 				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 16), Position = UDim2.fromOffset(6, 118), BackgroundTransparency = 1, Text = h.buffText or "", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 12 })
-				mk(card, "TextButton", { Size = UDim2.new(1, -12, 0, 24), Position = UDim2.new(0, 6, 1, -30), BackgroundColor3 = COLORS.button, BorderSizePixel = 0, Text = "Upgrade", TextColor3 = Color3.fromRGB(12, 35, 26), Font = Enum.Font.GothamBold, TextSize = 14, ZIndex = 4 }).Activated:Connect(function() context.Controllers.Generator.AutoUpgradeCondiments(i) end)
-				mk(card, "TextButton", { Size = UDim2.fromOffset(18, 18), Position = UDim2.new(1, -22, 0, 4), BackgroundTransparency = 1, Text = "🗑", TextSize = 14, ZIndex = 5 }).Activated:Connect(function()
+				mk(card, "TextButton", { Size = UDim2.new(1, -12, 0, 24), Position = UDim2.new(0, 6, 1, -30), BackgroundColor3 = COLORS.button, BorderSizePixel = 0, Text = "Upgrade", TextColor3 = Color3.fromRGB(12, 35, 26), Font = Enum.Font.GothamBold, TextSize = 14, ZIndex = 6 }).Activated:Connect(function() context.Controllers.Generator.AutoUpgradeCondiments(i) end)
+				mk(card, "TextButton", { Size = UDim2.fromOffset(18, 18), Position = UDim2.new(1, -22, 0, 4), BackgroundTransparency = 1, Text = "🗑", TextSize = 14, ZIndex = 7 }).Activated:Connect(function()
 					context.Controllers.Generator.Remove(i)
 				end)
-				mk(card, "TextButton", { Size = UDim2.new(1, -34, 1, -38), Position = UDim2.fromOffset(6, 4), BackgroundTransparency = 1, Text = "", ZIndex = 1 }).Activated:Connect(function()
+				mk(card, "TextButton", { Size = UDim2.new(1, -34, 1, -38), Position = UDim2.fromOffset(6, 4), BackgroundTransparency = 1, Text = "", ZIndex = 2 }).Activated:Connect(function()
 					state.mode = "detail"
 					state.selectedSlot = i
 					refresh(contextRef, true)
@@ -308,9 +308,9 @@ end
 function FoodHarvestersApp.Mount(target, context)
 	if root then return end
 	windowRef = Window.Create({ Title = "Food Harvesters.exe", IconImage = UIAssets.AppIconImages.FoodHarvesters, Size = UDim2.fromOffset(860, 640), Position = UDim2.fromScale(0.1, 0.08), Parent = target, OnClose = function() context.Controllers.Window.Close("FoodHarvesters") end })
-	root = mk(windowRef.Content, "Frame", { Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, 0), BackgroundColor3 = COLORS.background, BorderSizePixel = 0 })
+	root = mk(windowRef.Content, "Frame", { Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, 0), BackgroundColor3 = Color3.fromRGB(5, 17, 33), BackgroundTransparency = 0, BorderSizePixel = 0, ClipsDescendants = true })
 	mk(root, "UIPadding", { PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 8) })
-	contentFrame = mk(root, "Frame", { Size = UDim2.new(1, 0, 1, -28), BackgroundTransparency = 1, BorderSizePixel = 0 })
+	contentFrame = mk(root, "Frame", { Size = UDim2.new(1, 0, 1, -28), BackgroundColor3 = Color3.fromRGB(5, 17, 33), BackgroundTransparency = 0, BorderSizePixel = 0, ClipsDescendants = true })
 	notificationLabel = mk(root, "TextLabel", { Size = UDim2.new(1, 0, 0, 22), Position = UDim2.new(0, 0, 1, -22), BackgroundTransparency = 1, Text = "", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left })
 	refresh(context)
 end

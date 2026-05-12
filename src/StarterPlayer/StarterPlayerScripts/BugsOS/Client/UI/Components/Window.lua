@@ -9,10 +9,7 @@ local TITLE_BAR_RIGHT = Color3.fromRGB(15, 131, 207)
 
 local OUTER_BORDER = 6
 local TITLE_BAR_HEIGHT = 30
-local CONTENT_TOP = TITLE_BAR_HEIGHT + OUTER_BORDER
-local CONTENT_LEFT = OUTER_BORDER
-local CONTENT_RIGHT = OUTER_BORDER
-local CONTENT_BOTTOM = OUTER_BORDER
+local CONTENT_GAP = 4
 
 export type WindowProps = {
 	Title: string?,
@@ -38,9 +35,10 @@ function Window.Create(props: WindowProps)
 
 	local contentClipFrame = Instance.new("Frame")
 	contentClipFrame.Name = "ContentClipFrame"
-	contentClipFrame.Position = UDim2.fromOffset(CONTENT_LEFT, CONTENT_TOP)
-	contentClipFrame.Size = UDim2.new(1, -(CONTENT_LEFT + CONTENT_RIGHT), 1, -(CONTENT_TOP + CONTENT_BOTTOM))
-	contentClipFrame.BackgroundTransparency = 1
+	contentClipFrame.Position = UDim2.fromOffset(OUTER_BORDER, TITLE_BAR_HEIGHT + CONTENT_GAP)
+	contentClipFrame.Size = UDim2.new(1, -(OUTER_BORDER * 2), 1, -(TITLE_BAR_HEIGHT + CONTENT_GAP + OUTER_BORDER))
+	contentClipFrame.BackgroundColor3 = UITheme.Colors.AppBackground or Color3.fromRGB(5, 17, 33)
+	contentClipFrame.BackgroundTransparency = 0
 	contentClipFrame.BorderSizePixel = 0
 	contentClipFrame.ClipsDescendants = true
 	contentClipFrame.ZIndex = 2
@@ -59,7 +57,7 @@ function Window.Create(props: WindowProps)
 	local borderTop = Instance.new("Frame")
 	borderTop.Name = "BorderOverlayTop"
 	borderTop.Size = UDim2.new(1, -(OUTER_BORDER * 2), 0, 1)
-	borderTop.Position = UDim2.fromOffset(OUTER_BORDER, CONTENT_TOP)
+	borderTop.Position = UDim2.fromOffset(OUTER_BORDER, TITLE_BAR_HEIGHT + CONTENT_GAP)
 	borderTop.BorderSizePixel = 0
 	borderTop.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
 	borderTop.ZIndex = 4
@@ -67,8 +65,8 @@ function Window.Create(props: WindowProps)
 
 	local borderLeft = Instance.new("Frame")
 	borderLeft.Name = "BorderOverlayLeft"
-	borderLeft.Size = UDim2.new(0, 1, 1, -(CONTENT_TOP + CONTENT_BOTTOM + 2))
-	borderLeft.Position = UDim2.fromOffset(OUTER_BORDER, CONTENT_TOP + 1)
+	borderLeft.Size = UDim2.new(0, 1, 1, -(TITLE_BAR_HEIGHT + CONTENT_GAP + OUTER_BORDER + 2))
+	borderLeft.Position = UDim2.fromOffset(OUTER_BORDER, TITLE_BAR_HEIGHT + CONTENT_GAP + 1)
 	borderLeft.AnchorPoint = Vector2.new(0, 0)
 	borderLeft.BorderSizePixel = 0
 	borderLeft.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
@@ -77,8 +75,8 @@ function Window.Create(props: WindowProps)
 
 	local borderRight = Instance.new("Frame")
 	borderRight.Name = "BorderOverlayRight"
-	borderRight.Size = UDim2.new(0, 1, 1, -(CONTENT_TOP + CONTENT_BOTTOM + 2))
-	borderRight.Position = UDim2.new(1, -(OUTER_BORDER + 1), 0, CONTENT_TOP + 1)
+	borderRight.Size = UDim2.new(0, 1, 1, -(TITLE_BAR_HEIGHT + CONTENT_GAP + OUTER_BORDER + 2))
+	borderRight.Position = UDim2.new(1, -(OUTER_BORDER + 1), 0, TITLE_BAR_HEIGHT + CONTENT_GAP + 1)
 	borderRight.BorderSizePixel = 0
 	borderRight.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
 	borderRight.ZIndex = 4
@@ -202,7 +200,8 @@ function Window.Create(props: WindowProps)
 	contentFrame.Name = "ContentFrame"
 	contentFrame.Size = UDim2.fromScale(1, 1)
 	contentFrame.Position = UDim2.fromOffset(0, 0)
-	contentFrame.BackgroundTransparency = 1
+	contentFrame.BackgroundColor3 = UITheme.Colors.AppBackground or Color3.fromRGB(5, 17, 33)
+	contentFrame.BackgroundTransparency = 0
 	contentFrame.BorderSizePixel = 0
 	contentFrame.ClipsDescendants = true
 	contentFrame.ZIndex = 2

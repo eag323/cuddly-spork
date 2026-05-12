@@ -212,16 +212,18 @@ function MarketApp.Mount(target, context)
 	if windowRef then return end
 	windowRef = Window.Create({Title="Market.exe", IconImage=UIAssets.AppIconImages.Market, AppId="Market", Size=UDim2.fromOffset(760,700), Position=UDim2.fromOffset(460,80), Parent=target, OnClose=function() context.Controllers.Window.Close("Market") end, OnMinimize=function() context.Controllers.Window.Minimize("Market") end, OnFocus=function() context.Controllers.Window.Focus("Market") end})
 	local contentFrame = windowRef.Content
-	contentFrame.BackgroundColor3 = Color3.fromRGB(10, 22, 40)
+	contentFrame.BackgroundColor3 = Color3.fromRGB(5, 17, 33)
 	contentFrame.ClipsDescendants = true
 
 	local contentRoot = Instance.new("ScrollingFrame")
 	contentRoot.Name = "ContentRoot"
 	contentRoot.Size = UDim2.fromScale(1, 1)
 	contentRoot.Position = UDim2.fromOffset(0, 0)
-	contentRoot.BackgroundTransparency = 1
+	contentRoot.BackgroundColor3 = Color3.fromRGB(5, 17, 33)
+	contentRoot.BackgroundTransparency = 0
 	contentRoot.BorderSizePixel = 0
 	contentRoot.ScrollBarThickness = 12
+	contentRoot.ClipsDescendants = true
 	contentRoot.ScrollBarImageColor3 = Color3.fromRGB(88, 150, 220)
 	contentRoot.CanvasSize = UDim2.fromOffset(0, 0)
 	contentRoot.AutomaticCanvasSize = Enum.AutomaticSize.Y
