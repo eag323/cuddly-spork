@@ -15,6 +15,7 @@ local RemoteNames: RemoteNameMap = {
 	Generator_BuyEquipCondiment = "Generator_BuyEquipCondiment",
 	Generator_RemoveCondiment = "Generator_RemoveCondiment",
 	Generator_AutoUpgradeCondiments = "Generator_AutoUpgradeCondiments",
+	Generator_PromptExtraSlotPurchase = "Generator_PromptExtraSlotPurchase",
 	Generator_InsertCore = "Generator_InsertCore",
 	Generator_RemoveCore = "Generator_RemoveCore",
 	Prestige_Request = "Prestige_Request",

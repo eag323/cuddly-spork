@@ -1,6 +1,7 @@
 --!strict
 
 local Players = game:GetService("Players")
+local RobloxMarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
@@ -11,6 +12,7 @@ local RemotesFolder = SharedFolder:WaitForChild("Remotes")
 
 local GeneratorConfig = require(ConfigFolder:WaitForChild("GeneratorConfig"))
 local EconomyConfig = require(ConfigFolder:WaitForChild("EconomyConfig"))
+local MarketplaceConfig = require(ConfigFolder:WaitForChild("MarketplaceConfig"))
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
 
 local ServicesFolder = ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Server"):WaitForChild("Services")
@@ -30,8 +32,10 @@ local generatorCondimentRemote: RemoteEvent? = nil
 local generatorRemoveCondimentRemote: RemoteEvent? = nil
 local generatorAutoUpgradeRemote: RemoteEvent? = nil
 local generatorUpgradeRemote: RemoteEvent? = nil -- deprecated compatibility
+local generatorPromptExtraSlotPurchaseRemote: RemoteEvent? = nil
 local notificationPushRemote: RemoteEvent? = nil
 local passiveLoopRunning = false
+local EXTRA_SLOT_CAP = 10
 
 local harvesterById = if type(GeneratorConfig.Harvesters) == "table" then GeneratorConfig.Harvesters else {}
 local condimentById = if type(GeneratorConfig.Condiments) == "table" then GeneratorConfig.Condiments else {}
@@ -62,6 +66,9 @@ local function ensureGeneratorDataShape(playerData)
 		playerData.Generators = { SlotsUnlocked = STARTING_SLOTS, Equipped = {} }
 	end
 	if type(playerData.Generators.SlotsUnlocked) ~= "number" then playerData.Generators.SlotsUnlocked = STARTING_SLOTS end
+	if type(playerData.Generators.ExtraSlotsPurchased) ~= "number" then playerData.Generators.ExtraSlotsPurchased = 0 end
+	playerData.Generators.ExtraSlotsPurchased = math.clamp(math.floor(playerData.Generators.ExtraSlotsPurchased), 0, EXTRA_SLOT_CAP)
+	playerData.Generators.SlotsUnlocked = STARTING_SLOTS + playerData.Generators.ExtraSlotsPurchased
 	if type(playerData.Generators.Equipped) ~= "table" then playerData.Generators.Equipped = {} end
 	for slotIndex, slotData in pairs(playerData.Generators.Equipped) do
 		if type(slotIndex) == "number" and type(slotData) == "table" then
@@ -76,6 +83,17 @@ local function ensureGeneratorDataShape(playerData)
 			end
 		end
 	end
+end
+
+local function sortedCondimentsAsc()
+	local condiments = GeneratorConfig.GetCondimentsSorted()
+	table.sort(condiments, function(a, b)
+		local aps = tonumber(a.foodPerSec) or 0
+		local bps = tonumber(b.foodPerSec) or 0
+		if aps == bps then return (tonumber(a.cost) or 0) < (tonumber(b.cost) or 0) end
+		return aps < bps
+	end)
+	return condiments
 end
 
 local function patchGenerators(player, generatorsData)
@@ -168,22 +186,84 @@ local function onAutoUpgrade(player, payload)
 	if type(slotData) ~= "table" then pushNotification(player, "Could not upgrade condiments: empty slot.", "Warning"); return end
 	local harvester = harvesterById[slotData.GeneratorId]; if not harvester then return end
 	if type(slotData.Condiments) ~= "table" then slotData.Condiments = {} end
-	local bought = 0
-	while #slotData.Condiments < (tonumber(harvester.condimentSlots) or 0) do
+	local upgrades = 0
+	local maxSlots = tonumber(harvester.condimentSlots) or 0
+	while #slotData.Condiments < maxSlots do
 		local coins = tonumber((((data.Currencies or {}).Coins))) or 0
 		local best = GeneratorConfig.GetBestAffordableCondiment(coins)
 		if not best then break end
 		local cost = tonumber(best.cost) or math.huge
 		if not CurrencyService.RemoveCurrency(player, "Coins", cost) then break end
 		table.insert(slotData.Condiments, best.id)
-		bought += 1
+		upgrades += 1
 	end
-	if bought > 0 then
+	while #slotData.Condiments > 0 do
+		local weakestIndex = nil
+		local weakestValue = math.huge
+		for idx, condimentId in ipairs(slotData.Condiments) do
+			local condiment = condimentById[condimentId]
+			local value = tonumber(condiment and condiment.foodPerSec) or 0
+			if value < weakestValue then
+				weakestValue = value
+				weakestIndex = idx
+			end
+		end
+		if not weakestIndex then break end
+		local coins = tonumber((((data.Currencies or {}).Coins))) or 0
+		local candidate = nil
+		for _, condiment in ipairs(sortedCondimentsAsc()) do
+			local cCost = tonumber(condiment.cost) or math.huge
+			local cValue = tonumber(condiment.foodPerSec) or 0
+			if cCost <= coins and cValue > weakestValue then
+				candidate = condiment
+			end
+		end
+		if not candidate then break end
+		local cost = tonumber(candidate.cost) or math.huge
+		if not CurrencyService.RemoveCurrency(player, "Coins", cost) then break end
+		slotData.Condiments[weakestIndex] = candidate.id
+		upgrades += 1
+	end
+	if upgrades > 0 then
 		patchGenerators(player, data.Generators)
-		pushNotification(player, string.format("Equipped %d condiment(s).", bought), "Success")
+		pushNotification(player, string.format("Applied %d condiment upgrade(s).", upgrades), "Success")
 	else
-		pushNotification(player, "Not enough coins for condiment upgrade.", "Warning")
+		pushNotification(player, "No affordable condiment upgrades available.", "Warning")
 	end
+end
+
+local function onPromptExtraSlotPurchase(player)
+	local data = ProfileService.GetPlayerData(player); if not data then return end
+	ensureGeneratorDataShape(data)
+	local productId = tonumber(MarketplaceConfig.ExtraHarvesterSlotProductId) or 0
+	if productId <= 0 then
+		pushNotification(player, "Extra slot product is not configured.", "Warning")
+		return
+	end
+	if data.Generators.ExtraSlotsPurchased >= EXTRA_SLOT_CAP then
+		pushNotification(player, "You already own the max extra slots.", "Warning")
+		return
+	end
+	RobloxMarketplaceService:PromptProductPurchase(player, productId)
+end
+
+local function processReceipt(receiptInfo)
+	local productId = tonumber(MarketplaceConfig.ExtraHarvesterSlotProductId) or 0
+	if productId <= 0 or receiptInfo.ProductId ~= productId then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
+	if not player then return Enum.ProductPurchaseDecision.NotProcessedYet end
+	local data = ProfileService.GetPlayerData(player)
+	if not data then return Enum.ProductPurchaseDecision.NotProcessedYet end
+	ensureGeneratorDataShape(data)
+	if data.Generators.ExtraSlotsPurchased < EXTRA_SLOT_CAP then
+		data.Generators.ExtraSlotsPurchased += 1
+		data.Generators.SlotsUnlocked = STARTING_SLOTS + data.Generators.ExtraSlotsPurchased
+		patchGenerators(player, data.Generators)
+		pushNotification(player, "Extra harvester slot unlocked.", "Success")
+	end
+	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
 local function onRemoveCondiment(player, payload)
@@ -243,7 +323,9 @@ function GeneratorService.Init()
 	generatorRemoveCondimentRemote = getOrCreateRemoteEvent(RemoteNames.Generator_RemoveCondiment or "Generator_RemoveCondiment")
 	generatorAutoUpgradeRemote = getOrCreateRemoteEvent(RemoteNames.Generator_AutoUpgradeCondiments or "Generator_AutoUpgradeCondiments")
 	generatorUpgradeRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Upgrade or "Generator_Upgrade")
+	generatorPromptExtraSlotPurchaseRemote = getOrCreateRemoteEvent(RemoteNames.Generator_PromptExtraSlotPurchase or "Generator_PromptExtraSlotPurchase")
 	notificationPushRemote = getOrCreateRemoteEvent(RemoteNames.Notification_Push or "Notification_Push")
+	RobloxMarketplaceService.ProcessReceipt = processReceipt
 end
 
 function GeneratorService.Start()
@@ -254,6 +336,7 @@ function GeneratorService.Start()
 	if generatorRemoveCondimentRemote then generatorRemoveCondimentRemote.OnServerEvent:Connect(onRemoveCondiment) end
 	if generatorAutoUpgradeRemote then generatorAutoUpgradeRemote.OnServerEvent:Connect(onAutoUpgrade) end
 	if generatorUpgradeRemote then generatorUpgradeRemote.OnServerEvent:Connect(onAutoUpgrade) end
+	if generatorPromptExtraSlotPurchaseRemote then generatorPromptExtraSlotPurchaseRemote.OnServerEvent:Connect(onPromptExtraSlotPurchase) end
 	startPassiveLoop()
 end
 

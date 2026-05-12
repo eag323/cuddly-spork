@@ -56,6 +56,7 @@ local DEFAULT_PLAYER_DATA: PlayerData = {
 
 	Generators = {
 		SlotsUnlocked = 3,
+		ExtraSlotsPurchased = 0,
 		Equipped = {},
 	},
 
