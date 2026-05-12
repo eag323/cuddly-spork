@@ -103,11 +103,18 @@ local function addSubtleHover(button: TextButton, opts: { brighten: number?, str
 end
 
 local function makeDivider(parent: Instance, order: number)
-	mk(parent, "Frame", {
+	local wrap = mk(parent, "Frame", {
 		LayoutOrder = order,
+		Size = UDim2.new(1, 0, 0, 8),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+	})
+	mk(wrap, "Frame", {
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 0, 0.5, 0),
 		Size = UDim2.new(1, 0, 0, 1),
-		BackgroundColor3 = Color3.fromRGB(50, 74, 102),
-		BackgroundTransparency = 0.55,
+		BackgroundColor3 = Color3.fromRGB(45, 72, 105),
+		BackgroundTransparency = 0.35,
 		BorderSizePixel = 0,
 	})
 end
@@ -194,7 +201,7 @@ local function refresh(context, resetScroll: boolean?)
 		mk(detailScroll, "UIPadding", { PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 10) })
 		mk(detailScroll, "UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })
 
-		local detailHeader = mk(detailScroll, "Frame", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1 })
+		local detailHeader = mk(detailScroll, "Frame", { LayoutOrder = 10, Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1 })
 		local backButton = mk(detailHeader, "TextButton", { Size = UDim2.fromOffset(132, 36), Position = UDim2.fromOffset(0, 0), BackgroundColor3 = COLORS.panel, BorderSizePixel = 0, Text = "← Harvesters", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 17, TextXAlignment = Enum.TextXAlignment.Center, TextStrokeTransparency = 1 })
 		mk(backButton, "UICorner", { CornerRadius = UDim.new(0, 5) })
 				addSubtleHover(backButton)
@@ -202,7 +209,8 @@ local function refresh(context, resetScroll: boolean?)
 		mk(detailHeader, "TextLabel", { Size = UDim2.new(1, -140, 0, 16), Position = UDim2.fromOffset(140, 20), BackgroundTransparency = 1, Text = string.format("+%s/s • %d/%d condiment slots", NumberUtil.FormatNumber(harvester.baseFoodPerSec or 0), #(slot.Condiments or {}), harvester.condimentSlots or 0), TextColor3 = Color3.fromRGB(126, 149, 178), Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left })
 		backButton.Activated:Connect(function() state.mode = "main" refresh(contextRef, true) end)
 
-		local visual = mk(detailScroll, "Frame", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 290), BackgroundColor3 = Color3.fromRGB(3, 10, 20), BorderSizePixel = 0 })
+		makeDivider(detailScroll, 15)
+		local visual = mk(detailScroll, "Frame", { LayoutOrder = 20, Size = UDim2.new(1, 0, 0, 290), BackgroundColor3 = Color3.fromRGB(3, 10, 20), BorderSizePixel = 0 })
 		mk(visual, "UICorner", { CornerRadius = UDim.new(0, 6) })
 		local center = mk(visual, "ImageLabel", { Size = UDim2.fromOffset(120, 120), Position = UDim2.new(0.5, -60, 0.5, -60), BackgroundTransparency = 1, BorderSizePixel = 0, Image = harvester.icon or "" })
 		center.ScaleType = Enum.ScaleType.Fit
@@ -227,8 +235,8 @@ local function refresh(context, resetScroll: boolean?)
 		end
 
 		makeDivider(detailScroll, 25)
-		mk(detailScroll, "TextLabel", { LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = string.format("CONDIMENTS (%d/%d slots)", #(slot.Condiments or {}), harvester.condimentSlots or 0), TextColor3 = COLORS.text, Font = Enum.Font.GothamBold, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left })
-		local condimentList = mk(detailScroll, "Frame", { LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y })
+		mk(detailScroll, "TextLabel", { LayoutOrder = 30, Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = string.format("CONDIMENTS (%d/%d slots)", #(slot.Condiments or {}), harvester.condimentSlots or 0), TextColor3 = COLORS.text, Font = Enum.Font.GothamBold, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left })
+		local condimentList = mk(detailScroll, "Frame", { LayoutOrder = 40, Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y })
 		mk(condimentList, "UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
 		for _, condiment in ipairs(GeneratorConfig.GetCondimentsSorted()) do
 			local count = 0
@@ -252,13 +260,13 @@ local function refresh(context, resetScroll: boolean?)
 		total += slotOutput(equipped[i])
 		if equipped[i] then used += 1 end
 	end
-	local header = mk(scroll, "Frame", { Size = UDim2.new(1, 0, 0, 60), BackgroundTransparency = 1 })
+	local header = mk(scroll, "Frame", { LayoutOrder = 10, Size = UDim2.new(1, 0, 0, 60), BackgroundTransparency = 1 })
 	mk(header, "TextLabel", { Size = UDim2.new(1, -140, 0, 26), Position = UDim2.fromOffset(0, 0), BackgroundTransparency = 1, Text = "YOUR HARVESTERS", TextColor3 = COLORS.text, Font = Enum.Font.GothamBold, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Left })
 	mk(header, "TextLabel", { Size = UDim2.new(0, 140, 0, 26), Position = UDim2.new(1, -140, 0, 0), BackgroundTransparency = 1, Text = string.format("%d/%d Slots", used, slots), TextColor3 = COLORS.cyan, Font = Enum.Font.GothamBold, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Right })
 	mk(header, "TextLabel", { Size = UDim2.new(1, 0, 0, 20), Position = UDim2.fromOffset(0, 32), BackgroundTransparency = 1, Text = string.format("TOTAL: %s food/sec", NumberUtil.FormatNumber(total)), TextColor3 = Color3.fromRGB(88, 255, 139), Font = Enum.Font.GothamBold, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left })
 	makeDivider(scroll, 15)
 
-	local gridWrap = mk(scroll, "Frame", { Size = UDim2.new(1, 0, 0, 250), BackgroundTransparency = 1 })
+	local gridWrap = mk(scroll, "Frame", { LayoutOrder = 20, Size = UDim2.new(1, 0, 0, 250), BackgroundTransparency = 1 })
 	local grid = mk(gridWrap, "UIGridLayout", { CellPadding = UDim2.fromOffset(10, 10), CellSize = UDim2.new(0.25, -8, 0, 170), SortOrder = Enum.SortOrder.LayoutOrder })
 	if windowRef and windowRef.Content.AbsoluteSize.X < 780 then grid.CellSize = UDim2.new(1 / 3, -8, 0, 170) end
 
@@ -310,9 +318,9 @@ local function refresh(context, resetScroll: boolean?)
 		end)
 	end
 
-	makeDivider(scroll, 35)
-	mk(scroll, "TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Text = "HARVESTER SHOP", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 24, TextXAlignment = Enum.TextXAlignment.Left })
-	local tabRow = mk(scroll, "Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1 })
+	makeDivider(scroll, 25)
+	mk(scroll, "TextLabel", { LayoutOrder = 30, Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Text = "HARVESTER SHOP", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 24, TextXAlignment = Enum.TextXAlignment.Left })
+	local tabRow = mk(scroll, "Frame", { LayoutOrder = 40, Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1 })
 	local tabLayout = mk(tabRow, "UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) })
 	for _, c in ipairs(GeneratorConfig.Classes) do
 		local selected = c.id == state.selectedClass
@@ -339,9 +347,17 @@ local function refresh(context, resetScroll: boolean?)
 		state.selectedClass = "snack"
 	end
 
-	mk(scroll, "TextLabel", { Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "STANDARD HARVESTERS", TextColor3 = COLORS.cyan, Font = Enum.Font.GothamBold, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left })
+	mk(scroll, "TextLabel", { LayoutOrder = 50, Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "STANDARD HARVESTERS", TextColor3 = COLORS.cyan, Font = Enum.Font.GothamBold, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left })
+	local standardRowsContainer = mk(scroll, "Frame", {
+		LayoutOrder = 60,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, 0),
+	})
+	mk(standardRowsContainer, "UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
 	for _, h in ipairs(GeneratorConfig.GetStandardHarvestersForClass(state.selectedClass)) do
-		buildHarvesterRow(scroll, h, function()
+		buildHarvesterRow(standardRowsContainer, h, function()
 			local targetSlot = nil
 			for i = 1, slots do if not equipped[i] then targetSlot = i break end end
 			if not targetSlot then setNotification("No empty harvester slots") return end
@@ -351,10 +367,18 @@ local function refresh(context, resetScroll: boolean?)
 
 	local skins = GeneratorConfig.GetSkinHarvestersForClass(state.selectedClass)
 	if #skins > 0 then
-		makeDivider(scroll, 55)
-		mk(scroll, "TextLabel", { Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "SKIN HARVESTERS", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left })
+		makeDivider(scroll, 70)
+		mk(scroll, "TextLabel", { LayoutOrder = 80, Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "SKIN HARVESTERS", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left })
+		local skinRowsContainer = mk(scroll, "Frame", {
+			LayoutOrder = 90,
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Size = UDim2.new(1, 0, 0, 0),
+		})
+		mk(skinRowsContainer, "UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
 		for _, h in ipairs(skins) do
-			buildHarvesterRow(scroll, h, function()
+			buildHarvesterRow(skinRowsContainer, h, function()
 				local targetSlot = nil
 				for i = 1, slots do if not equipped[i] then targetSlot = i break end end
 				if not targetSlot then setNotification("No empty harvester slots") return end
