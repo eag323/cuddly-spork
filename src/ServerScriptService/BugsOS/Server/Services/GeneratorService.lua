@@ -34,6 +34,12 @@ local passiveLoopRunning = false
 
 local harvesterById = if type(GeneratorConfig.Harvesters) == "table" then GeneratorConfig.Harvesters else {}
 local condimentById = if type(GeneratorConfig.Condiments) == "table" then GeneratorConfig.Condiments else {}
+local classById = {}
+for _, classInfo in ipairs(GeneratorConfig.Classes or {}) do
+	if type(classInfo) == "table" and type(classInfo.id) == "string" then
+		classById[classInfo.id] = classInfo
+	end
+end
 
 local function getOrCreateRemoteEvent(remoteName: string): RemoteEvent
 	local existing = RemotesFolder:FindFirstChild(remoteName)
@@ -108,6 +114,13 @@ local function onBuyEquip(player, payload)
 	local harvesterId = payload.HarvesterId
 	local harvester = if type(harvesterId) == "string" then harvesterById[harvesterId] else nil
 	if not harvester then pushNotification(player, "Could not equip harvester: unknown harvester.", "Warning"); return end
+	local playerPrestige = tonumber((data.Prestige and data.Prestige.Level) or data.PrestigeLevel) or 0
+	local classInfo = classById[harvester.classId]
+	local requiredPrestige = tonumber(classInfo and classInfo.unlockPrestige) or 0
+	if playerPrestige < requiredPrestige then
+		pushNotification(player, string.format("Reach Prestige %d to unlock %s harvesters.", requiredPrestige, classInfo and classInfo.displayName or "this class"), "Warning")
+		return
+	end
 	if data.Generators.Equipped[slotIndex] then pushNotification(player, "Could not equip harvester: slot occupied.", "Warning"); return end
 	local cost = tonumber(harvester.cost) or math.huge
 	if not CurrencyService.RemoveCurrency(player, "Coins", cost) then pushNotification(player, "Not enough coins.", "Warning"); return end
