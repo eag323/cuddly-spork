@@ -16,36 +16,43 @@ GeneratorConfig.Classes = {
 		id = "snack",
 		displayName = "Snack",
 		sortOrder = 1,
+		unlockPrestige = 0,
 	},
 	{
 		id = "fruit",
 		displayName = "Fruit",
 		sortOrder = 2,
+		unlockPrestige = 1,
 	},
 	{
 		id = "sandwich",
 		displayName = "Sandwich",
 		sortOrder = 3,
+		unlockPrestige = 3,
 	},
 	{
 		id = "dessert",
 		displayName = "Dessert",
 		sortOrder = 4,
+		unlockPrestige = 5,
 	},
 	{
 		id = "picnic",
 		displayName = "Picnic",
 		sortOrder = 5,
+		unlockPrestige = 7,
 	},
 	{
 		id = "garden",
 		displayName = "Garden",
 		sortOrder = 6,
+		unlockPrestige = 9,
 	},
 	{
 		id = "feast",
 		displayName = "Feast",
 		sortOrder = 7,
+		unlockPrestige = 10,
 	},
 }
 
