@@ -23,7 +23,8 @@ local GeneratorService = {}
 local STARTING_SLOTS = 3
 local PASSIVE_TICK_SECONDS = 1
 
-local generatorEquipRemote: RemoteEvent? = nil
+local generatorBuyEquipRemote: RemoteEvent? = nil
+local generatorEquipLegacyRemote: RemoteEvent? = nil
 local generatorRemoveRemote: RemoteEvent? = nil
 local generatorCondimentRemote: RemoteEvent? = nil
 local generatorAutoUpgradeRemote: RemoteEvent? = nil
@@ -205,7 +206,8 @@ function GeneratorService.Init()
 	if GeneratorConfig.Generators and GeneratorConfig.Harvesters and GeneratorConfig.Generators ~= GeneratorConfig.Harvesters then
 		warn("[GeneratorService] GeneratorConfig.Generators is not aliased to Harvesters")
 	end
-	generatorEquipRemote = getOrCreateRemoteEvent(RemoteNames.Generator_BuyEquip or "Generator_BuyEquip")
+	generatorBuyEquipRemote = getOrCreateRemoteEvent(RemoteNames.Generator_BuyEquip or "Generator_BuyEquip")
+	generatorEquipLegacyRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Equip or "Generator_Equip")
 	generatorRemoveRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Remove or "Generator_Remove")
 	generatorCondimentRemote = getOrCreateRemoteEvent(RemoteNames.Generator_BuyEquipCondiment or "Generator_BuyEquipCondiment")
 	generatorAutoUpgradeRemote = getOrCreateRemoteEvent(RemoteNames.Generator_AutoUpgradeCondiments or "Generator_AutoUpgradeCondiments")
@@ -214,7 +216,8 @@ function GeneratorService.Init()
 end
 
 function GeneratorService.Start()
-	if generatorEquipRemote then generatorEquipRemote.OnServerEvent:Connect(onBuyEquip) end
+	if generatorBuyEquipRemote then generatorBuyEquipRemote.OnServerEvent:Connect(onBuyEquip) end
+	if generatorEquipLegacyRemote then generatorEquipLegacyRemote.OnServerEvent:Connect(onBuyEquip) end
 	if generatorRemoveRemote then generatorRemoveRemote.OnServerEvent:Connect(onRemove) end
 	if generatorCondimentRemote then generatorCondimentRemote.OnServerEvent:Connect(onBuyEquipCondiment) end
 	if generatorAutoUpgradeRemote then generatorAutoUpgradeRemote.OnServerEvent:Connect(onAutoUpgrade) end
