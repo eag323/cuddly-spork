@@ -9,6 +9,7 @@ local removeRemote: RemoteEvent
 local buyEquipCondimentRemote: RemoteEvent
 local removeCondimentRemote: RemoteEvent
 local autoUpgradeCondimentsRemote: RemoteEvent
+local promptExtraSlotPurchaseRemote: RemoteEvent
 
 function GeneratorController.Init(initContext): ()
 	context = initContext
@@ -17,6 +18,7 @@ function GeneratorController.Init(initContext): ()
 	buyEquipCondimentRemote = context.Remotes.GeneratorBuyEquipCondiment
 	removeCondimentRemote = context.Remotes.GeneratorRemoveCondiment
 	autoUpgradeCondimentsRemote = context.Remotes.GeneratorAutoUpgradeCondiments
+	promptExtraSlotPurchaseRemote = context.Remotes.GeneratorPromptExtraSlotPurchase
 end
 
 function GeneratorController.BuyEquip(slotIndex: number, harvesterId: string): ()
@@ -37,6 +39,10 @@ end
 
 function GeneratorController.AutoUpgradeCondiments(slotIndex: number): ()
 	autoUpgradeCondimentsRemote:FireServer({ SlotIndex = slotIndex })
+end
+
+function GeneratorController.PromptExtraSlotPurchase(): ()
+	promptExtraSlotPurchaseRemote:FireServer({})
 end
 
 function GeneratorController.Refresh(): ()

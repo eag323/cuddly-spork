@@ -2,6 +2,7 @@
 
 local MarketplaceConfig = {
 	AutoSellGamepassId = 1833023892,
+	ExtraHarvesterSlotProductId = 0,
 	MarketPrice = {
 		min = 0.5,
 		max = 3.0,
