@@ -36,7 +36,7 @@ function Window.Create(props: WindowProps)
 	contentClipFrame.BackgroundTransparency = 1
 	contentClipFrame.BorderSizePixel = 0
 	contentClipFrame.ClipsDescendants = true
-	contentClipFrame.ZIndex = 1
+	contentClipFrame.ZIndex = 2
 	contentClipFrame.Parent = rootFrame
 
 	local windowFrameImage = Instance.new("ImageLabel")
@@ -46,7 +46,7 @@ function Window.Create(props: WindowProps)
 	windowFrameImage.Image = UITheme.Assets.WindowFrame
 	windowFrameImage.ScaleType = Enum.ScaleType.Slice
 	windowFrameImage.SliceCenter = UITheme.Window.FrameSlice
-	windowFrameImage.ZIndex = 2
+	windowFrameImage.ZIndex = 0
 	windowFrameImage.Parent = rootFrame
 
 	local titleBar = Instance.new("TextButton")
@@ -160,7 +160,7 @@ function Window.Create(props: WindowProps)
 	contentFrame.Position = UDim2.fromOffset(0, 0)
 	contentFrame.BackgroundColor3 = UITheme.Colors.AppBackground
 	contentFrame.BorderSizePixel = 0
-	contentFrame.ZIndex = 1
+	contentFrame.ZIndex = 2
 	contentFrame.Parent = contentClipFrame
 
 	local contentPadding = Instance.new("UIPadding")
@@ -221,10 +221,11 @@ function Window.Create(props: WindowProps)
 			end
 		end
 		rootFrame.ZIndex = z
-		setIfGui(contentClipFrame, z)
-		setIfGui(contentFrame, z)
+		setIfGui(windowFrameImage, z)
+		setIfGui(contentClipFrame, z + 2)
+		setIfGui(contentFrame, z + 2)
 		setIfGui(titleBar, z + 1)
-		setIfGui(windowFrameImage, z + 2)
+		titleBottomLine.ZIndex = z + 4
 		for _, gui in ipairs(titleBar:GetDescendants()) do
 			if gui:IsA("GuiObject") then
 				if gui.Name == "TitleBarGradient" or gui.Name:match("^Slice%d+$") then
