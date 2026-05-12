@@ -215,9 +215,10 @@ local function refresh(context, resetScroll: boolean?)
 			local y = 0.68 + (row * 0.13)
 			local slotBox = mk(visual, "ImageLabel", { Size = UDim2.fromOffset(34, 34), Position = UDim2.new(x, -17, y, -17), BackgroundColor3 = Color3.fromRGB(175, 186, 201), BorderSizePixel = 0, Image = condId and (GeneratorConfig.GetCondiment(condId) and GeneratorConfig.GetCondiment(condId).icon or "") or "", ScaleType = Enum.ScaleType.Fit })
 			mk(slotBox, "UICorner", { CornerRadius = UDim.new(0, 4) })
+			mk(slotBox, "UIStroke", { Color = Color3.fromRGB(21, 49, 92), Thickness = 2, Transparency = 0 })
 			if not condId then mk(visual, "TextLabel", { Size = UDim2.fromOffset(34, 34), Position = UDim2.new(x, -17, y, -17), BackgroundTransparency = 1, Text = "+", TextColor3 = Color3.fromRGB(133, 146, 163), Font = Enum.Font.GothamBold, TextSize = 18 }) end
 			if condId then
-				local removeBtn = mk(slotBox, "TextButton", { Size = UDim2.fromOffset(14, 14), Position = UDim2.new(1, -12, 0, -2), BackgroundColor3 = Color3.fromRGB(220, 84, 84), BorderSizePixel = 0, Text = "✕", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 8, ZIndex = 5, TextStrokeTransparency = 1 })
+				local removeBtn = mk(slotBox, "TextButton", { Size = UDim2.fromOffset(14, 14), Position = UDim2.new(1, -12, 0, -2), BackgroundColor3 = Color3.fromRGB(220, 84, 84), BorderSizePixel = 0, Text = "❌", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 8, ZIndex = 5, TextStrokeTransparency = 1 })
 				addSubtleHover(removeBtn, { brighten = 0.12 })
 				removeBtn.Activated:Connect(function()
 					context.Controllers.Generator.RemoveCondiment(state.selectedSlot, i)
