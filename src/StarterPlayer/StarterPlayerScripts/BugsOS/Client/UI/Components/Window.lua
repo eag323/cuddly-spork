@@ -6,6 +6,10 @@ local UITheme = require(script.Parent.Parent:WaitForChild("UITheme"))
 local Window = {}
 local TITLE_BAR_LEFT = Color3.fromRGB(0, 3, 129)
 local TITLE_BAR_RIGHT = Color3.fromRGB(15, 131, 207)
+local FRAME_OUTER_DARK = Color3.fromRGB(45, 45, 45)
+local FRAME_HIGHLIGHT = Color3.fromRGB(235, 235, 235)
+local FRAME_MID = Color3.fromRGB(160, 160, 160)
+local FRAME_SHADOW = Color3.fromRGB(90, 90, 90)
 
 local OUTER_BORDER = 6
 local TITLE_BAR_HEIGHT = 30
@@ -54,42 +58,32 @@ function Window.Create(props: WindowProps)
 	windowFrameImage.ZIndex = 1
 	windowFrameImage.Parent = rootFrame
 
-	local borderTop = Instance.new("Frame")
-	borderTop.Name = "BorderOverlayTop"
-	borderTop.Size = UDim2.new(1, -(OUTER_BORDER * 2), 0, 1)
-	borderTop.Position = UDim2.fromOffset(OUTER_BORDER, TITLE_BAR_HEIGHT + CONTENT_GAP)
-	borderTop.BorderSizePixel = 0
-	borderTop.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
-	borderTop.ZIndex = 4
-	borderTop.Parent = rootFrame
+	local function createOverlayBorder(name: string, size: UDim2, position: UDim2, color: Color3): Frame
+		local border = Instance.new("Frame")
+		border.Name = name
+		border.Size = size
+		border.Position = position
+		border.BorderSizePixel = 0
+		border.BackgroundColor3 = color
+		border.ZIndex = 4
+		border.Parent = rootFrame
+		return border
+	end
 
-	local borderLeft = Instance.new("Frame")
-	borderLeft.Name = "BorderOverlayLeft"
-	borderLeft.Size = UDim2.new(0, 1, 1, -(TITLE_BAR_HEIGHT + CONTENT_GAP + OUTER_BORDER + 2))
-	borderLeft.Position = UDim2.fromOffset(OUTER_BORDER, TITLE_BAR_HEIGHT + CONTENT_GAP + 1)
-	borderLeft.AnchorPoint = Vector2.new(0, 0)
-	borderLeft.BorderSizePixel = 0
-	borderLeft.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
-	borderLeft.ZIndex = 4
-	borderLeft.Parent = rootFrame
+	local borderOuterTop = createOverlayBorder("BorderOverlayTopOuter", UDim2.new(1, 0, 0, 1), UDim2.fromOffset(0, 0), FRAME_OUTER_DARK)
+	local borderOuterLeft = createOverlayBorder("BorderOverlayLeftOuter", UDim2.new(0, 1, 1, 0), UDim2.fromOffset(0, 0), FRAME_OUTER_DARK)
+	local borderOuterRight = createOverlayBorder("BorderOverlayRightOuter", UDim2.new(0, 1, 1, 0), UDim2.new(1, -1, 0, 0), FRAME_OUTER_DARK)
+	local borderOuterBottom = createOverlayBorder("BorderOverlayBottomOuter", UDim2.new(1, 0, 0, 1), UDim2.new(0, 0, 1, -1), FRAME_OUTER_DARK)
 
-	local borderRight = Instance.new("Frame")
-	borderRight.Name = "BorderOverlayRight"
-	borderRight.Size = UDim2.new(0, 1, 1, -(TITLE_BAR_HEIGHT + CONTENT_GAP + OUTER_BORDER + 2))
-	borderRight.Position = UDim2.new(1, -(OUTER_BORDER + 1), 0, TITLE_BAR_HEIGHT + CONTENT_GAP + 1)
-	borderRight.BorderSizePixel = 0
-	borderRight.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
-	borderRight.ZIndex = 4
-	borderRight.Parent = rootFrame
+	local borderTop = createOverlayBorder("BorderOverlayTop", UDim2.new(1, -2, 0, 1), UDim2.fromOffset(1, 1), FRAME_HIGHLIGHT)
+	local borderLeft = createOverlayBorder("BorderOverlayLeft", UDim2.new(0, 1, 1, -2), UDim2.fromOffset(1, 1), FRAME_HIGHLIGHT)
+	local borderRight = createOverlayBorder("BorderOverlayRight", UDim2.new(0, 1, 1, -2), UDim2.new(1, -2, 0, 1), FRAME_SHADOW)
+	local borderBottom = createOverlayBorder("BorderOverlayBottom", UDim2.new(1, -2, 0, 1), UDim2.new(0, 1, 1, -2), FRAME_SHADOW)
 
-	local borderBottom = Instance.new("Frame")
-	borderBottom.Name = "BorderOverlayBottom"
-	borderBottom.Size = UDim2.new(1, -(OUTER_BORDER * 2), 0, 1)
-	borderBottom.Position = UDim2.new(0, OUTER_BORDER, 1, -(OUTER_BORDER + 1))
-	borderBottom.BorderSizePixel = 0
-	borderBottom.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
-	borderBottom.ZIndex = 4
-	borderBottom.Parent = rootFrame
+	local borderInnerTop = createOverlayBorder("BorderOverlayTopInner", UDim2.new(1, -4, 0, 1), UDim2.fromOffset(2, 2), FRAME_MID)
+	local borderInnerLeft = createOverlayBorder("BorderOverlayLeftInner", UDim2.new(0, 1, 1, -4), UDim2.fromOffset(2, 2), FRAME_MID)
+	local borderInnerRight = createOverlayBorder("BorderOverlayRightInner", UDim2.new(0, 1, 1, -4), UDim2.new(1, -3, 0, 2), FRAME_OUTER_DARK)
+	local borderInnerBottom = createOverlayBorder("BorderOverlayBottomInner", UDim2.new(1, -4, 0, 1), UDim2.new(0, 2, 1, -3), FRAME_OUTER_DARK)
 
 	local titleBar = Instance.new("TextButton")
 	titleBar.Name = "TitleBar"
@@ -136,7 +130,7 @@ function Window.Create(props: WindowProps)
 	local appIcon = Instance.new("ImageLabel")
 	appIcon.Name = "AppIcon"
 	appIcon.Size = UDim2.fromOffset(16, 16)
-	appIcon.Position = UDim2.fromOffset(8, 5)
+	appIcon.Position = UDim2.fromOffset(10, 7)
 	appIcon.BackgroundTransparency = 1
 	appIcon.Image = props.IconImage or ""
 	appIcon.ZIndex = 4
@@ -144,7 +138,7 @@ function Window.Create(props: WindowProps)
 
 	local fallbackIcon = Instance.new("TextLabel")
 	fallbackIcon.Size = UDim2.fromOffset(16, 16)
-	fallbackIcon.Position = UDim2.fromOffset(8, 5)
+	fallbackIcon.Position = UDim2.fromOffset(10, 7)
 	fallbackIcon.BackgroundTransparency = 1
 	fallbackIcon.Font = Enum.Font.ArialBold
 	fallbackIcon.TextSize = 14
@@ -157,7 +151,7 @@ function Window.Create(props: WindowProps)
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Name = "TitleText"
 	titleLabel.Size = UDim2.new(1, -96, 1, 0)
-	titleLabel.Position = UDim2.fromOffset(29, 0)
+	titleLabel.Position = UDim2.fromOffset(33, 0)
 	titleLabel.BackgroundTransparency = 1
 	titleLabel.Text = props.Title or "Window.exe"
 	titleLabel.TextColor3 = UITheme.Colors.TitleText
@@ -266,6 +260,14 @@ function Window.Create(props: WindowProps)
 		setIfGui(borderLeft, z + 4)
 		setIfGui(borderRight, z + 4)
 		setIfGui(borderBottom, z + 4)
+		setIfGui(borderOuterTop, z + 4)
+		setIfGui(borderOuterLeft, z + 4)
+		setIfGui(borderOuterRight, z + 4)
+		setIfGui(borderOuterBottom, z + 4)
+		setIfGui(borderInnerTop, z + 4)
+		setIfGui(borderInnerLeft, z + 4)
+		setIfGui(borderInnerRight, z + 4)
+		setIfGui(borderInnerBottom, z + 4)
 		titleBottomLine.ZIndex = z + 4
 		for _, gui in ipairs(titleBar:GetDescendants()) do
 			if gui:IsA("GuiObject") then
