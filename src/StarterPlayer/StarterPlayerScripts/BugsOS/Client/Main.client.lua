@@ -44,7 +44,6 @@ local requiredRemoteNames = {
 	MarketPriceUpdated = RemoteNames.Market_PriceUpdated,
 	UpgradeBuyClickTool = RemoteNames.Upgrade_BuyClickTool,
 	GeneratorUpgrade = RemoteNames.Generator_Upgrade,
-	GeneratorEquip = RemoteNames.Generator_Equip,
 	GeneratorBuyEquip = RemoteNames.Generator_BuyEquip,
 	GeneratorRemove = RemoteNames.Generator_Remove,
 	GeneratorBuyEquipCondiment = RemoteNames.Generator_BuyEquipCondiment,
