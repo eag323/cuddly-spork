@@ -52,13 +52,6 @@ local function patchAtPath(root: { [any]: any }, path: { string }, value: any): 
 	node[path[#path]] = value
 end
 
-local function refreshAll(): ()
-	context.Controllers.CurrencyHUD.Refresh()
-	MarketApp.Refresh(context)
-	context.Controllers.Upgrade.Refresh()
-	context.Controllers.Generator.Refresh()
-end
-
 local function refreshForPatch(path: { any }): ()
 	context.Controllers.CurrencyHUD.Refresh()
 
@@ -131,7 +124,7 @@ function MarketController.Start(): ()
 				passiveFlushAt = now + PASSIVE_FEEDBACK_WINDOW
 			end
 		end
-		refreshAll()
+		refreshForPatch(payload.Path)
 		if context.Events and context.Events.StateChanged then
 			context.Events.StateChanged:Fire(context.State.PlayerData)
 		end

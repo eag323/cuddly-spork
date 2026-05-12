@@ -7,6 +7,13 @@ local Window = {}
 local TITLE_BAR_LEFT = Color3.fromRGB(0, 3, 129)
 local TITLE_BAR_RIGHT = Color3.fromRGB(15, 131, 207)
 
+local OUTER_BORDER = 6
+local TITLE_BAR_HEIGHT = 30
+local CONTENT_TOP = TITLE_BAR_HEIGHT + OUTER_BORDER
+local CONTENT_LEFT = OUTER_BORDER
+local CONTENT_RIGHT = OUTER_BORDER
+local CONTENT_BOTTOM = OUTER_BORDER
+
 export type WindowProps = {
 	Title: string?,
 	Icon: string?,
@@ -31,8 +38,8 @@ function Window.Create(props: WindowProps)
 
 	local contentClipFrame = Instance.new("Frame")
 	contentClipFrame.Name = "ContentClipFrame"
-	contentClipFrame.Size = UDim2.new(1, -12, 1, -UITheme.Window.TitleBarHeight - 12)
-	contentClipFrame.Position = UDim2.fromOffset(6, UITheme.Window.TitleBarHeight + 6)
+	contentClipFrame.Position = UDim2.fromOffset(CONTENT_LEFT, CONTENT_TOP)
+	contentClipFrame.Size = UDim2.new(1, -(CONTENT_LEFT + CONTENT_RIGHT), 1, -(CONTENT_TOP + CONTENT_BOTTOM))
 	contentClipFrame.BackgroundTransparency = 1
 	contentClipFrame.BorderSizePixel = 0
 	contentClipFrame.ClipsDescendants = true
@@ -40,59 +47,58 @@ function Window.Create(props: WindowProps)
 	contentClipFrame.Parent = rootFrame
 
 	local windowFrameImage = Instance.new("ImageLabel")
-	windowFrameImage.Name = "WindowFrameImage"
+	windowFrameImage.Name = "WindowFrameBackground"
 	windowFrameImage.Size = UDim2.fromScale(1, 1)
 	windowFrameImage.BackgroundTransparency = 1
 	windowFrameImage.Image = UITheme.Assets.WindowFrame
 	windowFrameImage.ScaleType = Enum.ScaleType.Slice
 	windowFrameImage.SliceCenter = UITheme.Window.FrameSlice
-	windowFrameImage.ZIndex = 0
+	windowFrameImage.ZIndex = 1
 	windowFrameImage.Parent = rootFrame
 
 	local borderTop = Instance.new("Frame")
 	borderTop.Name = "BorderOverlayTop"
-	borderTop.Size = UDim2.new(1, -12, 0, 1)
-	borderTop.Position = UDim2.fromOffset(6, UITheme.Window.TitleBarHeight + 6)
+	borderTop.Size = UDim2.new(1, -(OUTER_BORDER * 2), 0, 1)
+	borderTop.Position = UDim2.fromOffset(OUTER_BORDER, CONTENT_TOP)
 	borderTop.BorderSizePixel = 0
 	borderTop.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
-	borderTop.ZIndex = 3
+	borderTop.ZIndex = 4
 	borderTop.Parent = rootFrame
 
 	local borderLeft = Instance.new("Frame")
 	borderLeft.Name = "BorderOverlayLeft"
-	borderLeft.Size = UDim2.fromOffset(1, 1)
-	borderLeft.Position = UDim2.fromOffset(6, UITheme.Window.TitleBarHeight + 7)
+	borderLeft.Size = UDim2.new(0, 1, 1, -(CONTENT_TOP + CONTENT_BOTTOM + 2))
+	borderLeft.Position = UDim2.fromOffset(OUTER_BORDER, CONTENT_TOP + 1)
 	borderLeft.AnchorPoint = Vector2.new(0, 0)
 	borderLeft.BorderSizePixel = 0
 	borderLeft.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
-	borderLeft.ZIndex = 3
+	borderLeft.ZIndex = 4
 	borderLeft.Parent = rootFrame
-	borderLeft.Size = UDim2.new(0, 1, 1, -(UITheme.Window.TitleBarHeight + 14))
 
 	local borderRight = Instance.new("Frame")
 	borderRight.Name = "BorderOverlayRight"
-	borderRight.Size = UDim2.new(0, 1, 1, -(UITheme.Window.TitleBarHeight + 14))
-	borderRight.Position = UDim2.new(1, -7, 0, UITheme.Window.TitleBarHeight + 7)
+	borderRight.Size = UDim2.new(0, 1, 1, -(CONTENT_TOP + CONTENT_BOTTOM + 2))
+	borderRight.Position = UDim2.new(1, -(OUTER_BORDER + 1), 0, CONTENT_TOP + 1)
 	borderRight.BorderSizePixel = 0
 	borderRight.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
-	borderRight.ZIndex = 3
+	borderRight.ZIndex = 4
 	borderRight.Parent = rootFrame
 
 	local borderBottom = Instance.new("Frame")
 	borderBottom.Name = "BorderOverlayBottom"
-	borderBottom.Size = UDim2.new(1, -12, 0, 1)
-	borderBottom.Position = UDim2.new(0, 6, 1, -7)
+	borderBottom.Size = UDim2.new(1, -(OUTER_BORDER * 2), 0, 1)
+	borderBottom.Position = UDim2.new(0, OUTER_BORDER, 1, -(OUTER_BORDER + 1))
 	borderBottom.BorderSizePixel = 0
 	borderBottom.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
-	borderBottom.ZIndex = 3
+	borderBottom.ZIndex = 4
 	borderBottom.Parent = rootFrame
 
 	local titleBar = Instance.new("TextButton")
 	titleBar.Name = "TitleBar"
 	titleBar.Text = ""
 	titleBar.AutoButtonColor = false
-	titleBar.Size = UDim2.new(1, -12, 0, UITheme.Window.TitleBarHeight)
-	titleBar.Position = UDim2.fromOffset(6, 6)
+	titleBar.Size = UDim2.new(1, -(OUTER_BORDER * 2), 0, TITLE_BAR_HEIGHT)
+	titleBar.Position = UDim2.fromOffset(OUTER_BORDER, OUTER_BORDER)
 	titleBar.BackgroundColor3 = TITLE_BAR_LEFT
 	titleBar.BackgroundTransparency = 0
 	titleBar.BorderSizePixel = 0
@@ -175,7 +181,7 @@ function Window.Create(props: WindowProps)
 		button.Position = UDim2.new(1, xOffset, 0, 3)
 		button.BackgroundTransparency = 1
 		button.Image = UITheme.Assets.WindowButton
-		button.ZIndex = 4
+		button.ZIndex = 5
 		button.Parent = titleBar
 		local symbolLabel = Instance.new("TextLabel")
 		symbolLabel.Size = UDim2.fromScale(1, 1)
@@ -184,7 +190,7 @@ function Window.Create(props: WindowProps)
 		symbolLabel.TextColor3 = Color3.fromRGB(30, 30, 30)
 		symbolLabel.Font = Enum.Font.ArialBold
 		symbolLabel.TextSize = 15
-		symbolLabel.ZIndex = 5
+		symbolLabel.ZIndex = 6
 		symbolLabel.Parent = button
 		return button
 	end
@@ -196,17 +202,11 @@ function Window.Create(props: WindowProps)
 	contentFrame.Name = "ContentFrame"
 	contentFrame.Size = UDim2.fromScale(1, 1)
 	contentFrame.Position = UDim2.fromOffset(0, 0)
-	contentFrame.BackgroundColor3 = UITheme.Colors.AppBackground
+	contentFrame.BackgroundTransparency = 1
 	contentFrame.BorderSizePixel = 0
+	contentFrame.ClipsDescendants = true
 	contentFrame.ZIndex = 2
 	contentFrame.Parent = contentClipFrame
-
-	local contentPadding = Instance.new("UIPadding")
-	contentPadding.PaddingLeft = UDim.new(0, UITheme.Window.ContentPadding)
-	contentPadding.PaddingRight = UDim.new(0, UITheme.Window.ContentPadding)
-	contentPadding.PaddingTop = UDim.new(0, UITheme.Window.ContentPadding)
-	contentPadding.PaddingBottom = UDim.new(0, UITheme.Window.ContentPadding)
-	contentPadding.Parent = contentFrame
 
 	local dragging = false
 	local dragStart = Vector2.zero
@@ -262,18 +262,18 @@ function Window.Create(props: WindowProps)
 		setIfGui(windowFrameImage, z)
 		setIfGui(contentClipFrame, z + 2)
 		setIfGui(contentFrame, z + 2)
-		setIfGui(borderTop, z + 3)
-		setIfGui(borderLeft, z + 3)
-		setIfGui(borderRight, z + 3)
-		setIfGui(borderBottom, z + 3)
-		setIfGui(titleBar, z + 1)
+		setIfGui(titleBar, z + 3)
+		setIfGui(borderTop, z + 4)
+		setIfGui(borderLeft, z + 4)
+		setIfGui(borderRight, z + 4)
+		setIfGui(borderBottom, z + 4)
 		titleBottomLine.ZIndex = z + 4
 		for _, gui in ipairs(titleBar:GetDescendants()) do
 			if gui:IsA("GuiObject") then
 				if gui.Name == "TitleBarGradient" or gui.Name:match("^Slice%d+$") then
-					gui.ZIndex = z + 1
+					gui.ZIndex = z + 3
 				else
-					gui.ZIndex = z + 4
+					gui.ZIndex = z + 5
 				end
 			end
 		end
