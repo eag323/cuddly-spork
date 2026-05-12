@@ -3,7 +3,6 @@
 export type RemoteNameMap = { [string]: string }
 
 local RemoteNames: RemoteNameMap = {
-	-- Client to Server
 	Click_Request = "Click_Request",
 	Market_SellFood = "Market_SellFood",
 	Market_SetAutoSellEnabled = "Market_SetAutoSellEnabled",
@@ -11,6 +10,10 @@ local RemoteNames: RemoteNameMap = {
 	Upgrade_BuyClickTool = "Upgrade_BuyClickTool",
 	Generator_Equip = "Generator_Equip",
 	Generator_Upgrade = "Generator_Upgrade",
+	Generator_BuyEquip = "Generator_BuyEquip",
+	Generator_Remove = "Generator_Remove",
+	Generator_BuyEquipCondiment = "Generator_BuyEquipCondiment",
+	Generator_AutoUpgradeCondiments = "Generator_AutoUpgradeCondiments",
 	Generator_InsertCore = "Generator_InsertCore",
 	Generator_RemoveCore = "Generator_RemoveCore",
 	Prestige_Request = "Prestige_Request",
@@ -55,8 +58,6 @@ local RemoteNames: RemoteNameMap = {
 	Profile_EquipTitle = "Profile_EquipTitle",
 	Profile_EquipColonySkin = "Profile_EquipColonySkin",
 	Profile_EquipColonyAura = "Profile_EquipColonyAura",
-
-	-- Server to Client
 	Click_Result = "Click_Result",
 	State_Patch = "State_Patch",
 	State_FullSync = "State_FullSync",

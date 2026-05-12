@@ -1,58 +1,74 @@
 --!strict
 local Window = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("Window"))
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
+local NumberUtil = require(Shared:WaitForChild("Util"):WaitForChild("NumberUtil"))
+local GeneratorConfig = require(Shared:WaitForChild("Config"):WaitForChild("GeneratorConfig"))
+
 local FoodHarvestersApp = {}
 local root: Frame?
 local windowRef
-local slotLabels: { [number]: TextLabel } = {}
-local slotUpgradeButtons: { [number]: TextButton } = {}
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
-local SharedFolder = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
-local NumberUtil = require(SharedFolder:WaitForChild("Util"):WaitForChild("NumberUtil"))
-local GeneratorConfig = require(SharedFolder:WaitForChild("Config"):WaitForChild("GeneratorConfig"))
-local generatorById = {}; for _,g in ipairs(GeneratorConfig.Generators) do generatorById[g.id]=g end
-local function getPrestigeMultiplier(context) local p=(((context.State.PlayerData or {}).Progression or {}).Prestige or 0); return 1+(p*0.1) end
-function FoodHarvestersApp.ShowPassiveIncomeFeedback(context, foodPerSecond)
- local parent = root or context.UI.AppsLayer; if not parent then return end
- local popup=Instance.new("TextLabel"); popup.AnchorPoint=Vector2.new(1,0); popup.Size=UDim2.fromOffset(170,26); popup.Position=UDim2.new(1,-28,0,32); popup.BackgroundTransparency=1; popup.Font=Enum.Font.GothamBold; popup.TextSize=18; popup.TextColor3=Color3.fromRGB(152,255,168); popup.TextXAlignment=Enum.TextXAlignment.Right; popup.Text=string.format("+%s Food/sec",NumberUtil.FormatNumber(foodPerSecond)); popup.Parent=parent
- TweenService:Create(popup,TweenInfo.new(0.45,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Position=popup.Position-UDim2.fromOffset(0,24),TextTransparency=1}):Play(); Debris:AddItem(popup,0.55)
+local currentClass = "snack"
+local selectedSlotForBuy: number? = nil
+local condimentSlotView: number? = nil
+local contextRef
+
+local function getData(ctx) return (ctx.State.PlayerData or {}).Generators or { SlotsUnlocked = 3, Equipped = {} } end
+local function slotOutput(slot)
+	if not slot then return 0 end
+	local h = GeneratorConfig.GetHarvester(slot.GeneratorId); if not h then return 0 end
+	local base = h.baseFoodPerSec or 0; local c = 0
+	for _, id in ipairs(slot.Condiments or {}) do local cd = GeneratorConfig.GetCondiment(id); if cd then c += (cd.foodPerSec or 0) end end
+	local m = 1 + ((h.buffType == "CondimentOutput") and (h.buffValue or 0) or 0)
+	return base + (c * m)
 end
+local function clear(frame) for _,c in ipairs(frame:GetChildren()) do if not c:IsA("UIListLayout") and not c:IsA("UIGridLayout") then c:Destroy() end end end
+
 function FoodHarvestersApp.Refresh(context)
- if not root then return end
- local equipped = (((context.State.PlayerData or {}).Generators or {}).Equipped)
- for i=1,3 do
-  local label = slotLabels[i]
-  local upgrade = slotUpgradeButtons[i]
-  local entry=equipped and equipped[i]; local gen=entry and generatorById[entry.GeneratorId] or nil; local lvl=entry and entry.Level or 0
-  local est=(gen and gen.baseFoodPerSec or 0)*(lvl^1.55)*getPrestigeMultiplier(context)
-  if label then
-   label.Text=string.format("Slot %d\n%s\nLevel %d\nFood/sec %s",i,gen and gen.displayName or "Empty Slot",lvl,NumberUtil.FormatNumber(est))
-  end
-  if upgrade then
-   if entry then upgrade.Text=string.format("Upgrade: %s Coins", NumberUtil.FormatNumber((gen.baseUpgradeCost or 0)*(lvl^2.05))); upgrade.Visible=true else upgrade.Visible=false end
-  end
- end
+	if not root then return end
+	contextRef = context
+	clear(root)
+	local data = getData(context); local slots = data.SlotsUnlocked or 3; local equipped = data.Equipped or {}
+	local total = 0; for i=1,slots do total += slotOutput(equipped[i]) end
+	local header = Instance.new("TextLabel"); header.Size=UDim2.new(1,0,0,54); header.BackgroundTransparency=1; header.TextXAlignment=Enum.TextXAlignment.Left; header.RichText=true; header.Font=Enum.Font.GothamBold; header.TextSize=18; header.TextColor3=Color3.new(1,1,1); header.Text=string.format("YOUR HARVESTERS    <font color='#66F5FF'>%d/%d Slots</font>\n<font color='#58FF8B'>TOTAL: %s food/sec</font>",0,slots,NumberUtil.FormatNumber(total)); header.Parent=root
+	if condimentSlotView then
+		local slot = equipped[condimentSlotView]; if not slot then condimentSlotView=nil; FoodHarvestersApp.Refresh(context); return end
+		local h = GeneratorConfig.GetHarvester(slot.GeneratorId); if not h then return end
+		local back=Instance.new("TextButton"); back.Size=UDim2.new(1,0,0,34); back.Text="← Harvesters"; back.Parent=root; back.Activated:Connect(function() condimentSlotView=nil; FoodHarvestersApp.Refresh(context) end)
+		local info=Instance.new("TextLabel"); info.Size=UDim2.new(1,0,0,32); info.BackgroundTransparency=1; info.Text=string.format("%s • +%s/s • %d/%d condiments",h.displayName,NumberUtil.FormatNumber(h.baseFoodPerSec or 0), #(slot.Condiments or {}), h.condimentSlots or 0); info.TextColor3=Color3.new(1,1,1); info.Parent=root
+		for _,cond in ipairs(GeneratorConfig.GetCondimentsSorted()) do local row=Instance.new("TextButton"); row.Size=UDim2.new(1,0,0,32); row.Text=string.format("%s  +%s/s  x%d  Cost %s",cond.displayName,NumberUtil.FormatNumber(cond.foodPerSec or 0),0,NumberUtil.FormatNumber(cond.cost or 0)); row.Parent=root; row.Activated:Connect(function() context.Controllers.Generator.BuyEquipCondiment(condimentSlotView, cond.id) end) end
+		return
+	end
+	local grid=Instance.new("Frame"); grid.Size=UDim2.new(1,0,0,240); grid.BackgroundTransparency=1; grid.Parent=root
+	local gl=Instance.new("UIGridLayout"); gl.CellSize=UDim2.fromOffset(195,112); gl.CellPadding=UDim2.fromOffset(10,10); gl.FillDirectionMaxCells=4; gl.Parent=grid
+	for i=1,slots do
+		local card=Instance.new("TextButton"); card.BackgroundColor3=Color3.fromRGB(21,33,57); card.Text=""; card.Parent=grid
+		local slot=equipped[i]
+		if slot then
+			local h=GeneratorConfig.GetHarvester(slot.GeneratorId)
+			card.Text = string.format("%s\n<font color='#58FF8B'>+%s/s</font>\n%d/%d condiments", (h and h.displayName) or "Unknown", NumberUtil.FormatNumber(slotOutput(slot)), #(slot.Condiments or {}), (h and h.condimentSlots) or 0)
+			card.RichText=true
+			card.Activated:Connect(function() condimentSlotView=i; FoodHarvestersApp.Refresh(context) end)
+			local up=Instance.new("TextButton"); up.Size=UDim2.new(1,-12,0,20); up.Position=UDim2.new(0,6,1,-24); up.Text="Upgrade"; up.Parent=card; up.Activated:Connect(function() context.Controllers.Generator.AutoUpgradeCondiments(i) end)
+			local rm=Instance.new("TextButton"); rm.Size=UDim2.fromOffset(18,18); rm.Position=UDim2.new(1,-20,0,2); rm.Text="🗑"; rm.Parent=card; rm.Activated:Connect(function() context.Controllers.Generator.Remove(i) end)
+		else
+			card.Text = "+ Add Harvester"; card.TextColor3=Color3.fromRGB(102,245,255)
+			card.Activated:Connect(function() selectedSlotForBuy=i end)
+		end
+	end
+	local shop=Instance.new("TextLabel"); shop.Size=UDim2.new(1,0,0,30); shop.BackgroundTransparency=1; shop.Text="HARVESTER SHOP"; shop.TextXAlignment=Enum.TextXAlignment.Left; shop.TextColor3=Color3.new(1,1,1); shop.Parent=root
+	for _, classInfo in ipairs(GeneratorConfig.Classes) do local b=Instance.new("TextButton"); b.Size=UDim2.new(0,95,0,26); b.Text=classInfo.displayName; b.Parent=root; b.Activated:Connect(function() currentClass=classInfo.id; FoodHarvestersApp.Refresh(context) end) end
+	for _, harvester in ipairs(GeneratorConfig.GetStandardHarvestersForClass(currentClass)) do local row=Instance.new("TextButton"); row.Size=UDim2.new(1,0,0,32); row.Text=string.format("%s  +%s/s  %d condiments  Cost %s",harvester.displayName,NumberUtil.FormatNumber(harvester.baseFoodPerSec or 0),harvester.condimentSlots or 0,NumberUtil.FormatNumber(harvester.cost or 0)); row.Parent=root; row.Activated:Connect(function() local target=selectedSlotForBuy; if not target then for i=1,slots do if not equipped[i] then target=i break end end end; if target then context.Controllers.Generator.BuyEquip(target, harvester.id) end end) end
 end
+
 function FoodHarvestersApp.Mount(target, context)
- if root then return end
- slotLabels = {}
- slotUpgradeButtons = {}
- windowRef=Window.Create({Title="Food Harvesters.exe", Size=UDim2.fromOffset(760,500), Position=UDim2.fromScale(0.12,0.1), Parent=target, OnClose=function() context.Controllers.Window.Close("FoodHarvesters") end})
- local content=windowRef.Content
- local scroll=Instance.new("ScrollingFrame"); scroll.Size=UDim2.fromScale(1,1); scroll.BackgroundTransparency=1; scroll.BorderSizePixel=0; scroll.AutomaticCanvasSize=Enum.AutomaticSize.Y; scroll.ScrollBarThickness=8; scroll.Parent=content
- local list=Instance.new("UIListLayout"); list.Padding=UDim.new(0,10); list.Parent=scroll
- root=Instance.new("Frame"); root.Size=UDim2.new(1,-6,0,1); root.AutomaticSize=Enum.AutomaticSize.Y; root.BackgroundTransparency=1; root.Parent=scroll
- local layout=Instance.new("UIListLayout"); layout.Padding=UDim.new(0,10); layout.Parent=root
- for i=1,3 do local row=Instance.new("Frame"); row.Size=UDim2.new(1,0,0,118); row.BackgroundColor3=Color3.fromRGB(38,38,46); row.Parent=root
-  local label=Instance.new("TextLabel"); label.Name="SlotLabel"..i; label.Size=UDim2.new(0.52,0,1,-10); label.Position=UDim2.fromOffset(8,5); label.BackgroundTransparency=1; label.TextColor3=Color3.new(1,1,1); label.TextXAlignment=Enum.TextXAlignment.Left; label.TextYAlignment=Enum.TextYAlignment.Top; label.TextWrapped=true; label.Parent=row
-  slotLabels[i] = label
-  local upgrade=Instance.new("TextButton"); upgrade.Name="SlotUpgrade"..i; upgrade.Size=UDim2.fromOffset(180,32); upgrade.Position=UDim2.new(1,-188,0,8); upgrade.BackgroundColor3=Color3.fromRGB(55,55,55); upgrade.TextColor3=Color3.new(1,1,1); upgrade.Parent=row; upgrade.Activated:Connect(function() context.Controllers.Generator.Upgrade(i) end)
-  slotUpgradeButtons[i] = upgrade
-  local buttons={{id='plain_cracker',label='Equip Plain Cracker'},{id='potato_chip',label='Equip Potato Chip'},{id='cookie_crumb',label='Equip Cookie Crumb'}}
-  for bi,info in ipairs(buttons) do local e=Instance.new("TextButton"); e.Size=UDim2.fromOffset(180,24); e.Position=UDim2.new(1,-188,0,44+((bi-1)*25)); e.BackgroundColor3=Color3.fromRGB(45,45,45); e.TextColor3=Color3.new(1,1,1); e.Text=info.label; e.TextSize=12; e.Parent=row; e.Activated:Connect(function() context.Controllers.Generator.Equip(i,info.id) end) end
- end
- FoodHarvestersApp.Refresh(context)
+	if root then return end
+	windowRef = Window.Create({Title="Food Harvesters.exe", Size=UDim2.fromOffset(850,620), Position=UDim2.fromScale(0.1,0.08), Parent=target, OnClose=function() context.Controllers.Window.Close("FoodHarvesters") end})
+	local scroll=Instance.new("ScrollingFrame"); scroll.Size=UDim2.fromScale(1,1); scroll.AutomaticCanvasSize=Enum.AutomaticSize.Y; scroll.BackgroundColor3=Color3.fromRGB(9,18,38); scroll.Parent=windowRef.Content
+	root=Instance.new("Frame"); root.Size=UDim2.new(1,-8,0,1); root.BackgroundTransparency=1; root.AutomaticSize=Enum.AutomaticSize.Y; root.Parent=scroll
+	local list=Instance.new("UIListLayout"); list.Padding=UDim.new(0,8); list.Parent=root
+	FoodHarvestersApp.Refresh(context)
 end
-function FoodHarvestersApp.Unmount() if windowRef then windowRef.Destroy() end; root=nil; windowRef=nil; slotLabels={}; slotUpgradeButtons={} end
+function FoodHarvestersApp.ShowPassiveIncomeFeedback() end
+function FoodHarvestersApp.Unmount() if windowRef then windowRef.Destroy() end root=nil windowRef=nil end
 return FoodHarvestersApp

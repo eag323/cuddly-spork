@@ -2,6 +2,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local BugsOSFolder = ReplicatedStorage:WaitForChild("BugsOS")
 local SharedFolder = BugsOSFolder:WaitForChild("Shared")
@@ -12,361 +13,211 @@ local GeneratorConfig = require(ConfigFolder:WaitForChild("GeneratorConfig"))
 local EconomyConfig = require(ConfigFolder:WaitForChild("EconomyConfig"))
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
 
-local ServerScriptService = game:GetService("ServerScriptService")
-local BugsOSServerFolder = ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Server")
-local ServicesFolder = BugsOSServerFolder:WaitForChild("Services")
-
+local ServicesFolder = ServerScriptService:WaitForChild("BugsOS"):WaitForChild("Server"):WaitForChild("Services")
 local CurrencyService = require(ServicesFolder:WaitForChild("CurrencyService"))
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
 local PrestigeService = require(ServicesFolder:WaitForChild("PrestigeService"))
 local BuffService = require(ServicesFolder:WaitForChild("BuffService"))
 
-type PlayerData = { [string]: any }
-
-type GeneratorConfigEntry = {
-	id: string,
-	classId: string,
-	baseFoodPerSec: number?,
-	baseUpgradeCost: number?,
-	maxLevel: number?,
-}
-
 local GeneratorService = {}
-
 local STARTING_SLOTS = 3
-local MAX_EQUIPPABLE_SNACK_GENERATORS = 3
 local PASSIVE_TICK_SECONDS = 1
-local DEFAULT_BASE_FOOD_PER_SEC = 1
-local DEFAULT_BASE_UPGRADE_COST = 10
 
 local generatorEquipRemote: RemoteEvent? = nil
-local generatorUpgradeRemote: RemoteEvent? = nil
+local generatorRemoveRemote: RemoteEvent? = nil
+local generatorCondimentRemote: RemoteEvent? = nil
+local generatorAutoUpgradeRemote: RemoteEvent? = nil
+local generatorUpgradeRemote: RemoteEvent? = nil -- deprecated compatibility
 local notificationPushRemote: RemoteEvent? = nil
-local snackGeneratorById: { [string]: GeneratorConfigEntry } = {}
 local passiveLoopRunning = false
 
+local harvesterById = GeneratorConfig.Harvesters
+local condimentById = GeneratorConfig.Condiments
+
 local function getOrCreateRemoteEvent(remoteName: string): RemoteEvent
-	local existingRemote = RemotesFolder:FindFirstChild(remoteName)
-	if existingRemote and existingRemote:IsA("RemoteEvent") then
-		return existingRemote
+	local existing = RemotesFolder:FindFirstChild(remoteName)
+	if existing and existing:IsA("RemoteEvent") then return existing end
+	local remote = Instance.new("RemoteEvent")
+	remote.Name = remoteName
+	remote.Parent = RemotesFolder
+	return remote
+end
+
+local function pushNotification(player: Player, message: string, notificationType: string)
+	if notificationPushRemote then
+		notificationPushRemote:FireClient(player, { Message = message, Type = notificationType })
 	end
-
-	local remoteEvent = Instance.new("RemoteEvent")
-	remoteEvent.Name = remoteName
-	remoteEvent.Parent = RemotesFolder
-
-	return remoteEvent
 end
 
-
-local function pushNotification(player: Player, message: string, notificationType: string): ()
-	if not notificationPushRemote then
-		return
-	end
-
-	notificationPushRemote:FireClient(player, {
-		Message = message,
-		Type = notificationType,
-	})
-end
-
-local function getPlayerData(player: Player): PlayerData?
-	return ProfileService.GetPlayerData(player)
-end
-
-local function patchFood(player: Player, food: number): ()
-	ProfileService.PatchPlayerState(player, { "Currencies", "Food" }, food)
-end
-
-local function patchGenerators(player: Player, generatorsData: any): ()
-	ProfileService.PatchPlayerState(player, { "Generators" }, generatorsData)
-end
-
-local function ensureGeneratorDataShape(playerData: PlayerData): ()
+local function ensureGeneratorDataShape(playerData)
 	if type(playerData.Generators) ~= "table" then
-		playerData.Generators = {
-			SlotsUnlocked = STARTING_SLOTS,
-			Equipped = {},
-		}
+		playerData.Generators = { SlotsUnlocked = STARTING_SLOTS, Equipped = {} }
 	end
-
-	if type(playerData.Generators.SlotsUnlocked) ~= "number" then
-		playerData.Generators.SlotsUnlocked = STARTING_SLOTS
-	end
-
-	if type(playerData.Generators.Equipped) ~= "table" then
-		playerData.Generators.Equipped = {}
-	end
-end
-
-local function sanitizeLevel(value: any): number
-	if type(value) ~= "number" then
-		return 1
-	end
-	if value < 1 then
-		return 1
-	end
-	if value ~= value or value == math.huge or value == -math.huge then
-		return 1
-	end
-
-	return math.floor(value)
-end
-
-local function computeGeneratorFoodPerSecond(slotData: any): number
-	if type(slotData) ~= "table" then
-		return 0
-	end
-
-	local generatorId = slotData.GeneratorId
-	if type(generatorId) ~= "string" then
-		return 0
-	end
-
-	local generatorDef = snackGeneratorById[generatorId]
-	if not generatorDef then
-		return 0
-	end
-
-	local level = sanitizeLevel(slotData.Level)
-	local baseFoodPerSec = generatorDef.baseFoodPerSec or DEFAULT_BASE_FOOD_PER_SEC
-	local foodPerSecond = baseFoodPerSec * (level ^ 1.55)
-	if EconomyConfig.DEV_MODE then
-		-- DEVELOPMENT ONLY: Must be disabled before real release.
-		foodPerSecond *= EconomyConfig.DEV_GENERATOR_MULTIPLIER
-	end
-
-	return foodPerSecond
-end
-
-local function computeUpgradeCost(slotData: any): number
-	if type(slotData) ~= "table" then
-		return math.huge
-	end
-
-	local generatorId = slotData.GeneratorId
-	if type(generatorId) ~= "string" then
-		return math.huge
-	end
-
-	local generatorDef = snackGeneratorById[generatorId]
-	if not generatorDef then
-		return math.huge
-	end
-
-	local level = sanitizeLevel(slotData.Level)
-	local baseUpgradeCost = generatorDef.baseUpgradeCost or DEFAULT_BASE_UPGRADE_COST
-
-	return baseUpgradeCost * (level ^ 2.05)
-end
-
-local function onGeneratorEquip(player: Player, payload: any): ()
-	if type(payload) ~= "table" then
-		warn(string.format("[GeneratorService] Rejected Generator_Equip from %s: malformed payload", player.Name))
-		pushNotification(player, "Could not equip generator: invalid request.", "Warning")
-		return
-	end
-
-	local slotIndex = payload.SlotIndex
-	local generatorId = payload.GeneratorId
-	if type(slotIndex) ~= "number" or type(generatorId) ~= "string" then
-		warn(string.format("[GeneratorService] Rejected Generator_Equip from %s: invalid slot or generator id", player.Name))
-		pushNotification(player, "Could not equip generator: invalid slot or generator.", "Warning")
-		return
-	end
-
-	slotIndex = math.floor(slotIndex)
-	if slotIndex < 1 or slotIndex > MAX_EQUIPPABLE_SNACK_GENERATORS then
-		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: invalid slot (%d)", player.Name, slotIndex))
-		pushNotification(player, "Could not equip generator: invalid slot.", "Warning")
-		return
-	end
-
-	local generatorDef = snackGeneratorById[generatorId]
-	if not generatorDef then
-		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: invalid generator id (%s)", player.Name, tostring(generatorId)))
-		pushNotification(player, "Could not equip generator: unknown generator.", "Warning")
-		return
-	end
-
-	local playerData = getPlayerData(player)
-	if not playerData then
-		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: missing profile", player.Name))
-		return
-	end
-
-	ensureGeneratorDataShape(playerData)
-	local slotsUnlocked = playerData.Generators.SlotsUnlocked
-	if type(slotsUnlocked) ~= "number" or slotIndex > slotsUnlocked then
-		warn(string.format("[GeneratorService] Rejected Generator_Equip for %s: invalid slot (%d)", player.Name, slotIndex))
-		pushNotification(player, "Could not equip generator: slot locked.", "Warning")
-		return
-	end
-
-	local newSlotData = {
-		GeneratorId = generatorId,
-		Level = 1,
-		CoreUid = nil,
-	}
-
-	playerData.Generators.Equipped[slotIndex] = newSlotData
-	patchGenerators(player, playerData.Generators)
-	pushNotification(player, "Generator equipped.", "Success")
-end
-
-local function onGeneratorUpgrade(player: Player, payload: any): ()
-	if type(payload) ~= "table" then
-		warn(string.format("[GeneratorService] Rejected Generator_Upgrade from %s: malformed payload", player.Name))
-		pushNotification(player, "Could not upgrade generator: invalid request.", "Warning")
-		return
-	end
-
-	local slotIndex = payload.SlotIndex
-	if type(slotIndex) ~= "number" then
-		warn(string.format("[GeneratorService] Rejected Generator_Upgrade from %s: invalid slot", player.Name))
-		pushNotification(player, "Could not upgrade generator: invalid slot.", "Warning")
-		return
-	end
-
-	slotIndex = math.floor(slotIndex)
-	if slotIndex < 1 or slotIndex > MAX_EQUIPPABLE_SNACK_GENERATORS then
-		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: invalid slot (%d)", player.Name, slotIndex))
-		pushNotification(player, "Could not upgrade generator: invalid slot.", "Warning")
-		return
-	end
-
-	local playerData = getPlayerData(player)
-	if not playerData then
-		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: missing profile", player.Name))
-		return
-	end
-
-	ensureGeneratorDataShape(playerData)
-	local slotsUnlocked = playerData.Generators.SlotsUnlocked
-	if type(slotsUnlocked) ~= "number" or slotIndex > slotsUnlocked then
-		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: invalid slot (%d)", player.Name, slotIndex))
-		return
-	end
-
-	local slotData = playerData.Generators.Equipped[slotIndex]
-	if type(slotData) ~= "table" then
-		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: empty generator slot (%d)", player.Name, slotIndex))
-		pushNotification(player, "Could not upgrade generator: slot is empty.", "Warning")
-		return
-	end
-
-
-	local generatorId = slotData.GeneratorId
-	local generatorDef = if type(generatorId) == "string" then snackGeneratorById[generatorId] else nil
-	local currentLevel = sanitizeLevel(slotData.Level)
-	local maxLevel = if generatorDef then generatorDef.maxLevel else nil
-	if type(maxLevel) == "number" and currentLevel >= maxLevel then
-		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: max level reached (%d)", player.Name, currentLevel))
-		pushNotification(player, "Generator is already max level.", "Warning")
-		return
-	end
-
-	local upgradeCost = computeUpgradeCost(slotData)
-	if upgradeCost <= 0 or upgradeCost == math.huge then
-		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: invalid generator id in slot (%d)", player.Name, slotIndex))
-		return
-	end
-
-	if not CurrencyService.RemoveCurrency(player, "Coins", upgradeCost) then
-		local coins = CurrencyService.GetBalance(player, "Coins")
-		warn(string.format("[GeneratorService] Rejected Generator_Upgrade for %s: insufficient Coins (cost=%d, coins=%d)", player.Name, upgradeCost, coins))
-		pushNotification(player, "Not enough coins to upgrade generator.", "Warning")
-		return
-	end
-
-	slotData.Level = sanitizeLevel(slotData.Level) + 1
-	patchGenerators(player, playerData.Generators)
-	pushNotification(player, "Generator upgraded.", "Success")
-end
-
-local function buildGeneratorLookups(): ()
-	snackGeneratorById = {}
-
-	local generators = GeneratorConfig.Generators
-	if type(generators) ~= "table" then
-		return
-	end
-
-	for _, generator in generators do
-		local entry = generator :: GeneratorConfigEntry
-		if type(entry.id) == "string" and entry.classId == "snack" then
-			snackGeneratorById[entry.id] = entry
+	if type(playerData.Generators.SlotsUnlocked) ~= "number" then playerData.Generators.SlotsUnlocked = STARTING_SLOTS end
+	if type(playerData.Generators.Equipped) ~= "table" then playerData.Generators.Equipped = {} end
+	for slotIndex, slotData in pairs(playerData.Generators.Equipped) do
+		if type(slotIndex) == "number" and type(slotData) == "table" then
+			if type(slotData.GeneratorId) ~= "string" or not harvesterById[slotData.GeneratorId] then
+				playerData.Generators.Equipped[slotIndex] = nil
+			else
+				if type(slotData.Condiments) ~= "table" then slotData.Condiments = {} end
+				local cleaned = {}
+				for _, condimentId in ipairs(slotData.Condiments) do if type(condimentId) == "string" and condimentById[condimentId] then table.insert(cleaned, condimentId) end end
+				slotData.Condiments = cleaned
+				slotData.Level = nil
+			end
 		end
 	end
 end
 
-local function runPassiveFoodLoop(): ()
-	if passiveLoopRunning then
-		return
-	end
+local function patchGenerators(player, generatorsData)
+	ProfileService.PatchPlayerState(player, { "Generators" }, generatorsData)
+end
 
+local function validateSlot(playerData, slotIndex)
+	if type(slotIndex) ~= "number" then return nil, "Invalid slot." end
+	slotIndex = math.floor(slotIndex)
+	local unlocked = playerData.Generators.SlotsUnlocked
+	if slotIndex < 1 or slotIndex > unlocked then return nil, "Slot is locked." end
+	return slotIndex, nil
+end
+
+local function computeSlotFoodPerSecond(slotData)
+	if type(slotData) ~= "table" or type(slotData.GeneratorId) ~= "string" then return 0 end
+	local harvester = harvesterById[slotData.GeneratorId]
+	if not harvester then return 0 end
+	local base = tonumber(harvester.baseFoodPerSec) or 0
+	local condimentTotal = 0
+	local condiments = if type(slotData.Condiments) == "table" then slotData.Condiments else {}
+	for _, condimentId in ipairs(condiments) do
+		local condiment = condimentById[condimentId]
+		if condiment then condimentTotal += tonumber(condiment.foodPerSec) or 0 end
+	end
+	local condimentMultiplier = 1
+	local buffType = harvester.buffType
+	if buffType == "CondimentOutput" then condimentMultiplier += tonumber(harvester.buffValue) or 0 end
+	return base + (condimentTotal * condimentMultiplier)
+end
+
+local function onBuyEquip(player, payload)
+	local data = ProfileService.GetPlayerData(player); if not data then return end
+	ensureGeneratorDataShape(data)
+	if type(payload) ~= "table" then return end
+	local slotIndex, slotErr = validateSlot(data, payload.SlotIndex); if not slotIndex then pushNotification(player, "Could not equip harvester: " .. slotErr, "Warning"); return end
+	local harvesterId = payload.HarvesterId
+	local harvester = if type(harvesterId) == "string" then harvesterById[harvesterId] else nil
+	if not harvester then pushNotification(player, "Could not equip harvester: unknown harvester.", "Warning"); return end
+	if data.Generators.Equipped[slotIndex] then pushNotification(player, "Could not equip harvester: slot occupied.", "Warning"); return end
+	local cost = tonumber(harvester.cost) or math.huge
+	if not CurrencyService.RemoveCurrency(player, "Coins", cost) then pushNotification(player, "Not enough coins.", "Warning"); return end
+	data.Generators.Equipped[slotIndex] = { GeneratorId = harvesterId, Condiments = {} }
+	patchGenerators(player, data.Generators)
+	pushNotification(player, "Harvester equipped.", "Success")
+end
+
+local function onRemove(player, payload)
+	local data = ProfileService.GetPlayerData(player); if not data then return end
+	ensureGeneratorDataShape(data)
+	local slotIndex, slotErr = validateSlot(data, payload and payload.SlotIndex); if not slotIndex then pushNotification(player, "Could not remove harvester: " .. slotErr, "Warning"); return end
+	data.Generators.Equipped[slotIndex] = nil
+	patchGenerators(player, data.Generators)
+	pushNotification(player, "Harvester removed.", "Success")
+end
+
+local function onBuyEquipCondiment(player, payload)
+	local data = ProfileService.GetPlayerData(player); if not data then return end
+	ensureGeneratorDataShape(data)
+	if type(payload) ~= "table" then return end
+	local slotIndex, slotErr = validateSlot(data, payload.SlotIndex); if not slotIndex then pushNotification(player, "Could not equip condiment: " .. slotErr, "Warning"); return end
+	local slotData = data.Generators.Equipped[slotIndex]
+	if type(slotData) ~= "table" then pushNotification(player, "Could not equip condiment: empty slot.", "Warning"); return end
+	local harvester = harvesterById[slotData.GeneratorId]; if not harvester then return end
+	if type(slotData.Condiments) ~= "table" then slotData.Condiments = {} end
+	local maxSlots = tonumber(harvester.condimentSlots) or 0
+	if #slotData.Condiments >= maxSlots then pushNotification(player, "Condiment slots are full.", "Warning"); return end
+	local condimentId = payload.CondimentId
+	local condiment = if type(condimentId) == "string" then condimentById[condimentId] else nil
+	if not condiment then pushNotification(player, "Could not equip condiment: unknown condiment.", "Warning"); return end
+	local cost = tonumber(condiment.cost) or math.huge
+	if not CurrencyService.RemoveCurrency(player, "Coins", cost) then pushNotification(player, "Not enough coins.", "Warning"); return end
+	table.insert(slotData.Condiments, condimentId)
+	patchGenerators(player, data.Generators)
+	pushNotification(player, "Condiment equipped.", "Success")
+end
+
+local function onAutoUpgrade(player, payload)
+	local data = ProfileService.GetPlayerData(player); if not data then return end
+	ensureGeneratorDataShape(data)
+	local slotIndex, slotErr = validateSlot(data, payload and payload.SlotIndex); if not slotIndex then pushNotification(player, "Could not upgrade condiments: " .. slotErr, "Warning"); return end
+	local slotData = data.Generators.Equipped[slotIndex]
+	if type(slotData) ~= "table" then pushNotification(player, "Could not upgrade condiments: empty slot.", "Warning"); return end
+	local harvester = harvesterById[slotData.GeneratorId]; if not harvester then return end
+	if type(slotData.Condiments) ~= "table" then slotData.Condiments = {} end
+	local bought = 0
+	while #slotData.Condiments < (tonumber(harvester.condimentSlots) or 0) do
+		local coins = tonumber((((data.Currencies or {}).Coins))) or 0
+		local best = GeneratorConfig.GetBestAffordableCondiment(coins)
+		if not best then break end
+		local cost = tonumber(best.cost) or math.huge
+		if not CurrencyService.RemoveCurrency(player, "Coins", cost) then break end
+		table.insert(slotData.Condiments, best.id)
+		bought += 1
+	end
+	if bought > 0 then
+		patchGenerators(player, data.Generators)
+		pushNotification(player, string.format("Equipped %d condiment(s).", bought), "Success")
+	else
+		pushNotification(player, "Not enough coins for condiment upgrade.", "Warning")
+	end
+end
+
+function GeneratorService.CalculateTotalFoodPerSecond(player)
+	local data = ProfileService.GetPlayerData(player); if not data then return 0 end
+	ensureGeneratorDataShape(data)
+	local total = 0
+	for slotIndex = 1, data.Generators.SlotsUnlocked do total += computeSlotFoodPerSecond(data.Generators.Equipped[slotIndex]) end
+	total *= PrestigeService.GetFoodMultiplier(player)
+	-- BuffService applies global FoodPerSec/AllEarnings style multipliers.
+	total *= BuffService.GetMultiplier(player, "AllFood")
+	total *= BuffService.GetMultiplier(player, "FoodPerSec")
+	if EconomyConfig.DEV_MODE then total *= EconomyConfig.DEV_GENERATOR_MULTIPLIER end
+	return total
+end
+
+local function startPassiveLoop()
+	if passiveLoopRunning then return end
 	passiveLoopRunning = true
 	task.spawn(function()
-		while passiveLoopRunning do
+		while true do
 			task.wait(PASSIVE_TICK_SECONDS)
-
-			for _, player in Players:GetPlayers() do
-				local playerData = getPlayerData(player)
-				if playerData then
-					ensureGeneratorDataShape(playerData)
-
-					local totalFoodPerSecond = GeneratorService.CalculateTotalFoodPerSecond(player)
-
-					if totalFoodPerSecond > 0 and CurrencyService.AddFood(player, totalFoodPerSecond) then
-						patchFood(player, playerData.Currencies.Food)
-					end
-				end
+			for _, player in ipairs(Players:GetPlayers()) do
+				local foodPerSecond = GeneratorService.CalculateTotalFoodPerSecond(player)
+				if foodPerSecond > 0 then CurrencyService.AddFood(player, foodPerSecond * PASSIVE_TICK_SECONDS) end
 			end
 		end
 	end)
 end
 
-
-function GeneratorService.CalculateTotalFoodPerSecond(player: Player): number
-	local playerData = getPlayerData(player)
-	if not playerData then
-		return 0
-	end
-
-	ensureGeneratorDataShape(playerData)
-
-	local totalFoodPerSecond = 0
-	for slotIndex = 1, MAX_EQUIPPABLE_SNACK_GENERATORS do
-		local slotData = playerData.Generators.Equipped[slotIndex]
-		totalFoodPerSecond += computeGeneratorFoodPerSecond(slotData)
-	end
-
-	local prestigeMultiplier = PrestigeService.GetPrestigeMultiplier(player)
-	local buffs = BuffService.GetPlayerBuffs(player)
-	totalFoodPerSecond *= prestigeMultiplier * (1 + buffs.AllFood) * (1 + buffs.FoodPerSec)
-	if EconomyConfig.DEV_DEBUG_BUFFS then
-		print(string.format("[GeneratorService] Food/sec with buffs for %s: %.3f", player.Name, totalFoodPerSecond))
-	end
-	return totalFoodPerSecond
-end
-
-function GeneratorService.Init(): ()
-	buildGeneratorLookups()
-	generatorEquipRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Equip or "Generator_Equip")
+function GeneratorService.Init()
+	assert(type(GeneratorConfig.Classes) == "table", "GeneratorConfig.Classes missing")
+	assert(type(GeneratorConfig.Harvesters) == "table", "GeneratorConfig.Harvesters missing")
+	assert(type(GeneratorConfig.Condiments) == "table", "GeneratorConfig.Condiments missing")
+	assert(GeneratorConfig.Generators == GeneratorConfig.Harvesters, "GeneratorConfig.Generators must alias Harvesters")
+	generatorEquipRemote = getOrCreateRemoteEvent(RemoteNames.Generator_BuyEquip or "Generator_BuyEquip")
+	generatorRemoveRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Remove or "Generator_Remove")
+	generatorCondimentRemote = getOrCreateRemoteEvent(RemoteNames.Generator_BuyEquipCondiment or "Generator_BuyEquipCondiment")
+	generatorAutoUpgradeRemote = getOrCreateRemoteEvent(RemoteNames.Generator_AutoUpgradeCondiments or "Generator_AutoUpgradeCondiments")
 	generatorUpgradeRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Upgrade or "Generator_Upgrade")
 	notificationPushRemote = getOrCreateRemoteEvent(RemoteNames.Notification_Push or "Notification_Push")
 end
 
-function GeneratorService.Start(): ()
-	if generatorEquipRemote then
-		generatorEquipRemote.OnServerEvent:Connect(onGeneratorEquip)
-	end
-
-	if generatorUpgradeRemote then
-		generatorUpgradeRemote.OnServerEvent:Connect(onGeneratorUpgrade)
-	end
-
-	runPassiveFoodLoop()
+function GeneratorService.Start()
+	if generatorEquipRemote then generatorEquipRemote.OnServerEvent:Connect(onBuyEquip) end
+	if generatorRemoveRemote then generatorRemoveRemote.OnServerEvent:Connect(onRemove) end
+	if generatorCondimentRemote then generatorCondimentRemote.OnServerEvent:Connect(onBuyEquipCondiment) end
+	if generatorAutoUpgradeRemote then generatorAutoUpgradeRemote.OnServerEvent:Connect(onAutoUpgrade) end
+	if generatorUpgradeRemote then generatorUpgradeRemote.OnServerEvent:Connect(onAutoUpgrade) end
+	startPassiveLoop()
 end
 
 return GeneratorService
