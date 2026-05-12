@@ -5,7 +5,7 @@ local UIAssets = {}
 UIAssets.TaskbarBackgroundImage = "rbxassetid://104682368007242"
 UIAssets.TaskbarTabDefaultImage = "rbxassetid://119258117138817"
 UIAssets.TaskbarTabPressedImage = "rbxassetid://76075104182281"
-UIAssets.DesktopWallpaperImage = "rbxassetid://96353904362779"
+UIAssets.DesktopWallpaperImage = "rbxassetid://109614056645697"
 UIAssets.WallpaperMode = "Tile"
 UIAssets.WallpaperTileSize = Vector2.new(512, 512)
 
