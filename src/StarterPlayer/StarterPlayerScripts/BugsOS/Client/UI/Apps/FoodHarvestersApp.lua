@@ -35,8 +35,8 @@ local COLORS = {
 	button = Color3.fromRGB(32, 225, 160),
 	upgradeButton = Color3.fromRGB(34, 220, 150),
 	upgradeButtonStroke = Color3.fromRGB(18, 140, 95),
-	shopButton = Color3.fromRGB(209, 214, 220),
-	shopButtonStroke = Color3.fromRGB(138, 146, 156),
+	shopButton = Color3.fromRGB(255, 185, 55),
+	shopButtonStroke = Color3.fromRGB(194, 130, 28),
 	slotUpsell = Color3.fromRGB(255, 185, 55),
 }
 
@@ -84,18 +84,18 @@ local function mk(parent: Instance, className: string, props)
 end
 
 local function buildHarvesterRow(parent: Instance, harvester, onBuy: () -> ())
-	local row = mk(parent, "Frame", { Size = UDim2.new(1, 0, 0, 74), BackgroundColor3 = COLORS.panelAlt, BorderSizePixel = 0 })
+	local row = mk(parent, "Frame", { Size = UDim2.new(1, 0, 0, 78), BackgroundColor3 = COLORS.panelAlt, BorderSizePixel = 0 })
 	mk(row, "UICorner", { CornerRadius = UDim.new(0, 6) })
 	mk(row, "UIStroke", { Color = COLORS.stroke, Thickness = 1 })
-	local icon = mk(row, "ImageLabel", { Size = UDim2.fromOffset(44, 44), Position = UDim2.fromOffset(12, 15), BackgroundTransparency = 1, Image = harvester.icon or "" })
+	local icon = mk(row, "ImageLabel", { Size = UDim2.fromOffset(44, 44), Position = UDim2.fromOffset(12, 17), BackgroundTransparency = 1, Image = harvester.icon or "" })
 	icon.ScaleType = Enum.ScaleType.Fit
-	mk(row, "TextLabel", { Size = UDim2.new(1, -220, 0, 25), Position = UDim2.fromOffset(64, 10), BackgroundTransparency = 1, Text = harvester.displayName, TextColor3 = COLORS.text, Font = Enum.Font.GothamBold, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left })
+	mk(row, "TextLabel", { Size = UDim2.new(1, -232, 0, 25), Position = UDim2.fromOffset(64, 9), BackgroundTransparency = 1, Text = harvester.displayName, TextColor3 = COLORS.text, Font = Enum.Font.GothamBold, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left })
 	local detail = string.format("+%s/s • %d slots", NumberUtil.FormatNumber(harvester.baseFoodPerSec or 0), harvester.condimentSlots or 0)
 	if harvester.buffText and harvester.buffText ~= "None" then detail = detail .. (" • " .. harvester.buffText) end
-	mk(row, "TextLabel", { Size = UDim2.new(1, -220, 0, 20), Position = UDim2.fromOffset(64, 38), BackgroundTransparency = 1, Text = detail, TextColor3 = COLORS.muted, Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left })
-	local buyButton = mk(row, "TextButton", { Size = UDim2.fromOffset(152, 40), Position = UDim2.new(1, -164, 0.5, -20), BackgroundColor3 = COLORS.shopButton, Text = string.format("💰 %s coins", NumberUtil.FormatNumber(harvester.cost or 0)), TextColor3 = Color3.fromRGB(25, 30, 39), Font = Enum.Font.GothamBold, TextSize = 15, TextScaled = true })
-	mk(buyButton, "UICorner", { CornerRadius = UDim.new(0, 6) })
-	mk(buyButton, "UIStroke", { Color = COLORS.shopButtonStroke, Thickness = 1.5 })
+	mk(row, "TextLabel", { Size = UDim2.new(1, -232, 0, 20), Position = UDim2.fromOffset(64, 40), BackgroundTransparency = 1, Text = detail, TextColor3 = COLORS.muted, Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left })
+	local buyButton = mk(row, "TextButton", { Size = UDim2.fromOffset(160, 42), Position = UDim2.new(1, -172, 0.5, -21), BackgroundColor3 = COLORS.shopButton, Text = string.format("💰 %s coins", NumberUtil.FormatNumber(harvester.cost or 0)), TextColor3 = Color3.fromRGB(12, 28, 45), Font = Enum.Font.GothamBold, TextSize = 15, TextScaled = true, BorderSizePixel = 0 })
+	mk(buyButton, "UICorner", { CornerRadius = UDim.new(0, 5) })
+	mk(buyButton, "UIStroke", { Color = COLORS.shopButtonStroke, Thickness = 2 })
 	mk(buyButton, "UITextSizeConstraint", { MaxTextSize = 15, MinTextSize = 12 })
 	buyButton.Activated:Connect(onBuy)
 end
@@ -167,13 +167,15 @@ local function refresh(context, resetScroll: boolean?)
 
 		local detailHeader = mk(detailScroll, "Frame", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1 })
 		local backButton = mk(detailHeader, "TextButton", { Size = UDim2.fromOffset(132, 36), Position = UDim2.fromOffset(0, 0), BackgroundColor3 = COLORS.panel, BorderSizePixel = 0, Text = "← Harvesters", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left })
-		mk(backButton, "UICorner", { CornerRadius = UDim.new(0, 6) })
-		mk(detailHeader, "TextLabel", { Size = UDim2.new(1, -140, 1, 0), Position = UDim2.fromOffset(140, 0), BackgroundTransparency = 1, Text = string.format("%s • +%s/s • %d/%d condiment slots", harvester.displayName, NumberUtil.FormatNumber(harvester.baseFoodPerSec or 0), #(slot.Condiments or {}), harvester.condimentSlots or 0), TextColor3 = COLORS.text, Font = Enum.Font.GothamBold, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left })
+		mk(backButton, "UICorner", { CornerRadius = UDim.new(0, 5) })
+		mk(backButton, "UIStroke", { Color = COLORS.stroke, Thickness = 2 })
+		mk(detailHeader, "TextLabel", { Size = UDim2.new(1, -140, 0, 20), Position = UDim2.fromOffset(140, 0), BackgroundTransparency = 1, Text = harvester.displayName, TextColor3 = COLORS.text, Font = Enum.Font.GothamBold, TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left })
+		mk(detailHeader, "TextLabel", { Size = UDim2.new(1, -140, 0, 16), Position = UDim2.fromOffset(140, 20), BackgroundTransparency = 1, Text = string.format("+%s/s • %d/%d condiment slots", NumberUtil.FormatNumber(harvester.baseFoodPerSec or 0), #(slot.Condiments or {}), harvester.condimentSlots or 0), TextColor3 = Color3.fromRGB(126, 149, 178), Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left })
 		backButton.Activated:Connect(function() state.mode = "main" refresh(contextRef, true) end)
 
-		local visual = mk(detailScroll, "Frame", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 290), BackgroundColor3 = Color3.fromRGB(31, 95, 150), BorderSizePixel = 0 })
+		local visual = mk(detailScroll, "Frame", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 290), BackgroundColor3 = Color3.fromRGB(3, 10, 20), BorderSizePixel = 0 })
 		mk(visual, "UICorner", { CornerRadius = UDim.new(0, 6) })
-		local center = mk(visual, "ImageLabel", { Size = UDim2.fromOffset(120, 120), Position = UDim2.new(0.5, -60, 0.5, -60), BackgroundColor3 = Color3.fromRGB(77, 129, 175), BackgroundTransparency = 0.4, BorderSizePixel = 0, Image = harvester.icon or "" })
+		local center = mk(visual, "ImageLabel", { Size = UDim2.fromOffset(120, 120), Position = UDim2.new(0.5, -60, 0.5, -60), BackgroundColor3 = Color3.fromRGB(44, 55, 72), BackgroundTransparency = 0.35, BorderSizePixel = 0, Image = harvester.icon or "" })
 		center.ScaleType = Enum.ScaleType.Fit
 		for i = 1, (harvester.condimentSlots or 0) do
 			local condId = slot.Condiments and slot.Condiments[i]
@@ -182,7 +184,7 @@ local function refresh(context, resetScroll: boolean?)
 			local col = (i - 1) % columns
 			local x = 0.1 + (col * (0.8 / math.max(columns - 1, 1)))
 			local y = 0.68 + (row * 0.13)
-			local slotBox = mk(visual, "ImageLabel", { Size = UDim2.fromOffset(34, 34), Position = UDim2.new(x, -17, y, -17), BackgroundColor3 = Color3.fromRGB(158, 198, 227), BorderSizePixel = 0, Image = condId and (GeneratorConfig.GetCondiment(condId) and GeneratorConfig.GetCondiment(condId).icon or "") or "", ScaleType = Enum.ScaleType.Fit })
+			local slotBox = mk(visual, "ImageLabel", { Size = UDim2.fromOffset(34, 34), Position = UDim2.new(x, -17, y, -17), BackgroundColor3 = Color3.fromRGB(175, 186, 201), BorderSizePixel = 0, Image = condId and (GeneratorConfig.GetCondiment(condId) and GeneratorConfig.GetCondiment(condId).icon or "") or "", ScaleType = Enum.ScaleType.Fit })
 			mk(slotBox, "UICorner", { CornerRadius = UDim.new(0, 4) })
 			if not condId then mk(visual, "TextLabel", { Size = UDim2.fromOffset(34, 34), Position = UDim2.new(x, -17, y, -17), BackgroundTransparency = 1, Text = "+", TextColor3 = Color3.fromRGB(133, 146, 163), Font = Enum.Font.GothamBold, TextSize = 18 }) end
 			if condId then
@@ -234,11 +236,11 @@ local function refresh(context, resetScroll: boolean?)
 			local h = GeneratorConfig.GetHarvester(slot.GeneratorId)
 			if h then
 				mk(card, "ImageLabel", { Size = UDim2.fromOffset(52, 52), Position = UDim2.new(0.5, -26, 0, 8), BackgroundTransparency = 1, Image = h.icon or "", ScaleType = Enum.ScaleType.Fit })
-				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 20), Position = UDim2.fromOffset(6, 64), BackgroundTransparency = 1, Text = h.displayName, TextColor3 = COLORS.text, Font = Enum.Font.GothamBold, TextSize = 16 })
+				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 20), Position = UDim2.fromOffset(6, 64), BackgroundTransparency = 1, Text = h.displayName, TextColor3 = Color3.fromRGB(248, 251, 255), Font = Enum.Font.GothamBold, TextSize = 17 })
 				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 18), Position = UDim2.fromOffset(6, 84), BackgroundTransparency = 1, Text = "+" .. NumberUtil.FormatNumber(slotOutput(slot)) .. "/s", TextColor3 = COLORS.positive, Font = Enum.Font.GothamBold, TextSize = 15 })
-				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 16), Position = UDim2.fromOffset(6, 102), BackgroundTransparency = 1, Text = string.format("%d/%d condiment slots", #(slot.Condiments or {}), h.condimentSlots or 0), TextColor3 = COLORS.muted, Font = Enum.Font.Gotham, TextSize = 13 })
-				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 16), Position = UDim2.fromOffset(6, 118), BackgroundTransparency = 1, Text = h.buffText or "", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 12 })
-				local upgradeButton = mk(card, "TextButton", { Size = UDim2.new(1, -12, 0, 24), Position = UDim2.new(0, 6, 1, -30), BackgroundColor3 = COLORS.upgradeButton, BorderSizePixel = 0, Text = "Upgrade", TextColor3 = Color3.fromRGB(12, 28, 45), Font = Enum.Font.GothamBold, TextSize = 14, ZIndex = 6 })
+				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 16), Position = UDim2.fromOffset(6, 102), BackgroundTransparency = 1, Text = string.format("%d/%d condiment slots", #(slot.Condiments or {}), h.condimentSlots or 0), TextColor3 = Color3.fromRGB(126, 149, 178), Font = Enum.Font.Gotham, TextSize = 12 })
+				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 16), Position = UDim2.fromOffset(6, 118), BackgroundTransparency = 1, Text = (h.buffText and h.buffText ~= "" and h.buffText) or "None", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 12 })
+				local upgradeButton = mk(card, "TextButton", { Size = UDim2.new(1, -12, 0, 24), Position = UDim2.new(0, 6, 1, -30), BackgroundColor3 = COLORS.upgradeButton, BorderSizePixel = 0, Text = "Upgrade", TextColor3 = Color3.fromRGB(12, 28, 45), Font = Enum.Font.GothamBold, TextSize = 14, TextStrokeTransparency = 1, ZIndex = 6 })
 				mk(upgradeButton, "UICorner", { CornerRadius = UDim.new(0, 5) })
 				mk(upgradeButton, "UIStroke", { Color = COLORS.upgradeButtonStroke, Thickness = 2 })
 				upgradeButton.Activated:Connect(function() context.Controllers.Generator.AutoUpgradeCondiments(i) end)
@@ -252,6 +254,8 @@ local function refresh(context, resetScroll: boolean?)
 				end)
 			end
 		else
+			mk(card, "UIStroke", { Color = Color3.fromRGB(88, 138, 186), Thickness = 1.5 })
+			mk(card, "Frame", { Size = UDim2.new(1, -12, 1, -12), Position = UDim2.fromOffset(6, 6), BackgroundColor3 = Color3.fromRGB(22, 41, 69), BackgroundTransparency = 0.25, BorderSizePixel = 0 })
 			mk(card, "TextButton", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(16, 29, 51), Text = "+ Add Harvester", TextColor3 = COLORS.cyan, Font = Enum.Font.GothamBold, TextSize = 20 }).Activated:Connect(function() setNotification("Select a harvester below") end)
 		end
 	end
