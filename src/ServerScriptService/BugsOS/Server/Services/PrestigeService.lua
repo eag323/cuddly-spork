@@ -58,6 +58,10 @@ function PrestigeService.GetPrestigeMultiplier(player: Player): number
 	return PrestigeConfig.GetMultiplier(prestige)
 end
 
+function PrestigeService.GetFoodMultiplier(player: Player): number
+	return PrestigeService.GetPrestigeMultiplier(player)
+end
+
 local function onPrestigeRequest(player: Player, payload: any): ()
 	if type(payload) ~= "table" or payload.Confirm ~= true then
 		return
