@@ -13,6 +13,7 @@ local RemoteNames: RemoteNameMap = {
 	Generator_BuyEquip = "Generator_BuyEquip",
 	Generator_Remove = "Generator_Remove",
 	Generator_BuyEquipCondiment = "Generator_BuyEquipCondiment",
+	Generator_RemoveCondiment = "Generator_RemoveCondiment",
 	Generator_AutoUpgradeCondiments = "Generator_AutoUpgradeCondiments",
 	Generator_InsertCore = "Generator_InsertCore",
 	Generator_RemoveCore = "Generator_RemoveCore",

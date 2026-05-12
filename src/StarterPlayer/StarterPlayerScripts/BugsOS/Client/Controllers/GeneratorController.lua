@@ -7,6 +7,7 @@ local context: { [string]: any }
 local buyEquipRemote: RemoteEvent
 local removeRemote: RemoteEvent
 local buyEquipCondimentRemote: RemoteEvent
+local removeCondimentRemote: RemoteEvent
 local autoUpgradeCondimentsRemote: RemoteEvent
 
 function GeneratorController.Init(initContext): ()
@@ -14,6 +15,7 @@ function GeneratorController.Init(initContext): ()
 	buyEquipRemote = context.Remotes.GeneratorBuyEquip
 	removeRemote = context.Remotes.GeneratorRemove
 	buyEquipCondimentRemote = context.Remotes.GeneratorBuyEquipCondiment
+	removeCondimentRemote = context.Remotes.GeneratorRemoveCondiment
 	autoUpgradeCondimentsRemote = context.Remotes.GeneratorAutoUpgradeCondiments
 end
 
@@ -27,6 +29,10 @@ end
 
 function GeneratorController.BuyEquipCondiment(slotIndex: number, condimentId: string): ()
 	buyEquipCondimentRemote:FireServer({ SlotIndex = slotIndex, CondimentId = condimentId })
+end
+
+function GeneratorController.RemoveCondiment(slotIndex: number, condimentSlotIndex: number): ()
+	removeCondimentRemote:FireServer({ SlotIndex = slotIndex, CondimentSlotIndex = condimentSlotIndex })
 end
 
 function GeneratorController.AutoUpgradeCondiments(slotIndex: number): ()

@@ -49,6 +49,44 @@ function Window.Create(props: WindowProps)
 	windowFrameImage.ZIndex = 0
 	windowFrameImage.Parent = rootFrame
 
+	local borderTop = Instance.new("Frame")
+	borderTop.Name = "BorderOverlayTop"
+	borderTop.Size = UDim2.new(1, -12, 0, 1)
+	borderTop.Position = UDim2.fromOffset(6, UITheme.Window.TitleBarHeight + 6)
+	borderTop.BorderSizePixel = 0
+	borderTop.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
+	borderTop.ZIndex = 3
+	borderTop.Parent = rootFrame
+
+	local borderLeft = Instance.new("Frame")
+	borderLeft.Name = "BorderOverlayLeft"
+	borderLeft.Size = UDim2.fromOffset(1, 1)
+	borderLeft.Position = UDim2.fromOffset(6, UITheme.Window.TitleBarHeight + 7)
+	borderLeft.AnchorPoint = Vector2.new(0, 0)
+	borderLeft.BorderSizePixel = 0
+	borderLeft.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
+	borderLeft.ZIndex = 3
+	borderLeft.Parent = rootFrame
+	borderLeft.Size = UDim2.new(0, 1, 1, -(UITheme.Window.TitleBarHeight + 14))
+
+	local borderRight = Instance.new("Frame")
+	borderRight.Name = "BorderOverlayRight"
+	borderRight.Size = UDim2.new(0, 1, 1, -(UITheme.Window.TitleBarHeight + 14))
+	borderRight.Position = UDim2.new(1, -7, 0, UITheme.Window.TitleBarHeight + 7)
+	borderRight.BorderSizePixel = 0
+	borderRight.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
+	borderRight.ZIndex = 3
+	borderRight.Parent = rootFrame
+
+	local borderBottom = Instance.new("Frame")
+	borderBottom.Name = "BorderOverlayBottom"
+	borderBottom.Size = UDim2.new(1, -12, 0, 1)
+	borderBottom.Position = UDim2.new(0, 6, 1, -7)
+	borderBottom.BorderSizePixel = 0
+	borderBottom.BackgroundColor3 = Color3.fromRGB(12, 16, 28)
+	borderBottom.ZIndex = 3
+	borderBottom.Parent = rootFrame
+
 	local titleBar = Instance.new("TextButton")
 	titleBar.Name = "TitleBar"
 	titleBar.Text = ""
@@ -224,6 +262,10 @@ function Window.Create(props: WindowProps)
 		setIfGui(windowFrameImage, z)
 		setIfGui(contentClipFrame, z + 2)
 		setIfGui(contentFrame, z + 2)
+		setIfGui(borderTop, z + 3)
+		setIfGui(borderLeft, z + 3)
+		setIfGui(borderRight, z + 3)
+		setIfGui(borderBottom, z + 3)
 		setIfGui(titleBar, z + 1)
 		titleBottomLine.ZIndex = z + 4
 		for _, gui in ipairs(titleBar:GetDescendants()) do
