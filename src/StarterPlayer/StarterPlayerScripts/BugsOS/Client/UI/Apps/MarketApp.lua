@@ -218,6 +218,7 @@ function MarketApp.Mount(target, context)
 	local contentRoot = Instance.new("ScrollingFrame")
 	contentRoot.Name = "ContentRoot"
 	contentRoot.Size = UDim2.fromScale(1, 1)
+	contentRoot.Position = UDim2.fromOffset(0, 0)
 	contentRoot.BackgroundTransparency = 1
 	contentRoot.BorderSizePixel = 0
 	contentRoot.ScrollBarThickness = 12

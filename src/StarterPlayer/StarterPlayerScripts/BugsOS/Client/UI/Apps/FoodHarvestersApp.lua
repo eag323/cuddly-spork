@@ -103,6 +103,28 @@ local function isClassUnlocked(ctx, classInfo)
 	return getPrestigeLevel(ctx) >= required, required
 end
 
+local function buildHarvesterSignature(context)
+	local data = getData(context)
+	local equipped = data.Equipped or {}
+	local slotParts = {}
+	for i = 1, (data.SlotsUnlocked or 3) do
+		local slot = equipped[i]
+		if type(slot) == "table" then
+			table.insert(slotParts, string.format("%d:%s:%d", i, tostring(slot.GeneratorId), #(slot.Condiments or {})))
+		else
+			table.insert(slotParts, string.format("%d:-:0", i))
+		end
+	end
+	return table.concat({
+		"mode=" .. tostring(state.mode),
+		"class=" .. tostring(state.selectedClass),
+		"slot=" .. tostring(state.selectedSlot),
+		"slots=" .. tostring(data.SlotsUnlocked or 3),
+		"equipped=" .. table.concat(slotParts, "|"),
+		"prestige=" .. tostring(getPrestigeLevel(context)),
+	}, ";")
+end
+
 local function refresh(context, resetScroll: boolean?)
 	if not root or not contentFrame then return end
 	contextRef = context
@@ -275,26 +297,7 @@ local function refresh(context, resetScroll: boolean?)
 end
 
 function FoodHarvestersApp.Refresh(context)
-	local data = getData(context)
-	local equipped = data.Equipped or {}
-	local slotParts = {}
-	for i = 1, (data.SlotsUnlocked or 3) do
-		local slot = equipped[i]
-		if type(slot) == "table" then
-			table.insert(slotParts, string.format("%d:%s:%d", i, tostring(slot.GeneratorId), #(slot.Condiments or {})))
-		else
-			table.insert(slotParts, string.format("%d:-:0", i))
-		end
-	end
-	local prestige = tostring(getPrestigeLevel(context))
-	local signature = table.concat({
-		state.mode,
-		tostring(state.selectedClass),
-		tostring(state.selectedSlot),
-		tostring(data.SlotsUnlocked or 3),
-		table.concat(slotParts, "|"),
-		prestige,
-	}, ";")
+	local signature = buildHarvesterSignature(context)
 	if signature == lastRefreshSignature then
 		return
 	end
@@ -305,7 +308,7 @@ end
 function FoodHarvestersApp.Mount(target, context)
 	if root then return end
 	windowRef = Window.Create({ Title = "Food Harvesters.exe", IconImage = UIAssets.AppIconImages.FoodHarvesters, Size = UDim2.fromOffset(860, 640), Position = UDim2.fromScale(0.1, 0.08), Parent = target, OnClose = function() context.Controllers.Window.Close("FoodHarvesters") end })
-	root = mk(windowRef.Content, "Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = COLORS.background, BorderSizePixel = 0 })
+	root = mk(windowRef.Content, "Frame", { Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, 0), BackgroundColor3 = COLORS.background, BorderSizePixel = 0 })
 	mk(root, "UIPadding", { PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 8) })
 	contentFrame = mk(root, "Frame", { Size = UDim2.new(1, 0, 1, -28), BackgroundTransparency = 1, BorderSizePixel = 0 })
 	notificationLabel = mk(root, "TextLabel", { Size = UDim2.new(1, 0, 0, 22), Position = UDim2.new(0, 0, 1, -22), BackgroundTransparency = 1, Text = "", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left })
