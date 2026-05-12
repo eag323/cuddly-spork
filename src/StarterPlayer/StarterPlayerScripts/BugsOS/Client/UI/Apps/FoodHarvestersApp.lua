@@ -14,6 +14,7 @@ local contentFrame: Frame?
 local notificationLabel: TextLabel?
 local contextRef
 local mainScrollRef: ScrollingFrame?
+local lastRefreshSignature: string? = nil
 
 local state = {
 	mode = "main" :: "main" | "detail",
@@ -107,6 +108,7 @@ local function refresh(context, resetScroll: boolean?)
 	contextRef = context
 	local previousCanvasPosition = if mainScrollRef then mainScrollRef.CanvasPosition else Vector2.zero
 	local previousMode = state.mode
+	local previousClass = state.selectedClass
 	clear(contentFrame)
 	mainScrollRef = nil
 	local data = getData(context)
@@ -132,9 +134,9 @@ local function refresh(context, resetScroll: boolean?)
 		mk(detailScroll, "UIPadding", { PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 10) })
 		mk(detailScroll, "UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })
 
-		mk(detailScroll, "TextButton", { Size = UDim2.new(1, 0, 0, 36), BackgroundColor3 = COLORS.panel, BorderSizePixel = 0, Text = string.format("← Harvesters    %s • +%s/s • %d/%d slots", harvester.displayName, NumberUtil.FormatNumber(harvester.baseFoodPerSec or 0), #(slot.Condiments or {}), harvester.condimentSlots or 0), TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left }).Activated:Connect(function() state.mode = "main" refresh(contextRef, true) end)
+		mk(detailScroll, "TextButton", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 36), BackgroundColor3 = COLORS.panel, BorderSizePixel = 0, Text = string.format("← Harvesters    %s • +%s/s • %d/%d slots", harvester.displayName, NumberUtil.FormatNumber(harvester.baseFoodPerSec or 0), #(slot.Condiments or {}), harvester.condimentSlots or 0), TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left }).Activated:Connect(function() state.mode = "main" refresh(contextRef, true) end)
 
-		local visual = mk(detailScroll, "Frame", { Size = UDim2.new(1, 0, 0, 290), BackgroundColor3 = Color3.fromRGB(31, 95, 150), BorderSizePixel = 0 })
+		local visual = mk(detailScroll, "Frame", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 290), BackgroundColor3 = Color3.fromRGB(31, 95, 150), BorderSizePixel = 0 })
 		mk(visual, "UICorner", { CornerRadius = UDim.new(0, 6) })
 		local center = mk(visual, "ImageLabel", { Size = UDim2.fromOffset(120, 120), Position = UDim2.new(0.5, -60, 0.5, -60), BackgroundColor3 = Color3.fromRGB(77, 129, 175), BackgroundTransparency = 0.4, BorderSizePixel = 0, Image = harvester.icon or "" })
 		center.ScaleType = Enum.ScaleType.Fit
@@ -148,13 +150,20 @@ local function refresh(context, resetScroll: boolean?)
 			local slotBox = mk(visual, "ImageLabel", { Size = UDim2.fromOffset(34, 34), Position = UDim2.new(x, -17, y, -17), BackgroundColor3 = Color3.fromRGB(158, 198, 227), BorderSizePixel = 0, Image = condId and (GeneratorConfig.GetCondiment(condId) and GeneratorConfig.GetCondiment(condId).icon or "") or "", ScaleType = Enum.ScaleType.Fit })
 			mk(slotBox, "UICorner", { CornerRadius = UDim.new(0, 4) })
 			if not condId then mk(visual, "TextLabel", { Size = UDim2.fromOffset(34, 34), Position = UDim2.new(x, -17, y, -17), BackgroundTransparency = 1, Text = "+", TextColor3 = Color3.fromRGB(133, 146, 163), Font = Enum.Font.GothamBold, TextSize = 18 }) end
+			if condId then
+				mk(slotBox, "TextButton", { Size = UDim2.fromOffset(14, 14), Position = UDim2.new(1, -12, 0, -2), BackgroundColor3 = Color3.fromRGB(220, 84, 84), BorderSizePixel = 0, Text = "❌", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 8, ZIndex = 5 }).Activated:Connect(function()
+					context.Controllers.Generator.RemoveCondiment(state.selectedSlot, i)
+				end)
+			end
 		end
 
-		mk(detailScroll, "TextLabel", { Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = string.format("CONDIMENTS (%d/%d slots)", #(slot.Condiments or {}), harvester.condimentSlots or 0), TextColor3 = COLORS.text, Font = Enum.Font.GothamBold, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left })
+		mk(detailScroll, "TextLabel", { LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = string.format("CONDIMENTS (%d/%d slots)", #(slot.Condiments or {}), harvester.condimentSlots or 0), TextColor3 = COLORS.text, Font = Enum.Font.GothamBold, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left })
+		local condimentList = mk(detailScroll, "Frame", { LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y })
+		mk(condimentList, "UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
 		for _, condiment in ipairs(GeneratorConfig.GetCondimentsSorted()) do
 			local count = 0
 			for _, id in ipairs(slot.Condiments or {}) do if id == condiment.id then count += 1 end end
-			buildHarvesterRow(detailScroll, { displayName = condiment.displayName, baseFoodPerSec = condiment.foodPerSec, condimentSlots = count, buffText = "x" .. tostring(count), cost = condiment.cost, icon = condiment.icon }, function()
+			buildHarvesterRow(condimentList, { displayName = condiment.displayName, baseFoodPerSec = condiment.foodPerSec, condimentSlots = count, buffText = "x" .. tostring(count), cost = condiment.cost, icon = condiment.icon }, function()
 				if #(slot.Condiments or {}) >= (harvester.condimentSlots or 0) then setNotification("No empty condiment slots") return end
 				context.Controllers.Generator.BuyEquipCondiment(state.selectedSlot, condiment.id)
 			end)
@@ -191,11 +200,11 @@ local function refresh(context, resetScroll: boolean?)
 				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 18), Position = UDim2.fromOffset(6, 84), BackgroundTransparency = 1, Text = "+" .. NumberUtil.FormatNumber(slotOutput(slot)) .. "/s", TextColor3 = COLORS.positive, Font = Enum.Font.GothamBold, TextSize = 15 })
 				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 16), Position = UDim2.fromOffset(6, 102), BackgroundTransparency = 1, Text = string.format("%d/%d condiment slots", #(slot.Condiments or {}), h.condimentSlots or 0), TextColor3 = COLORS.muted, Font = Enum.Font.Gotham, TextSize = 13 })
 				mk(card, "TextLabel", { Size = UDim2.new(1, -12, 0, 16), Position = UDim2.fromOffset(6, 118), BackgroundTransparency = 1, Text = h.buffText or "", TextColor3 = COLORS.buff, Font = Enum.Font.GothamBold, TextSize = 12 })
-				mk(card, "TextButton", { Size = UDim2.new(1, -12, 0, 24), Position = UDim2.new(0, 6, 1, -30), BackgroundColor3 = COLORS.button, BorderSizePixel = 0, Text = "Upgrade", TextColor3 = Color3.fromRGB(12, 35, 26), Font = Enum.Font.GothamBold, TextSize = 14 }).Activated:Connect(function() context.Controllers.Generator.AutoUpgradeCondiments(i) end)
-				mk(card, "TextButton", { Size = UDim2.fromOffset(18, 18), Position = UDim2.new(1, -22, 0, 4), BackgroundTransparency = 1, Text = "🗑", TextSize = 14, ZIndex = 4 }).Activated:Connect(function()
+				mk(card, "TextButton", { Size = UDim2.new(1, -12, 0, 24), Position = UDim2.new(0, 6, 1, -30), BackgroundColor3 = COLORS.button, BorderSizePixel = 0, Text = "Upgrade", TextColor3 = Color3.fromRGB(12, 35, 26), Font = Enum.Font.GothamBold, TextSize = 14, ZIndex = 4 }).Activated:Connect(function() context.Controllers.Generator.AutoUpgradeCondiments(i) end)
+				mk(card, "TextButton", { Size = UDim2.fromOffset(18, 18), Position = UDim2.new(1, -22, 0, 4), BackgroundTransparency = 1, Text = "🗑", TextSize = 14, ZIndex = 5 }).Activated:Connect(function()
 					context.Controllers.Generator.Remove(i)
 				end)
-				mk(card, "TextButton", { Size = UDim2.new(1, -12, 1, -38), Position = UDim2.fromOffset(6, 4), BackgroundTransparency = 1, Text = "", ZIndex = 1 }).Activated:Connect(function()
+				mk(card, "TextButton", { Size = UDim2.new(1, -34, 1, -38), Position = UDim2.fromOffset(6, 4), BackgroundTransparency = 1, Text = "", ZIndex = 1 }).Activated:Connect(function()
 					state.mode = "detail"
 					state.selectedSlot = i
 					refresh(contextRef, true)
@@ -256,7 +265,7 @@ local function refresh(context, resetScroll: boolean?)
 
 	list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() gridWrap.Size = UDim2.new(1, 0, 0, math.max(180, grid.AbsoluteContentSize.Y)) end)
 	gridWrap.Size = UDim2.new(1, 0, 0, math.max(180, grid.AbsoluteContentSize.Y))
-	if previousMode == "main" and state.mode == "main" and not resetScroll then
+	if previousMode == "main" and state.mode == "main" and state.selectedClass == previousClass and not resetScroll then
 		task.defer(function()
 			if mainScrollRef == scroll then
 				scroll.CanvasPosition = previousCanvasPosition
@@ -266,6 +275,30 @@ local function refresh(context, resetScroll: boolean?)
 end
 
 function FoodHarvestersApp.Refresh(context)
+	local data = getData(context)
+	local equipped = data.Equipped or {}
+	local slotParts = {}
+	for i = 1, (data.SlotsUnlocked or 3) do
+		local slot = equipped[i]
+		if type(slot) == "table" then
+			table.insert(slotParts, string.format("%d:%s:%d", i, tostring(slot.GeneratorId), #(slot.Condiments or {})))
+		else
+			table.insert(slotParts, string.format("%d:-:0", i))
+		end
+	end
+	local prestige = tostring(getPrestigeLevel(context))
+	local signature = table.concat({
+		state.mode,
+		tostring(state.selectedClass),
+		tostring(state.selectedSlot),
+		tostring(data.SlotsUnlocked or 3),
+		table.concat(slotParts, "|"),
+		prestige,
+	}, ";")
+	if signature == lastRefreshSignature then
+		return
+	end
+	lastRefreshSignature = signature
 	refresh(context)
 end
 
@@ -290,6 +323,7 @@ function FoodHarvestersApp.Unmount()
 	contextRef = nil
 	state.mode = "main"
 	state.selectedSlot = nil
+	lastRefreshSignature = nil
 end
 
 return FoodHarvestersApp

@@ -47,6 +47,7 @@ local requiredRemoteNames = {
 	GeneratorBuyEquip = RemoteNames.Generator_BuyEquip,
 	GeneratorRemove = RemoteNames.Generator_Remove,
 	GeneratorBuyEquipCondiment = RemoteNames.Generator_BuyEquipCondiment,
+	GeneratorRemoveCondiment = RemoteNames.Generator_RemoveCondiment,
 	GeneratorAutoUpgradeCondiments = RemoteNames.Generator_AutoUpgradeCondiments,
 	PrestigeRequest = RemoteNames.Prestige_Request,
 	NotificationPush = RemoteNames.Notification_Push,

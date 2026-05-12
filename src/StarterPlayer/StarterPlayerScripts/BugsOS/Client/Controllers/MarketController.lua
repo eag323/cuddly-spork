@@ -93,7 +93,7 @@ function MarketController.Start(): ()
 		end
 		passiveAccumulatedFood = 0
 		passiveFlushAt = os.clock() + PASSIVE_FEEDBACK_WINDOW
-		refreshAll()
+		refreshForPatch(payload.Path)
 		if context.Events and context.Events.StateChanged then
 			context.Events.StateChanged:Fire(context.State.PlayerData)
 		end

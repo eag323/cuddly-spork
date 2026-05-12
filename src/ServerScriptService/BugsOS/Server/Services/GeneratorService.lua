@@ -27,6 +27,7 @@ local generatorBuyEquipRemote: RemoteEvent? = nil
 local generatorEquipLegacyRemote: RemoteEvent? = nil
 local generatorRemoveRemote: RemoteEvent? = nil
 local generatorCondimentRemote: RemoteEvent? = nil
+local generatorRemoveCondimentRemote: RemoteEvent? = nil
 local generatorAutoUpgradeRemote: RemoteEvent? = nil
 local generatorUpgradeRemote: RemoteEvent? = nil -- deprecated compatibility
 local notificationPushRemote: RemoteEvent? = nil
@@ -185,6 +186,22 @@ local function onAutoUpgrade(player, payload)
 	end
 end
 
+local function onRemoveCondiment(player, payload)
+	local data = ProfileService.GetPlayerData(player); if not data then return end
+	ensureGeneratorDataShape(data)
+	if type(payload) ~= "table" then return end
+	local slotIndex, slotErr = validateSlot(data, payload.SlotIndex); if not slotIndex then pushNotification(player, "Could not remove condiment: " .. slotErr, "Warning"); return end
+	local slotData = data.Generators.Equipped[slotIndex]
+	if type(slotData) ~= "table" then pushNotification(player, "Could not remove condiment: empty slot.", "Warning"); return end
+	if type(slotData.Condiments) ~= "table" then slotData.Condiments = {} end
+	local condimentSlotIndex = tonumber(payload.CondimentSlotIndex)
+	if not condimentSlotIndex then pushNotification(player, "Could not remove condiment: invalid slot.", "Warning"); return end
+	condimentSlotIndex = math.floor(condimentSlotIndex)
+	if condimentSlotIndex < 1 or condimentSlotIndex > #slotData.Condiments then pushNotification(player, "Could not remove condiment: invalid slot.", "Warning"); return end
+	table.remove(slotData.Condiments, condimentSlotIndex)
+	patchGenerators(player, data.Generators)
+end
+
 function GeneratorService.CalculateTotalFoodPerSecond(player)
 	local data = ProfileService.GetPlayerData(player); if not data then return 0 end
 	ensureGeneratorDataShape(data)
@@ -223,6 +240,7 @@ function GeneratorService.Init()
 	generatorEquipLegacyRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Equip or "Generator_Equip")
 	generatorRemoveRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Remove or "Generator_Remove")
 	generatorCondimentRemote = getOrCreateRemoteEvent(RemoteNames.Generator_BuyEquipCondiment or "Generator_BuyEquipCondiment")
+	generatorRemoveCondimentRemote = getOrCreateRemoteEvent(RemoteNames.Generator_RemoveCondiment or "Generator_RemoveCondiment")
 	generatorAutoUpgradeRemote = getOrCreateRemoteEvent(RemoteNames.Generator_AutoUpgradeCondiments or "Generator_AutoUpgradeCondiments")
 	generatorUpgradeRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Upgrade or "Generator_Upgrade")
 	notificationPushRemote = getOrCreateRemoteEvent(RemoteNames.Notification_Push or "Notification_Push")
@@ -233,6 +251,7 @@ function GeneratorService.Start()
 	if generatorEquipLegacyRemote then generatorEquipLegacyRemote.OnServerEvent:Connect(onBuyEquip) end
 	if generatorRemoveRemote then generatorRemoveRemote.OnServerEvent:Connect(onRemove) end
 	if generatorCondimentRemote then generatorCondimentRemote.OnServerEvent:Connect(onBuyEquipCondiment) end
+	if generatorRemoveCondimentRemote then generatorRemoveCondimentRemote.OnServerEvent:Connect(onRemoveCondiment) end
 	if generatorAutoUpgradeRemote then generatorAutoUpgradeRemote.OnServerEvent:Connect(onAutoUpgrade) end
 	if generatorUpgradeRemote then generatorUpgradeRemote.OnServerEvent:Connect(onAutoUpgrade) end
 	startPassiveLoop()
