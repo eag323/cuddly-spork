@@ -31,8 +31,8 @@ local generatorUpgradeRemote: RemoteEvent? = nil -- deprecated compatibility
 local notificationPushRemote: RemoteEvent? = nil
 local passiveLoopRunning = false
 
-local harvesterById = GeneratorConfig.Harvesters
-local condimentById = GeneratorConfig.Condiments
+local harvesterById = if type(GeneratorConfig.Harvesters) == "table" then GeneratorConfig.Harvesters else {}
+local condimentById = if type(GeneratorConfig.Condiments) == "table" then GeneratorConfig.Condiments else {}
 
 local function getOrCreateRemoteEvent(remoteName: string): RemoteEvent
 	local existing = RemotesFolder:FindFirstChild(remoteName)
@@ -199,10 +199,12 @@ local function startPassiveLoop()
 end
 
 function GeneratorService.Init()
-	assert(type(GeneratorConfig.Classes) == "table", "GeneratorConfig.Classes missing")
-	assert(type(GeneratorConfig.Harvesters) == "table", "GeneratorConfig.Harvesters missing")
-	assert(type(GeneratorConfig.Condiments) == "table", "GeneratorConfig.Condiments missing")
-	assert(GeneratorConfig.Generators == GeneratorConfig.Harvesters, "GeneratorConfig.Generators must alias Harvesters")
+	if type(GeneratorConfig.Classes) ~= "table" then warn("[GeneratorService] GeneratorConfig.Classes missing; class-filtered UI may be unavailable") end
+	if type(GeneratorConfig.Harvesters) ~= "table" then warn("[GeneratorService] GeneratorConfig.Harvesters missing; harvesters disabled") end
+	if type(GeneratorConfig.Condiments) ~= "table" then warn("[GeneratorService] GeneratorConfig.Condiments missing; condiments disabled") end
+	if GeneratorConfig.Generators and GeneratorConfig.Harvesters and GeneratorConfig.Generators ~= GeneratorConfig.Harvesters then
+		warn("[GeneratorService] GeneratorConfig.Generators is not aliased to Harvesters")
+	end
 	generatorEquipRemote = getOrCreateRemoteEvent(RemoteNames.Generator_BuyEquip or "Generator_BuyEquip")
 	generatorRemoveRemote = getOrCreateRemoteEvent(RemoteNames.Generator_Remove or "Generator_Remove")
 	generatorCondimentRemote = getOrCreateRemoteEvent(RemoteNames.Generator_BuyEquipCondiment or "Generator_BuyEquipCondiment")
