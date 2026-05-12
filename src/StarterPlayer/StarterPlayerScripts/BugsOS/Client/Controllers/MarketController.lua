@@ -59,6 +59,25 @@ local function refreshAll(): ()
 	context.Controllers.Generator.Refresh()
 end
 
+local function refreshForPatch(path: { any }): ()
+	context.Controllers.CurrencyHUD.Refresh()
+
+	local root = path[1]
+	local key = path[2]
+
+	if root == "Market" then
+		MarketApp.Refresh(context)
+	end
+
+	if root == "Upgrades" or root == "ClickTools" or (root == "Currencies" and key == "Coins") then
+		context.Controllers.Upgrade.Refresh()
+	end
+
+	if root == "Generators" or root == "Prestige" then
+		context.Controllers.Generator.Refresh()
+	end
+end
+
 function MarketController.Init(initContext): ()
 	context = initContext
 end
