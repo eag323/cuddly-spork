@@ -6,11 +6,50 @@ local UITheme = require(script.Parent.Parent:WaitForChild("UITheme"))
 local Window = {}
 local TITLE_BAR_LEFT = Color3.fromRGB(0, 3, 129)
 local TITLE_BAR_RIGHT = Color3.fromRGB(15, 131, 207)
-local OUTER_BORDER = 4
+local OUTER_BORDER = 6
 local TITLE_BAR_HEIGHT = 28
 local CONTENT_TOP = OUTER_BORDER + TITLE_BAR_HEIGHT
 local WINDOW_FRAME_IMAGE = "rbxassetid://138529502428069"
 local WINDOW_BUTTON_IMAGE = "rbxassetid://128179488793090"
+
+
+local function createFrameBorderOverlay(rootFrame: Frame, zIndex: number): { ImageLabel }
+	local SOURCE_SIZE = 64
+	local BORDER = OUTER_BORDER
+	local EDGE_SIZE = SOURCE_SIZE - (BORDER * 2)
+	local pieces = {}
+
+	local function createPiece(name: string, position: UDim2, size: UDim2, rectOffset: Vector2, rectSize: Vector2)
+		local piece = Instance.new("ImageLabel")
+		piece.Name = name
+		piece.Position = position
+		piece.Size = size
+		piece.BackgroundTransparency = 1
+		piece.BorderSizePixel = 0
+		piece.Image = WINDOW_FRAME_IMAGE
+		piece.ScaleType = Enum.ScaleType.Stretch
+		piece.ImageRectOffset = rectOffset
+		piece.ImageRectSize = rectSize
+		piece.ZIndex = zIndex
+		piece.Active = false
+		piece.Selectable = false
+		piece.Parent = rootFrame
+		table.insert(pieces, piece)
+		return piece
+	end
+
+	createPiece("FrameTopLeft", UDim2.fromOffset(0, 0), UDim2.fromOffset(BORDER, BORDER), Vector2.new(0, 0), Vector2.new(BORDER, BORDER))
+	createPiece("FrameTopRight", UDim2.new(1, -BORDER, 0, 0), UDim2.fromOffset(BORDER, BORDER), Vector2.new(SOURCE_SIZE - BORDER, 0), Vector2.new(BORDER, BORDER))
+	createPiece("FrameBottomLeft", UDim2.new(0, 0, 1, -BORDER), UDim2.fromOffset(BORDER, BORDER), Vector2.new(0, SOURCE_SIZE - BORDER), Vector2.new(BORDER, BORDER))
+	createPiece("FrameBottomRight", UDim2.new(1, -BORDER, 1, -BORDER), UDim2.fromOffset(BORDER, BORDER), Vector2.new(SOURCE_SIZE - BORDER, SOURCE_SIZE - BORDER), Vector2.new(BORDER, BORDER))
+
+	createPiece("FrameTop", UDim2.fromOffset(BORDER, 0), UDim2.new(1, -(BORDER * 2), 0, BORDER), Vector2.new(BORDER, 0), Vector2.new(EDGE_SIZE, BORDER))
+	createPiece("FrameBottom", UDim2.new(0, BORDER, 1, -BORDER), UDim2.new(1, -(BORDER * 2), 0, BORDER), Vector2.new(BORDER, SOURCE_SIZE - BORDER), Vector2.new(EDGE_SIZE, BORDER))
+	createPiece("FrameLeft", UDim2.new(0, 0, 0, BORDER), UDim2.new(0, BORDER, 1, -(BORDER * 2)), Vector2.new(0, BORDER), Vector2.new(BORDER, EDGE_SIZE))
+	createPiece("FrameRight", UDim2.new(1, -BORDER, 0, BORDER), UDim2.new(0, BORDER, 1, -(BORDER * 2)), Vector2.new(SOURCE_SIZE - BORDER, BORDER), Vector2.new(BORDER, EDGE_SIZE))
+
+	return pieces
+end
 
 export type WindowProps = {
 	Title: string?,
@@ -45,19 +84,7 @@ function Window.Create(props: WindowProps)
 	contentClipFrame.ZIndex = 10
 	contentClipFrame.Parent = rootFrame
 
-	local windowFrameImage = Instance.new("ImageLabel")
-	windowFrameImage.Name = "WindowFrameOverlay"
-	windowFrameImage.Size = UDim2.fromScale(1, 1)
-	windowFrameImage.BackgroundTransparency = 1
-	windowFrameImage.Image = WINDOW_FRAME_IMAGE
-	windowFrameImage.ScaleType = Enum.ScaleType.Slice
-	windowFrameImage.SliceCenter = Rect.new(6, 6, 58, 58)
-	windowFrameImage.Position = UDim2.fromOffset(0, 0)
-	windowFrameImage.BorderSizePixel = 0
-	windowFrameImage.Active = false
-	windowFrameImage.Selectable = false
-	windowFrameImage.ZIndex = 30
-	windowFrameImage.Parent = rootFrame
+	local frameBorderPieces = createFrameBorderOverlay(rootFrame, 30)
 
 
 	local titleBar = Instance.new("TextButton")
@@ -232,7 +259,9 @@ function Window.Create(props: WindowProps)
 				gui.ZIndex = z + 19
 			end
 		end
-		windowFrameImage.ZIndex = z + 29
+		for _, piece in ipairs(frameBorderPieces) do
+			piece.ZIndex = z + 29
+		end
 		appIcon.ZIndex = z + 39
 		fallbackIcon.ZIndex = z + 39
 		titleLabel.ZIndex = z + 39
