@@ -226,9 +226,28 @@ local function onAutoUpgrade(player, payload)
 	end
 	if upgrades > 0 then
 		patchGenerators(player, data.Generators)
-		pushNotification(player, string.format("Applied %d condiment upgrade(s).", upgrades), "Success")
+		pushNotification(player, "Condiments upgraded.", "Success")
 	else
-		pushNotification(player, "No affordable condiment upgrades available.", "Warning")
+		local maxValue = 0
+		for _, condiment in pairs(condimentById) do
+			maxValue = math.max(maxValue, tonumber(condiment.foodPerSec) or 0)
+		end
+		local allBest = #slotData.Condiments >= maxSlots and maxSlots > 0
+		if allBest then
+			for _, condimentId in ipairs(slotData.Condiments) do
+				local condiment = condimentById[condimentId]
+				local value = tonumber(condiment and condiment.foodPerSec) or 0
+				if value < maxValue then
+					allBest = false
+					break
+				end
+			end
+		end
+		if allBest then
+			pushNotification(player, "Already using best condiments.", "Info")
+		else
+			pushNotification(player, "Not enough coins.", "Warning")
+		end
 	end
 end
 
