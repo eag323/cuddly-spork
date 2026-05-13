@@ -17,7 +17,6 @@ local milestoneLabel
 local listFrame
 local stateChangedConn
 
-local rarityOrder = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" }
 
 local rarityColors = {
 	Common = Color3.fromRGB(185, 185, 185),
@@ -30,6 +29,88 @@ local rarityColors = {
 
 local function getRarityColor(rarity: string): Color3
 	return rarityColors[rarity] or Color3.fromRGB(210, 210, 210)
+end
+
+local function getRarityOrderIndex(rarity: string): number
+	local configuredOrder = BugConfig.RarityOrder
+	if type(configuredOrder) == "table" then
+		local fromConfig = tonumber(configuredOrder[rarity])
+		if fromConfig then
+			return fromConfig
+		end
+	end
+
+	local fallbackOrder = {
+		Common = 1,
+		Uncommon = 2,
+		Rare = 3,
+		Epic = 4,
+		Legendary = 5,
+		Mythic = 6,
+	}
+	return fallbackOrder[rarity] or math.huge
+end
+
+local function getBugdexCatalog()
+	if type(BugConfig.GetAllBugs) == "function" then
+		return BugConfig.GetAllBugs()
+	end
+
+	if type(BugConfig.Bugs) == "table" then
+		local list = {}
+		for _, bug in pairs(BugConfig.Bugs) do
+			table.insert(list, bug)
+		end
+		table.sort(list, function(a, b)
+			local rarityA = getRarityOrderIndex(tostring(a.rarity))
+			local rarityB = getRarityOrderIndex(tostring(b.rarity))
+			if rarityA ~= rarityB then
+				return rarityA < rarityB
+			end
+			local speciesA = tostring(a.species or "")
+			local speciesB = tostring(b.species or "")
+			if speciesA ~= speciesB then
+				return speciesA < speciesB
+			end
+			return tostring(a.displayName or a.id) < tostring(b.displayName or b.id)
+		end)
+		return list
+	end
+
+	warn("[BugdexApp] BugConfig catalog missing. Falling back to empty display list.")
+	return {}
+end
+
+local function isBugDiscovered(playerData, bugId: string, caughtCount: number): boolean
+	if caughtCount > 0 then
+		return true
+	end
+
+	local bugdexData = playerData.Bugdex
+	if type(bugdexData) == "table" then
+		local discovered = bugdexData.Discovered
+		if type(discovered) == "table" and discovered[bugId] == true then
+			return true
+		end
+		if bugdexData[bugId] == true then
+			return true
+		end
+	end
+
+	local bugsData = playerData.Bugs
+	if type(bugsData) == "table" then
+		local discovered = bugsData.Discovered
+		if type(discovered) == "table" and discovered[bugId] == true then
+			return true
+		end
+	end
+
+	local discoveredBugs = playerData.DiscoveredBugs
+	if type(discoveredBugs) == "table" and discoveredBugs[bugId] == true then
+		return true
+	end
+
+	return false
 end
 
 local function makeProgressBar(parent: Instance, percent: number, color: Color3)
@@ -76,32 +157,41 @@ local function refresh(context)
 	local playerData = context.State.PlayerData or {}
 	local bugdexData = playerData.Bugdex or {}
 	local totalsBySpecies = bugdexData.TotalCaughtBySpecies or {}
-	local totalSpecies = #BugConfig.Species
+	local bugs = getBugdexCatalog()
+	local totalSpecies = #bugs
 	local discovered = 0
 	local totalCaught = 0
 	local groups = {}
-
-	for _, rarity in ipairs(rarityOrder) do
-		groups[rarity] = { total = 0, discovered = 0, entries = {} }
-	end
-
-	for _, species in ipairs(BugConfig.Species) do
-		local count = tonumber(totalsBySpecies[species.id]) or 0
-		local rarity = tostring(species.rarity)
-		local group = groups[rarity]
-		if group then
-			group.total += 1
-			if count > 0 then
-				group.discovered += 1
-			end
-			table.insert(group.entries, { species = species, count = count })
+	for _, bug in ipairs(bugs) do
+		local rarity = tostring(bug.rarity or "Common")
+		if groups[rarity] == nil then
+			groups[rarity] = { rarity = rarity, total = 0, discovered = 0, entries = {} }
 		end
-
-		if count > 0 then
+		local group = groups[rarity]
+		local bugId = tostring(bug.id or "")
+		local count = tonumber(totalsBySpecies[bugId]) or 0
+		local discoveredEntry = isBugDiscovered(playerData, bugId, count)
+		group.total += 1
+		if discoveredEntry then
+			group.discovered += 1
 			discovered += 1
 		end
 		totalCaught += count
+		table.insert(group.entries, { bug = bug, count = count, discovered = discoveredEntry })
 	end
+
+	local rarityOrder = {}
+	for rarity, _ in pairs(groups) do
+		table.insert(rarityOrder, rarity)
+	end
+	table.sort(rarityOrder, function(a, b)
+		local orderA = getRarityOrderIndex(a)
+		local orderB = getRarityOrderIndex(b)
+		if orderA ~= orderB then
+			return orderA < orderB
+		end
+		return a < b
+	end)
 
 	local completion = if totalSpecies > 0 then math.floor((discovered / totalSpecies) * 1000 + 0.5) / 10 else 0
 	summaryLabel.Text = string.format(
@@ -153,6 +243,13 @@ local function refresh(context)
 			local sectionPercent = if group.total > 0 then group.discovered / group.total else 0
 			makeProgressBar(section, sectionPercent, getRarityColor(rarity))
 
+			table.sort(group.entries, function(a, b)
+				local speciesA = tostring(a.bug.species or "")
+				local speciesB = tostring(b.bug.species or "")
+				if speciesA ~= speciesB then return speciesA < speciesB end
+				return tostring(a.bug.displayName or a.bug.id) < tostring(b.bug.displayName or b.bug.id)
+			end)
+
 			for _, entry in ipairs(group.entries) do
 				local row = Instance.new("Frame")
 				row.Size = UDim2.new(1, 0, 0, 44)
@@ -160,18 +257,25 @@ local function refresh(context)
 				row.BorderSizePixel = 0
 				row.Parent = section
 
-				local discoveredEntry = entry.count > 0
+				local discoveredEntry = entry.discovered == true
 				if not discoveredEntry then
 					row.BackgroundTransparency = 0.35
 				end
 
-				local iconLabel = Instance.new("TextLabel")
-				iconLabel.Size = UDim2.fromOffset(22, 22)
-				iconLabel.Position = UDim2.fromOffset(6, 11)
+				local iconLabel = Instance.new("ImageLabel")
+				iconLabel.Size = UDim2.fromOffset(28, 28)
+				iconLabel.Position = UDim2.fromOffset(8, 8)
 				iconLabel.BackgroundTransparency = 1
-				iconLabel.TextSize = 16
-				iconLabel.TextColor3 = if discoveredEntry then Color3.fromRGB(225, 225, 225) else Color3.fromRGB(95, 95, 95)
-				iconLabel.Text = if discoveredEntry then "[]" else "##"
+				iconLabel.ScaleType = Enum.ScaleType.Fit
+				local icon = entry.bug.icon or "rbxassetid://0"
+				iconLabel.Image = icon
+				if discoveredEntry then
+					iconLabel.ImageColor3 = Color3.new(1, 1, 1)
+					iconLabel.ImageTransparency = 0
+				else
+					iconLabel.ImageColor3 = Color3.fromRGB(0, 0, 0)
+					iconLabel.ImageTransparency = 0.2
+				end
 				iconLabel.Parent = row
 
 				local nameLabel = Instance.new("TextLabel")
@@ -181,7 +285,7 @@ local function refresh(context)
 				nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 				nameLabel.TextColor3 = if discoveredEntry then Color3.new(1, 1, 1) else Color3.fromRGB(140, 140, 140)
 				nameLabel.TextSize = 15
-				nameLabel.Text = if discoveredEntry then tostring(entry.species.displayName) else "???"
+				nameLabel.Text = if discoveredEntry then tostring(entry.bug.displayName) else "???"
 				nameLabel.Parent = row
 
 				local rarityLabel = Instance.new("TextLabel")
@@ -201,7 +305,7 @@ local function refresh(context)
 				caughtLabel.TextXAlignment = Enum.TextXAlignment.Left
 				caughtLabel.TextColor3 = if discoveredEntry then Color3.fromRGB(206, 206, 206) else Color3.fromRGB(120, 120, 120)
 				caughtLabel.TextSize = 14
-				caughtLabel.Text = if discoveredEntry then string.format("Caught %s", NumberUtil.FormatNumber(entry.count)) else "Caught --"
+				caughtLabel.Text = if discoveredEntry then tostring(entry.bug.species or "Unknown") else "Undiscovered"
 				caughtLabel.Parent = row
 
 				local checkLabel = Instance.new("TextLabel")
