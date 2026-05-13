@@ -52,8 +52,19 @@ local function patchAtPath(root: { [any]: any }, path: { string }, value: any): 
 	node[path[#path]] = value
 end
 
-local function refreshForPatch(path: { any }): ()
+local function refreshForPatch(path: { any }?): ()
 	context.Controllers.CurrencyHUD.Refresh()
+
+	if type(path) ~= "table" then
+		MarketApp.Refresh(context)
+		if context.Controllers.Upgrade then
+			context.Controllers.Upgrade.Refresh()
+		end
+		if context.Controllers.Generator then
+			context.Controllers.Generator.Refresh()
+		end
+		return
+	end
 
 	local root = path[1]
 	local key = path[2]
