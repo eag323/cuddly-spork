@@ -901,21 +901,49 @@ function BugdexApp.Mount(target: Instance, context): ()
 	local rewardTrack = Instance.new("Frame", progressCard); rewardTrack.Size=UDim2.new(0.4,0,0,10); rewardTrack.Position=UDim2.new(0.56,0,0,52); rewardTrack.BackgroundColor3=Color3.fromRGB(21,33,49); rewardTrack.BorderSizePixel=0; Instance.new("UICorner", rewardTrack).CornerRadius=UDim.new(0,4)
 	rewardBarFill = Instance.new("Frame", rewardTrack); rewardBarFill.Size=UDim2.new(0,0,1,0); rewardBarFill.BackgroundColor3=Color3.fromRGB(255,220,110); rewardBarFill.BorderSizePixel=0; Instance.new("UICorner", rewardBarFill).CornerRadius=UDim.new(0,4)
 	rewardBarLabel = Instance.new("TextLabel", progressCard); rewardBarLabel.Size=UDim2.new(0.4,0,0,16); rewardBarLabel.Position=UDim2.new(0.56,0,0,64); rewardBarLabel.BackgroundTransparency=1; rewardBarLabel.Font=Enum.Font.GothamBold; rewardBarLabel.TextSize=12; rewardBarLabel.TextColor3=Color3.fromRGB(220,230,245); rewardBarLabel.TextXAlignment=Enum.TextXAlignment.Center
-	searchBox = Instance.new("TextBox", headerPanel); searchBox.Size=UDim2.new(0.55,0,0,SEARCH_ROW_HEIGHT); searchBox.Position=UDim2.fromOffset(0,searchY); searchBox.PlaceholderText="Search bugs..."; searchBox.Text=""; searchBox.TextStrokeTransparency=1; searchBox.ClearTextOnFocus=false; searchBox.BackgroundColor3=Color3.fromRGB(19,33,50); searchBox.TextColor3=Color3.fromRGB(230,238,248); searchBox.BorderSizePixel=0; searchBox.Font=Enum.Font.Gotham; searchBox.TextSize=14; searchBox.TextXAlignment=Enum.TextXAlignment.Left
-	local searchStroke = Instance.new("UIStroke", searchBox); searchStroke.Color = Color3.fromRGB(72, 95, 124); searchStroke.Thickness = 1
-	Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 7)
-	local searchPadding = Instance.new("UIPadding", searchBox)
-	searchPadding.PaddingLeft = UDim.new(0, 28)
-	local searchIcon = Instance.new("TextLabel", searchBox)
-	searchIcon.Size = UDim2.fromOffset(16, 16)
-	searchIcon.Position = UDim2.new(0, 8, 0.5, 0)
+	local searchBarFrame = Instance.new("Frame")
+	searchBarFrame.Name = "SearchBarFrame"
+	searchBarFrame.Size = UDim2.new(0.55, 0, 0, SEARCH_ROW_HEIGHT)
+	searchBarFrame.Position = UDim2.fromOffset(0, searchY)
+	searchBarFrame.BackgroundColor3 = Color3.fromRGB(19, 33, 50)
+	searchBarFrame.BorderSizePixel = 0
+	searchBarFrame.Parent = headerPanel
+	local searchStroke = Instance.new("UIStroke", searchBarFrame)
+	searchStroke.Color = Color3.fromRGB(72, 95, 124)
+	searchStroke.Thickness = 1
+	Instance.new("UICorner", searchBarFrame).CornerRadius = UDim.new(0, 7)
+
+	local searchIcon = Instance.new("TextLabel")
+	searchIcon.Name = "SearchIcon"
+	searchIcon.Size = UDim2.fromOffset(24, 24)
 	searchIcon.AnchorPoint = Vector2.new(0, 0.5)
+	searchIcon.Position = UDim2.new(0, 12, 0.5, 0)
 	searchIcon.BackgroundTransparency = 1
 	searchIcon.Font = Enum.Font.GothamBold
-	searchIcon.TextSize = 12
+	searchIcon.TextSize = 14
+	searchIcon.TextStrokeTransparency = 1
 	searchIcon.TextColor3 = Color3.fromRGB(140, 170, 200)
-	searchIcon.Text = "🔎"
-	searchIcon.ZIndex = searchBox.ZIndex + 1
+	searchIcon.TextXAlignment = Enum.TextXAlignment.Center
+	searchIcon.TextYAlignment = Enum.TextYAlignment.Center
+	searchIcon.Text = "🔍"
+	searchIcon.Parent = searchBarFrame
+
+	searchBox = Instance.new("TextBox")
+	searchBox.Name = "SearchTextBox"
+	searchBox.Size = UDim2.new(1, -48, 1, 0)
+	searchBox.Position = UDim2.fromOffset(40, 0)
+	searchBox.PlaceholderText = "Search bugs..."
+	searchBox.Text = ""
+	searchBox.TextStrokeTransparency = 1
+	searchBox.ClearTextOnFocus = false
+	searchBox.BackgroundTransparency = 1
+	searchBox.TextColor3 = Color3.fromRGB(230, 238, 248)
+	searchBox.BorderSizePixel = 0
+	searchBox.Font = Enum.Font.Gotham
+	searchBox.TextSize = 14
+	searchBox.TextXAlignment = Enum.TextXAlignment.Left
+	searchBox.TextYAlignment = Enum.TextYAlignment.Center
+	searchBox.Parent = searchBarFrame
 
 	sortButton = Instance.new("TextButton", headerPanel); sortButton.Size=UDim2.new(0.43,0,0,SEARCH_ROW_HEIGHT); sortButton.Position=UDim2.new(0.57,0,0,searchY); sortButton.Text="Sort: Rarity"; sortButton.BackgroundColor3=Color3.fromRGB(29,44,61); sortButton.TextColor3=Color3.fromRGB(235,245,255); sortButton.Font=Enum.Font.GothamBold; sortButton.TextSize=14; sortButton.TextScaled=false; sortButton.TextWrapped=false; sortButton.TextTruncate=Enum.TextTruncate.AtEnd; sortButton.TextStrokeTransparency=1; sortButton.TextXAlignment=Enum.TextXAlignment.Center; sortButton.TextYAlignment=Enum.TextYAlignment.Center; sortButton.BorderSizePixel=0
 	local sortStroke = Instance.new("UIStroke", sortButton); sortStroke.Color = Color3.fromRGB(84, 116, 148); sortStroke.Thickness = 1
