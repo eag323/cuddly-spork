@@ -32,6 +32,14 @@ local sortModes = { "Rarity", "Name", "Species", "Discovered First", "Undiscover
 local sortIndex = 1
 local searchQuery = ""
 local collapsedByRarity = {}
+
+local HEADER_TOP_PADDING = 8
+local HEADER_GAP = 8
+local HEADER_LIST_GAP = 12
+local PROGRESS_CARD_HEIGHT = 96
+local SEARCH_ROW_HEIGHT = 32
+local TABS_ROW_HEIGHT = 40
+local TAB_BUTTON_HEIGHT = 32
 local closeButtonRef
 
 local function clearTextStrokes(container: Instance)
@@ -250,7 +258,7 @@ local selectedRarityTextColors = {
 	Rare = Color3.fromRGB(5, 15, 35),
 	Epic = Color3.fromRGB(255, 245, 255),
 	Legendary = Color3.fromRGB(35, 20, 5),
-	Mythic = Color3.fromRGB(255, 245, 250),
+	Mythic = Color3.fromRGB(255, 255, 255),
 }
 
 local selectedRarityBackgroundColors = {
@@ -714,7 +722,7 @@ local function refresh(context)
 	end
 	for _, tab in ipairs(rarityTabs) do
 		local button = Instance.new("TextButton")
-		button.Size = UDim2.fromOffset(94, 30)
+		button.Size = UDim2.fromOffset(94, TAB_BUTTON_HEIGHT)
 		button.Text = tab
 		button.Font = Enum.Font.GothamBold
 		button.TextSize = 14
@@ -868,12 +876,18 @@ function BugdexApp.Mount(target: Instance, context): ()
 	rootPadding.PaddingLeft = UDim.new(0, 8) rootPadding.PaddingRight = UDim.new(0, 8)
 	rootPadding.Parent = root
 
+	local progressY = HEADER_TOP_PADDING
+	local searchY = progressY + PROGRESS_CARD_HEIGHT + HEADER_GAP
+	local tabsY = searchY + SEARCH_ROW_HEIGHT + HEADER_GAP
+	local listY = tabsY + TABS_ROW_HEIGHT + HEADER_LIST_GAP
+
 	headerPanel = Instance.new("Frame")
-	headerPanel.Size = UDim2.new(1, 0, 0, 152)
+	headerPanel.Size = UDim2.new(1, 0, 0, listY)
 	headerPanel.BackgroundTransparency = 1
 	headerPanel.Parent = root
 	progressCard = Instance.new("Frame")
-	progressCard.Size = UDim2.new(1, 0, 0, 96)
+	progressCard.Size = UDim2.new(1, 0, 0, PROGRESS_CARD_HEIGHT)
+	progressCard.Position = UDim2.fromOffset(0, progressY)
 	progressCard.BackgroundColor3 = Color3.fromRGB(10, 24, 42)
 	progressCard.Parent = headerPanel
 	Instance.new("UICorner", progressCard).CornerRadius = UDim.new(0, 10)
@@ -887,15 +901,15 @@ function BugdexApp.Mount(target: Instance, context): ()
 	local rewardTrack = Instance.new("Frame", progressCard); rewardTrack.Size=UDim2.new(0.4,0,0,10); rewardTrack.Position=UDim2.new(0.56,0,0,52); rewardTrack.BackgroundColor3=Color3.fromRGB(21,33,49); rewardTrack.BorderSizePixel=0; Instance.new("UICorner", rewardTrack).CornerRadius=UDim.new(0,4)
 	rewardBarFill = Instance.new("Frame", rewardTrack); rewardBarFill.Size=UDim2.new(0,0,1,0); rewardBarFill.BackgroundColor3=Color3.fromRGB(255,220,110); rewardBarFill.BorderSizePixel=0; Instance.new("UICorner", rewardBarFill).CornerRadius=UDim.new(0,4)
 	rewardBarLabel = Instance.new("TextLabel", progressCard); rewardBarLabel.Size=UDim2.new(0.4,0,0,16); rewardBarLabel.Position=UDim2.new(0.56,0,0,64); rewardBarLabel.BackgroundTransparency=1; rewardBarLabel.Font=Enum.Font.GothamBold; rewardBarLabel.TextSize=12; rewardBarLabel.TextColor3=Color3.fromRGB(220,230,245); rewardBarLabel.TextXAlignment=Enum.TextXAlignment.Center
-	searchBox = Instance.new("TextBox", headerPanel); searchBox.Size=UDim2.new(0.55,0,0,30); searchBox.Position=UDim2.fromOffset(0,104); searchBox.PlaceholderText="Search bugs..."; searchBox.Text=""; searchBox.TextStrokeTransparency=1; searchBox.ClearTextOnFocus=false; searchBox.BackgroundColor3=Color3.fromRGB(19,33,50); searchBox.TextColor3=Color3.fromRGB(230,238,248); searchBox.BorderSizePixel=0; searchBox.Font=Enum.Font.Gotham; searchBox.TextSize=14
+	searchBox = Instance.new("TextBox", headerPanel); searchBox.Size=UDim2.new(0.55,0,0,SEARCH_ROW_HEIGHT); searchBox.Position=UDim2.fromOffset(0,searchY); searchBox.PlaceholderText="Search bugs..."; searchBox.Text=""; searchBox.TextStrokeTransparency=1; searchBox.ClearTextOnFocus=false; searchBox.BackgroundColor3=Color3.fromRGB(19,33,50); searchBox.TextColor3=Color3.fromRGB(230,238,248); searchBox.BorderSizePixel=0; searchBox.Font=Enum.Font.Gotham; searchBox.TextSize=14
 	local searchStroke = Instance.new("UIStroke", searchBox); searchStroke.Color = Color3.fromRGB(72, 95, 124); searchStroke.Thickness = 1
 	Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 7)
-	sortButton = Instance.new("TextButton", headerPanel); sortButton.Size=UDim2.new(0.43,0,0,30); sortButton.Position=UDim2.new(0.57,0,0,104); sortButton.Text="Sort: Rarity"; sortButton.BackgroundColor3=Color3.fromRGB(29,44,61); sortButton.TextColor3=Color3.fromRGB(235,245,255); sortButton.Font=Enum.Font.GothamBold; sortButton.TextSize=14; sortButton.TextScaled=false; sortButton.TextWrapped=false; sortButton.TextTruncate=Enum.TextTruncate.AtEnd; sortButton.TextStrokeTransparency=1; sortButton.TextXAlignment=Enum.TextXAlignment.Center; sortButton.TextYAlignment=Enum.TextYAlignment.Center; sortButton.BorderSizePixel=0
+	sortButton = Instance.new("TextButton", headerPanel); sortButton.Size=UDim2.new(0.43,0,0,SEARCH_ROW_HEIGHT); sortButton.Position=UDim2.new(0.57,0,0,searchY); sortButton.Text="Sort: Rarity"; sortButton.BackgroundColor3=Color3.fromRGB(29,44,61); sortButton.TextColor3=Color3.fromRGB(235,245,255); sortButton.Font=Enum.Font.GothamBold; sortButton.TextSize=14; sortButton.TextScaled=false; sortButton.TextWrapped=false; sortButton.TextTruncate=Enum.TextTruncate.AtEnd; sortButton.TextStrokeTransparency=1; sortButton.TextXAlignment=Enum.TextXAlignment.Center; sortButton.TextYAlignment=Enum.TextYAlignment.Center; sortButton.BorderSizePixel=0
 	local sortStroke = Instance.new("UIStroke", sortButton); sortStroke.Color = Color3.fromRGB(84, 116, 148); sortStroke.Thickness = 1
 	Instance.new("UICorner", sortButton).CornerRadius = UDim.new(0, 7)
 	filtersFrame = Instance.new("Frame")
-	filtersFrame.Size = UDim2.new(1, 0, 0, 34)
-	filtersFrame.Position = UDim2.fromOffset(0, 142)
+	filtersFrame.Size = UDim2.new(1, 0, 0, TABS_ROW_HEIGHT)
+	filtersFrame.Position = UDim2.fromOffset(0, tabsY)
 	filtersFrame.BackgroundTransparency = 1
 	filtersFrame.Parent = headerPanel
 	local filtersLayout = Instance.new("UIListLayout")
@@ -905,8 +919,8 @@ function BugdexApp.Mount(target: Instance, context): ()
 	filtersLayout.Padding = UDim.new(0, 8)
 	filtersLayout.Parent = filtersFrame
 	listFrame = Instance.new("ScrollingFrame")
-	listFrame.Size = UDim2.new(1, 0, 1, -164)
-	listFrame.Position = UDim2.fromOffset(0, 164)
+	listFrame.Size = UDim2.new(1, 0, 1, -listY)
+	listFrame.Position = UDim2.fromOffset(0, listY)
 	listFrame.BackgroundColor3 = Color3.fromRGB(16, 28, 42)
 	listFrame.BorderSizePixel = 0
 	listFrame.ScrollBarThickness = 8
@@ -961,6 +975,7 @@ function BugdexApp.Mount(target: Instance, context): ()
 	closeButton.Font = Enum.Font.GothamBold
 	closeButton.TextSize = 17
 	closeButton.Text = "×"
+	closeButton.TextStrokeTransparency = 1
 	closeButton.ZIndex = 7
 	closeButton.Parent = detailPanel
 	local closeCorner = Instance.new("UICorner")
