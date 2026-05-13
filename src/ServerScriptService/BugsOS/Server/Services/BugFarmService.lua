@@ -33,7 +33,6 @@ local function ensureData(d)
 		for i, uid in pairs(d.Bugs.Equipped) do
 			if d.Bugs.FarmerSlots[i] == nil then d.Bugs.FarmerSlots[i] = uid end
 		end
-		d.Bugs.Equipped = nil
 	end
 	for uid, bug in pairs(d.Bugs.Inventory) do
 		if type(bug) == "table" then
@@ -60,7 +59,7 @@ local function firstEmpty(slots, count)
 end
 
 local function recycleValue(bug)
-	local cfg = BugConfig.Bugs[bug.BugId]
+	local cfg = BugConfig.GetBug(bug.BugId) or BugConfig.Bugs[bug.BugId]
 	if cfg and cfg.recycling and type(cfg.recycling.bugEssence) == "number" then return cfg.recycling.bugEssence end
 	local fallback = { Common = 0, Uncommon = 1, Rare = 3, Epic = 10, Legendary = 40, Mythic = 150 }
 	return fallback[tostring(bug.Rarity or "Common")] or 0
@@ -71,9 +70,10 @@ function BugFarmService.Init()
 	remotes.UnequipFarmer = ensureRemote(RemoteNames.BugFarm_UnequipFarmer)
 	remotes.EquipCombat = ensureRemote(RemoteNames.BugFarm_EquipCombat)
 	remotes.UnequipCombat = ensureRemote(RemoteNames.BugFarm_UnequipCombat)
-	remotes.ToggleLock = ensureRemote(RemoteNames.Bug_ToggleLock)
-	remotes.Recycle = ensureRemote(RemoteNames.Bug_Recycle)
-	remotes.BuyExtraSlot = ensureRemote(RemoteNames.BugFarm_BuyExtraFarmerSlot)
+	remotes.ToggleLock = ensureRemote(RemoteNames.BugFarm_ToggleLock)
+	remotes.Recycle = ensureRemote(RemoteNames.BugFarm_Recycle)
+	remotes.Ascend = ensureRemote(RemoteNames.BugFarm_Ascend)
+	remotes.BuyExtraSlot = ensureRemote(RemoteNames.BugFarm_PromptExtraFarmerSlotPurchase)
 	remotes.NotificationPush = ensureRemote(RemoteNames.Notification_Push)
 end
 
@@ -118,10 +118,30 @@ function BugFarmService.Start()
 		for _,uid in ipairs(payload.Uids) do
 			local bug = d.Bugs.Inventory[uid]
 			if bug and not bug.Locked and not inSlots(d.Bugs.FarmerSlots, uid) and not inSlots(d.Bugs.CombatSlots, uid) then
+				local cfg = BugConfig.GetBug(bug.BugId)
+				local rarity = tostring((cfg and cfg.rarity) or bug.Rarity or "Common")
+				if (rarity == "Legendary" or rarity == "Mythic") and payload.ConfirmHighRarity ~= true then
+					continue
+				end
 				gain += recycleValue(bug); d.Bugs.Inventory[uid] = nil
 			end
 		end
 		if gain > 0 then d.Currencies.BugEssence += gain end
+		ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
+		ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
+	end)
+	remotes.Ascend.OnServerEvent:Connect(function(player,payload)
+		local d=ProfileService.GetPlayerData(player); if not d or type(payload)~="table" then return end; ensureData(d)
+		d.Currencies = d.Currencies or {}; d.Currencies.BugEssence = tonumber(d.Currencies.BugEssence) or 0
+		local uid = payload.Uid; local bug = d.Bugs.Inventory[uid]; if type(uid)~="string" or not bug then return end
+		local cfg = BugConfig.GetBug(bug.BugId)
+		local maxRank = 5
+		local rank = math.max(0, tonumber(bug.Ascension) or 0)
+		if rank >= maxRank then notify(player, "Max ascension reached.", "Info"); return end
+		local base = ({Common=0,Uncommon=10,Rare=30,Epic=100,Legendary=300,Mythic=800})[tostring((cfg and cfg.rarity) or bug.Rarity or "Common")] or 0
+		local cost = base * (rank + 1)
+		if d.Currencies.BugEssence < cost then notify(player, "Not enough Bug Essence.", "Warning"); return end
+		d.Currencies.BugEssence -= cost; bug.Ascension = rank + 1
 		ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
 		ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
 	end)

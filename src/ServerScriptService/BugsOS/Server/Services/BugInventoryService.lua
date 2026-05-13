@@ -35,20 +35,22 @@ function BugInventoryService.CreateBug(player: Player, speciesId: string, rarity
 	playerData.Bugs = playerData.Bugs or { Inventory = {}, Equipped = {}, SlotsUnlocked = 5 }
 	playerData.Bugs.Inventory = playerData.Bugs.Inventory or {}
 
-	local species = nil
-	for _, s in ipairs(BugConfig.Species) do
-		if s.id == speciesId then
-			species = s
-			break
+	local bugCfg = BugConfig.GetBug(speciesId)
+	local species = bugCfg
+	if not species then
+		for _, s in ipairs(BugConfig.Species or {}) do
+			if s.id == speciesId then
+				species = s
+				break
+			end
 		end
 	end
 	if not species then return nil end
 
-	local statPool = BugConfig.StatTypes or {}
-	if #statPool == 0 then return nil end
-	local statId = species.primaryStatType
+	local statPool = BugConfig.StatTypes or {"AllFood"}
+	local statId = species.primaryStatType or "AllFood"
 	if type(statId) ~= "string" or statId == "" then
-		statId = statPool[math.random(1, #statPool)]
+		statId = statPool[1]
 	end
 	local range = RARITY_RANGES[rarity] or RARITY_RANGES.Common
 	local baseValue = tonumber(species.primaryStatValue) or Random.new():NextNumber(range[1], range[2])
@@ -60,9 +62,13 @@ function BugInventoryService.CreateBug(player: Player, speciesId: string, rarity
 
 	local bug = {
 		Uid = uid,
+		BugId = speciesId,
 		SpeciesId = speciesId,
-		Species = species.displayName,
+		Species = species.displayName or species.species or speciesId,
 		Rarity = rarity,
+		Ascension = 0,
+		Equipment = {},
+		CaughtAt = os.time(),
 		Primary = {
 			Stat = statId,
 			Attribute = statId,

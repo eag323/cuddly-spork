@@ -8,8 +8,7 @@ local AppRegistry = {
 	{ Id = "Market", Title = "Market.exe", IconImage = UIAssets.AppIconImages.Market, DefaultWindowSize = UDim2.fromOffset(560, 380), Module = require(Apps:WaitForChild("MarketApp")), UnlockedByDefault = true, AllowDuplicate = false },
 	{ Id = "Upgrades", Title = "Upgrades.exe", IconImage = UIAssets.AppIconImages.Upgrades, DefaultWindowSize = UDim2.fromOffset(780, 620), Module = require(Apps:WaitForChild("UpgradesApp")), UnlockedByDefault = true, AllowDuplicate = false },
 	{ Id = "FoodHarvesters", Title = "Food Harvesters.exe", IconImage = UIAssets.AppIconImages.FoodHarvesters, DefaultWindowSize = UDim2.fromOffset(900, 650), Module = require(Apps:WaitForChild("FoodHarvestersApp")), UnlockedByDefault = true, AllowDuplicate = false },
-	{ Id = "BugFarm", Title = "Bug Farm.exe", IconImage = UIAssets.AppIconImages.BugFarm, DefaultWindowSize = UDim2.fromOffset(900, 620), Module = require(Apps:WaitForChild("BugFarmApp")), UnlockedByDefault = true, AllowDuplicate = false },
-	{ Id = "Bugdex", Title = "Bugdex.exe", IconImage = UIAssets.AppIconImages.Bugdex, DefaultWindowSize = UDim2.fromOffset(900, 620), Module = require(Apps:WaitForChild("BugdexApp")), UnlockedByDefault = true, AllowDuplicate = false },
+	{ Id = "Bugs", Title = "Bugs.exe", IconImage = UIAssets.AppIconImages.BugFarm, DefaultWindowSize = UDim2.fromOffset(900, 620), Module = require(Apps:WaitForChild("BugsApp")), UnlockedByDefault = true, AllowDuplicate = false },
 	{ Id = "Profile", Title = "Profile.exe", IconImage = UIAssets.AppIconImages.Settings, DefaultWindowSize = UDim2.fromOffset(760, 560), Module = require(Apps:WaitForChild("ProfileApp")), UnlockedByDefault = true, AllowDuplicate = false },
 	{ Id = "Prestige", Title = "Prestige.exe", IconImage = UIAssets.AppIconImages.Prestige, DefaultWindowSize = UDim2.fromOffset(520, 320), Module = require(Apps:WaitForChild("PrestigeApp")), UnlockedByDefault = true, AllowDuplicate = false },
 }
