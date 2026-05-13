@@ -20,6 +20,7 @@ local searchQuery = ""
 local sortMode = "Rarity"
 local rarityFilter = "All"
 local sortModes = {"Rarity","Name","Species","Newest","Locked First","Farmer Equipped","Combat Equipped","Power"}
+local rarityTabs = {"All","Common","Uncommon","Rare","Epic","Legendary","Mythic"}
 local detailOverlay
 local bugdexInlineHost
 
@@ -192,9 +193,26 @@ local function makeButton(parent, text, color, size)
 	return button
 end
 
+local function formatNum(n)
+	return tostring(math.floor(tonumber(n) or 0)):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+end
+
+local function makeSectionTitle(parent, text, y)
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Size = UDim2.new(1, -20, 0, 18)
+	t.Position = UDim2.fromOffset(10, y)
+	t.TextXAlignment = Enum.TextXAlignment.Left
+	t.Text = text
+	t.TextSize = 13
+	styleLabel(t, true)
+	t.TextColor3 = COLORS.accent
+	t.Parent = parent
+	return t
+end
+
 local function makeDetailPopup(context, uid, bug)
 	if detailOverlay then detailOverlay:Destroy() detailOverlay = nil end
-	local cfg = getBugCfg(bug.BugId) or {}
 	detailOverlay = Instance.new("TextButton")
 	detailOverlay.Text = ""
 	detailOverlay.AutoButtonColor = false
@@ -202,62 +220,96 @@ local function makeDetailPopup(context, uid, bug)
 	detailOverlay.BackgroundTransparency = 0.3
 	detailOverlay.Size = UDim2.fromScale(1, 1)
 	detailOverlay.Parent = root
-	local panel = makeCard(detailOverlay, UDim2.fromOffset(620, 420))
-	panel.Position = UDim2.fromScale(0.5, 0.5) - UDim2.fromOffset(310, 210)
+	local cfg = getBugConfig(bug) or {}
+	local rarity = tostring(cfg.rarity or bug.Rarity or "Common")
+	local panel = makeCard(detailOverlay, UDim2.fromOffset(680, 520))
+	panel.Position = UDim2.fromScale(0.5, 0.5) - UDim2.fromOffset(340, 260)
+	local stroke = panel:FindFirstChildOfClass("UIStroke")
+	if stroke then stroke.Color = getRarityColor(rarity) stroke.Thickness = (BugConfig.RarityOrder[rarity] or 1) >= 4 and 2 or 1 end
+	local icon = Instance.new("ImageLabel")
+	icon.BackgroundTransparency = 1
+	icon.Size = UDim2.fromOffset(88, 88)
+	icon.Position = UDim2.fromOffset(16, 16)
+	icon.Image = tostring(cfg.icon or "")
+	icon.Parent = panel
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -20, 0, 26)
-	title.Position = UDim2.fromOffset(10, 10)
+	title.Size = UDim2.new(1, -170, 0, 30)
+	title.Position = UDim2.fromOffset(114, 18)
 	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Text = tostring(cfg.displayName or bug.BugId)
-	title.TextSize = 20
+	title.Text = tostring(cfg.displayName or getOwnedBugBugId(bug) or "Unknown Bug")
+	title.TextSize = 24
 	styleLabel(title, true)
 	title.Parent = panel
-	local rarity = tostring(cfg.rarity or bug.Rarity or "Common")
 	local badge = makeBadge(panel, rarity)
-	badge.Position = UDim2.fromOffset(12, 44)
-	local info = Instance.new("TextLabel")
-	info.Size = UDim2.new(1, -20, 0, 220)
-	info.Position = UDim2.fromOffset(10, 72)
-	info.TextXAlignment = Enum.TextXAlignment.Left
-	info.TextYAlignment = Enum.TextYAlignment.Top
-	info.TextWrapped = true
-	info.TextSize = 14
+	badge.Position = UDim2.fromOffset(114, 54)
+	local assign = makeBadge(panel, getAssignmentStatus(uid, getBugsState(context).FarmerSlots or {}, getBugsState(context).CombatSlots or {}))
+	assign.Size = UDim2.fromOffset(124, 22)
+	assign.Position = UDim2.fromOffset(220, 54)
+	local closeBtn = makeButton(panel, "X", COLORS.cardDark, UDim2.fromOffset(34, 28))
+	closeBtn.Position = UDim2.new(1, -44, 0, 12)
+	closeBtn.Activated:Connect(function() if detailOverlay then detailOverlay:Destroy() detailOverlay = nil end end)
+
 	local stats = cfg.stats or {}
 	local idleBonuses = cfg.idleBonuses or {}
 	local ability = cfg.ability
-	local bonusText = #idleBonuses == 0 and "No farming buffs" or table.concat(idleBonuses, ", ")
-	local abilityText = ability and (tostring(ability.name or "Ability") .. " (" .. tostring(ability.type or "Passive") .. ")\n" .. tostring(ability.description or "")) or "No ability"
-	info.Text = string.format("STATS\nHP %s  ATK %s  DEF %s  SPD %s  CR %s  CD %s  RES %s  ACC %s\n\nFARMING BUFFS\n%s\n\nABILITY\n%s\n\nEQUIPMENT\nWeapon | Helmet | Chestplate | Boots | Charm\nEquipment Coming Soon",
-		tostring(stats.HP or 0), tostring(stats.ATK or 0), tostring(stats.DEF or 0), tostring(stats.SPD or 0), tostring(stats.CritRate or 0), tostring(stats.CritDamage or 0), tostring(stats.RES or 0), tostring(stats.ACC or 0),
-		bonusText, abilityText)
-	styleLabel(info, false)
-	info.TextColor3 = COLORS.muted
-	info.Parent = panel
+	local chipNames = {{"HP","HP"},{"ATK","ATK"},{"DEF","DEF"},{"SPD","SPD"},{"CR","CritRate"},{"CD","CritDamage"},{"RES","RES"},{"ACC","ACC"}}
+	for i, entry in ipairs(chipNames) do
+		local chip = makeCard(panel, UDim2.fromOffset(74, 38))
+		chip.Position = UDim2.fromOffset(16 + ((i-1)%4)*82, 116 + math.floor((i-1)/4)*44)
+		chip.BackgroundColor3 = COLORS.cardDark
+		local l = Instance.new("TextLabel"); l.BackgroundTransparency=1; l.Size=UDim2.new(1,0,0,14); l.Position=UDim2.fromOffset(0,4); l.Text=entry[1]; l.TextSize=10; styleLabel(l,false); l.TextColor3=COLORS.muted; l.Parent=chip
+		local v = Instance.new("TextLabel"); v.BackgroundTransparency=1; v.Size=UDim2.new(1,0,0,16); v.Position=UDim2.fromOffset(0,18); v.Text=tostring(stats[entry[2]] or 0); v.TextSize=13; styleLabel(v,true); v.TextColor3=COLORS.text; v.Parent=chip
+	end
+	makeSectionTitle(panel, "FARMING BUFFS", 210)
+	for i = 1, math.max(#idleBonuses, 1) do
+		local txt = idleBonuses[i] or "No farming buffs"
+		local row = makeCard(panel, UDim2.new(0.48, -16, 0, 24))
+		row.Position = UDim2.new(0, 12, 0, 232 + (i-1)*28)
+		row.BackgroundColor3 = COLORS.cardDark
+		local rt = Instance.new("TextLabel"); rt.BackgroundTransparency=1; rt.Size=UDim2.new(1,-10,1,0); rt.Position=UDim2.fromOffset(8,0); rt.TextXAlignment=Enum.TextXAlignment.Left; rt.Text=txt; rt.TextSize=12; styleLabel(rt,false); rt.TextColor3= idleBonuses[i] and COLORS.good or COLORS.muted; rt.Parent=row
+	end
+	makeSectionTitle(panel, "ABILITY", 210)
+	local abilityCard = makeCard(panel, UDim2.new(0.48, -16, 0, 82)); abilityCard.Position = UDim2.new(0.52, 4, 0, 232); abilityCard.BackgroundColor3 = COLORS.cardDark
+	local abilityText = ability and tostring(ability.name or "Ability") or "No ability"
+	local abilityDesc = ability and tostring(ability.description or "") or ""
+	local at = Instance.new("TextLabel"); at.BackgroundTransparency=1; at.Size=UDim2.new(1,-10,0,20); at.Position=UDim2.fromOffset(8,6); at.TextXAlignment=Enum.TextXAlignment.Left; at.Text=abilityText; at.TextSize=13; styleLabel(at,true); at.Parent=abilityCard
+	local ad = Instance.new("TextLabel"); ad.BackgroundTransparency=1; ad.Size=UDim2.new(1,-10,0,44); ad.Position=UDim2.fromOffset(8,28); ad.TextXAlignment=Enum.TextXAlignment.Left; ad.TextYAlignment=Enum.TextYAlignment.Top; ad.TextWrapped=true; ad.Text=abilityDesc; ad.TextSize=12; styleLabel(ad,false); ad.TextColor3=COLORS.muted; ad.Parent=abilityCard
+	makeSectionTitle(panel, "EQUIPMENT", 324)
+	for i, slotName in ipairs({"Weapon","Helmet","Chestplate","Boots","Charm"}) do
+		local slot = makeCard(panel, UDim2.fromOffset(124, 50)); slot.Position = UDim2.fromOffset(12 + (i-1)*132, 346); slot.BackgroundColor3 = COLORS.cardDark
+		local s = Instance.new("TextLabel"); s.BackgroundTransparency=1; s.Size=UDim2.new(1,0,0,18); s.Position=UDim2.fromOffset(0,4); s.Text=slotName; s.TextSize=11; styleLabel(s,true); s.Parent=slot
+		local c = Instance.new("TextLabel"); c.BackgroundTransparency=1; c.Size=UDim2.new(1,0,0,16); c.Position=UDim2.fromOffset(0,24); c.Text="Coming Soon"; c.TextSize=10; styleLabel(c,false); c.TextColor3=COLORS.muted; c.Parent=slot
+	end
 	local rank = getBugAscension(bug)
-	local rarity = tostring(cfg.rarity or bug.Rarity or "Common")
 	local costTable = ((cfg.ascension or {}).essenceRequiredByRank) or FALLBACK_ASCENSION_COSTS[rarity] or FALLBACK_ASCENSION_COSTS.Common
 	local cost = tonumber(costTable[rank + 1]) or tonumber(costTable[rank + 2]) or 0
 	local essence = tonumber((((context.State.PlayerData or {}).Currencies or {}).BugEssence)) or 0
-	local asc = makeButton(panel, rank >= 5 and "Max Ascension" or ("Ascend ("..cost.." Essence)"), COLORS.accent, UDim2.fromOffset(170, 30))
-	asc.Position = UDim2.new(1, -182, 1, -40)
+	local ascWrap = makeCard(panel, UDim2.new(1, -24, 0, 66)); ascWrap.Position = UDim2.fromOffset(12, 402); ascWrap.BackgroundColor3 = COLORS.cardDark
+	local ascText = Instance.new("TextLabel"); ascText.BackgroundTransparency=1; ascText.Size=UDim2.new(0.66,0,1,0); ascText.Position=UDim2.fromOffset(10,0); ascText.TextXAlignment=Enum.TextXAlignment.Left; ascText.TextYAlignment=Enum.TextYAlignment.Center; ascText.Text=("ASCENSION  Rank: "..rank.."/5  Cost: "..cost.."  Essence: "..essence); ascText.TextSize=12; styleLabel(ascText,false); ascText.TextColor3=COLORS.text; ascText.Parent=ascWrap
+	local asc = makeButton(ascWrap, rank >= 5 and "Max Ascension" or "Ascend", COLORS.accent, UDim2.fromOffset(120, 32))
+	asc.Position = UDim2.new(1, -132, 0.5, -16)
 	asc.TextColor3 = Color3.fromRGB(8,20,34)
 	if rank >= 5 or essence < cost then asc.BackgroundColor3 = COLORS.cardDark asc.TextColor3 = COLORS.muted else
 		asc.Activated:Connect(function() context.Controllers.BugFarm.Ascend(uid) if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end)
 	end
 	local lockButton = makeButton(panel, isBugLocked(bug) and "Unlock" or "Lock", isBugLocked(bug) and COLORS.gold or COLORS.cardDark, UDim2.fromOffset(90, 30))
-	lockButton.Position = UDim2.new(1, -278, 1, -40)
+	lockButton.Position = UDim2.fromOffset(364, 368)
 	lockButton.Activated:Connect(function()
 		context.Controllers.BugFarm.ToggleLock(uid)
 		detailOverlay:Destroy()
 		detailOverlay = nil
 	end)
-	local farmerBtn = makeButton(panel, "Equip Farmer", COLORS.cardDark, UDim2.fromOffset(120, 30))
-	farmerBtn.Position = UDim2.fromOffset(10, 380)
+	local farmerBtn = makeButton(panel, "Equip Farmer", Color3.fromRGB(68, 170, 150), UDim2.fromOffset(110, 30))
+	farmerBtn.Position = UDim2.fromOffset(12, 368)
 	farmerBtn.Activated:Connect(function() context.Controllers.BugFarm.EquipFarmer(uid, nil) end)
-	local combatBtn = makeButton(panel, "Add Combat", COLORS.cardDark, UDim2.fromOffset(120, 30))
-	combatBtn.Position = UDim2.fromOffset(138, 380)
+	local combatBtn = makeButton(panel, "Add Combat", Color3.fromRGB(82, 136, 220), UDim2.fromOffset(110, 30))
+	combatBtn.Position = UDim2.fromOffset(130, 368)
 	combatBtn.Activated:Connect(function() context.Controllers.BugFarm.EquipCombat(uid, nil) end)
+	local recycleBtn = makeButton(panel, "Recycle", Color3.fromRGB(210, 108, 74), UDim2.fromOffset(110, 30))
+	recycleBtn.Position = UDim2.fromOffset(248, 368)
+	recycleBtn.Activated:Connect(function() context.Controllers.BugFarm.RecycleSelected({uid}) end)
 	detailOverlay.Activated:Connect(function() if detailOverlay then detailOverlay:Destroy() detailOverlay = nil end end)
+	panel.InputBegan:Connect(function() end)
 end
 
 local function render(context)
@@ -285,7 +337,8 @@ local function render(context)
 	layout.Parent = scroll
 	Instance.new("UIPadding", scroll).PaddingLeft = UDim.new(0, 10)
 
-	local summary = makeCard(scroll, UDim2.new(1, -20, 0, 110))
+	local summary = makeCard(scroll, UDim2.new(1, -20, 0, 138))
+	summary.BackgroundColor3 = COLORS.cardDark
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, -14, 0, 24)
 	title.Position = UDim2.fromOffset(10, 8)
@@ -301,17 +354,19 @@ local function render(context)
 		if picked and inventory[uid] then selectedCount += 1 selectedValue += tonumber((inventory[uid].RecycleValue or 10)) or 10 end
 	end
 	local summaryText = Instance.new("TextLabel")
-	summaryText.Size = UDim2.new(1, -14, 1, -36)
-	summaryText.Position = UDim2.fromOffset(10, 32)
-	summaryText.TextXAlignment = Enum.TextXAlignment.Left
-	summaryText.TextYAlignment = Enum.TextYAlignment.Top
-	summaryText.TextSize = 14
-	styleLabel(summaryText, false)
-	summaryText.TextColor3 = COLORS.muted
-	summaryText.Text = string.format("Owned Bugs: %d\nLocked: %d\nBug Essence: %s", #owned, 0, tostring((context.State.PlayerData or {}).Currencies and (context.State.PlayerData or {}).Currencies.BugEssence or 0))
+	summaryText.Visible = false
 	local lockedCount = 0
 	for _, b in pairs(inventory) do if b.Locked then lockedCount += 1 end end
-	summaryText.Text = string.format("Owned Bugs: %d\nLocked: %d\nBug Essence: %s\nFarmer Assigned: %d\nCombat Assigned: %d", #owned, lockedCount, tostring((context.State.PlayerData or {}).Currencies and (context.State.PlayerData or {}).Currencies.BugEssence or 0), #farmerSlots, #combatSlots)
+	local highest = "None"
+	local highestOrder = 0
+	local totalPower = 0
+	for _, ob in pairs(inventory) do
+		local cfg = getBugConfig(ob) or {}
+		local r = tostring(cfg.rarity or ob.Rarity or "Common")
+		local o = BugConfig.RarityOrder[r] or 1
+		if o > highestOrder then highestOrder = o highest = r end
+		totalPower += getBugPower(cfg)
+	end
 	if selectedTab == "Farmers" then
 		summaryText.Text = string.format("Equipped: %d / %d\nExtra Slots: %d / 10", #farmerSlots, 5 + tonumber(bugs.ExtraFarmerSlotsPurchased or 0), tonumber(bugs.ExtraFarmerSlotsPurchased or 0))
 	end
@@ -320,7 +375,43 @@ local function render(context)
 	elseif selectedTab == "Recycling" then
 		summaryText.Text = string.format("Bug Essence: %s\nSelected: %d bugs\nRecycle Value: +%d Essence", tostring(bugs.Essence or 0), selectedCount, selectedValue)
 	end
-	summaryText.Parent = summary
+	if selectedTab == "My Bugs" then
+		local stats = {
+			{"Owned Bugs", tostring(#owned), COLORS.text},
+			{"Locked", tostring(lockedCount), COLORS.gold},
+			{"Bug Essence", formatNum((context.State.PlayerData or {}).Currencies and (context.State.PlayerData or {}).Currencies.BugEssence or 0), COLORS.accent},
+			{"Farmer Assigned", tostring(#farmerSlots), COLORS.good},
+			{"Combat Assigned", tostring(#combatSlots), Color3.fromRGB(134, 180, 255)},
+			{"Highest Rarity", highest, getRarityColor(highest)},
+			{"Total Power", formatNum(totalPower), COLORS.text},
+		}
+		for i, st in ipairs(stats) do
+			local col = (i - 1) % 3
+			local row = math.floor((i - 1) / 3)
+			local lbl = Instance.new("TextLabel")
+			lbl.BackgroundTransparency = 1
+			lbl.Size = UDim2.new(0.32, 0, 0, 34)
+			lbl.Position = UDim2.new(0.02 + col * 0.325, 0, 0, 34 + row * 34)
+			lbl.TextXAlignment = Enum.TextXAlignment.Left
+			lbl.Text = st[1] .. "\n" .. st[2]
+			lbl.TextSize = 12
+			styleLabel(lbl, false)
+			lbl.TextColor3 = COLORS.muted
+			lbl.RichText = true
+			lbl.Text = string.format("%s\n<font color=\"#%02X%02X%02X\">%s</font>", st[1], math.floor(st[3].R*255), math.floor(st[3].G*255), math.floor(st[3].B*255), st[2])
+			lbl.Parent = summary
+		end
+	else
+		summaryText.Size = UDim2.new(1, -14, 1, -36)
+		summaryText.Position = UDim2.fromOffset(10, 32)
+		summaryText.TextXAlignment = Enum.TextXAlignment.Left
+		summaryText.TextYAlignment = Enum.TextYAlignment.Top
+		summaryText.TextSize = 14
+		styleLabel(summaryText, false)
+		summaryText.TextColor3 = COLORS.muted
+		summaryText.Visible = true
+		summaryText.Parent = summary
+	end
 
 	local controls = makeCard(scroll, UDim2.new(1, -20, 0, 46))
 	local search = Instance.new("TextBox")
@@ -384,12 +475,14 @@ local function render(context)
 end
 
 	if selectedTab == "My Bugs" then
-		local filterBar = makeCard(scroll, UDim2.new(1, -20, 0, 40))
-		local tabs = {"All","Common","Uncommon","Rare","Epic","Legendary","Mythic"}
-		for i, r in ipairs(tabs) do
-			local b = makeButton(filterBar, r, r == rarityFilter and getRarityColor(r) or COLORS.cardDark, UDim2.fromOffset(95, 28))
-			b.Position = UDim2.fromOffset(8 + (i - 1) * 98, 6)
+		local filterBar = makeCard(scroll, UDim2.new(1, -20, 0, 76))
+		local wrap = Instance.new("Frame"); wrap.BackgroundTransparency=1; wrap.Size=UDim2.new(1,-10,1,-10); wrap.Position=UDim2.fromOffset(6,6); wrap.Parent=filterBar
+		local tabLayout = Instance.new("UIGridLayout"); tabLayout.CellSize = UDim2.fromOffset(94, 28); tabLayout.CellPadding = UDim2.fromOffset(6, 6); tabLayout.FillDirectionMaxCells=7; tabLayout.Parent=wrap
+		for _, r in ipairs(rarityTabs) do
+			local color = getRarityColor(r)
+			local b = makeButton(wrap, r, r == rarityFilter and color or COLORS.cardDark, UDim2.fromOffset(95, 28))
 			b.TextColor3 = r == rarityFilter and Color3.fromRGB(12, 20, 30) or COLORS.text
+			local s = b:FindFirstChildOfClass("UIStroke"); if s then s.Color = color s.Transparency = r == rarityFilter and 0.1 or 0.55 end
 			b.Activated:Connect(function() rarityFilter = r render(context) end)
 		end
 		local gridWrap = makeCard(scroll, UDim2.new(1, -20, 0, 500))
@@ -433,7 +526,7 @@ end
 				local card = makeCard(gridScroll, UDim2.fromOffset(160, 225))
 				card.BackgroundColor3 = COLORS.card
 				local stroke = card:FindFirstChildOfClass("UIStroke")
-				if stroke then stroke.Color = getRarityColor(rarity) stroke.Thickness = 2 end
+				if stroke then stroke.Color = getRarityColor(rarity) stroke.Thickness = (BugConfig.RarityOrder[rarity] or 1) >= 4 and 2 or 1.5 end
 				local icon = Instance.new("ImageLabel"); icon.BackgroundTransparency = 1; icon.Size = UDim2.fromOffset(82, 82); icon.Position = UDim2.new(0.5, -41, 0, 28); icon.Image = tostring(cfg.icon or ""); icon.Parent = card
 				local name = Instance.new("TextLabel"); name.BackgroundTransparency = 1; name.Size = UDim2.new(1, -12, 0, 34); name.Position = UDim2.fromOffset(6, 114); name.Text = tostring(cfg.displayName or "Unknown Bug"); name.TextWrapped = true; name.TextSize = 14; styleLabel(name, true); name.Parent = card
 				local sub = Instance.new("TextLabel"); sub.BackgroundTransparency = 1; sub.Size = UDim2.new(1, -12, 0, 16); sub.Position = UDim2.fromOffset(6, 148); sub.Text = tostring(cfg.role or cfg.species or "Unknown"); sub.TextSize = 12; sub.TextColor3 = COLORS.muted; styleLabel(sub, false); sub.Parent = card
@@ -441,6 +534,8 @@ end
 				local p = Instance.new("TextLabel"); p.BackgroundTransparency = 1; p.Size = UDim2.new(1, -10, 0, 14); p.Position = UDim2.fromOffset(5, 190); p.Text = "Power: "..tostring(getBugPower(cfg)); p.TextSize = 12; styleLabel(p, false); p.Parent = card
 				if isBugLocked(bug) then local l=makeBadge(card, "Locked"); l.Size=UDim2.fromOffset(64,18); l.Position=UDim2.new(1,-70,0,6); l.BackgroundColor3 = COLORS.gold end
 				local asc = getBugAscension(bug); if asc > 0 then local a=makeBadge(card, "A"..tostring(asc)); a.Size=UDim2.fromOffset(42,18); a.Position=UDim2.fromOffset(6,6) end
+				card.MouseEnter:Connect(function() card.BackgroundColor3 = COLORS.card:Lerp(Color3.new(1,1,1), 0.06); if stroke then stroke.Transparency = 0 end end)
+				card.MouseLeave:Connect(function() card.BackgroundColor3 = COLORS.card; if stroke then stroke.Transparency = 0.15 end end)
 				card.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then makeDetailPopup(context, uid, bug) end end)
 			end
 		end
