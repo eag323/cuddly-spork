@@ -207,6 +207,26 @@ local rarityColors = {
 
 local rarityTabs = { "All", "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" }
 
+local selectedRarityTextColors = {
+	All = Color3.fromRGB(8, 18, 30),
+	Common = Color3.fromRGB(8, 18, 30),
+	Uncommon = Color3.fromRGB(5, 25, 15),
+	Rare = Color3.fromRGB(5, 15, 35),
+	Epic = Color3.fromRGB(255, 245, 255),
+	Legendary = Color3.fromRGB(35, 20, 5),
+	Mythic = Color3.fromRGB(255, 245, 250),
+}
+
+local selectedRarityBackgroundColors = {
+	All = Color3.fromRGB(125, 205, 255),
+	Common = Color3.fromRGB(210, 215, 225),
+	Uncommon = Color3.fromRGB(65, 210, 115),
+	Rare = Color3.fromRGB(80, 155, 255),
+	Epic = Color3.fromRGB(160, 95, 240),
+	Legendary = Color3.fromRGB(255, 190, 75),
+	Mythic = Color3.fromRGB(255, 90, 160),
+}
+
 local function getRarityColor(rarity: string): Color3
 	return rarityColors[rarity] or Color3.fromRGB(210, 210, 210)
 end
@@ -627,14 +647,21 @@ local function refresh(context)
 		button.Size = UDim2.fromOffset(94, 30)
 		button.Text = tab
 		button.Font = Enum.Font.GothamBold
-		button.TextSize = 13
+		button.TextSize = 14
+		button.TextScaled = false
+		button.TextWrapped = false
+		button.TextTruncate = Enum.TextTruncate.AtEnd
+		button.TextStrokeTransparency = 1
+		button.TextXAlignment = Enum.TextXAlignment.Center
+		button.TextYAlignment = Enum.TextYAlignment.Center
 		button.AutoButtonColor = false
 		button.BorderSizePixel = 0
 		local active = selectedRarityFilter == tab
 		local tint = tab ~= "All" and getRarityColor(tab) or Color3.fromRGB(80, 150, 220)
-		local base = active and tint:Lerp(Color3.new(1,1,1),0.55) or tint:Lerp(Color3.fromRGB(18, 26, 38), 0.78)
+		local selectedBackground = selectedRarityBackgroundColors[tab] or tint:Lerp(Color3.new(1, 1, 1), 0.55)
+		local base = active and selectedBackground or tint:Lerp(Color3.fromRGB(18, 26, 38), 0.78)
 		button.BackgroundColor3 = base
-		button.TextColor3 = active and Color3.fromRGB(14, 18, 26) or tint:Lerp(Color3.fromRGB(230, 235, 242), 0.35)
+		button.TextColor3 = active and (selectedRarityTextColors[tab] or Color3.fromRGB(10, 18, 30)) or Color3.fromRGB(235, 245, 255)
 		local stroke = Instance.new("UIStroke")
 		stroke.Color = tint
 		stroke.Thickness = active and 1.6 or 1
@@ -642,7 +669,11 @@ local function refresh(context)
 		stroke.Parent = button
 		button.Parent = filtersFrame
 		Instance.new("UICorner", button).CornerRadius = UDim.new(0, 7)
-		button.MouseEnter:Connect(function() if selectedRarityFilter ~= tab then button.BackgroundColor3 = tint:Lerp(Color3.fromRGB(34, 49, 68), 0.62) end end)
+		button.MouseEnter:Connect(function()
+			if selectedRarityFilter ~= tab then
+				button.BackgroundColor3 = tint:Lerp(Color3.fromRGB(34, 49, 68), 0.62)
+			end
+		end)
 		button.MouseLeave:Connect(function() button.BackgroundColor3 = base end)
 		button.Activated:Connect(function() selectedRarityFilter = tab refresh(context) end)
 	end
@@ -763,7 +794,7 @@ function BugdexApp.Mount(target: Instance, context): ()
 	rewardBarFill = Instance.new("Frame", rewardTrack); rewardBarFill.Size=UDim2.new(0,0,1,0); rewardBarFill.BackgroundColor3=Color3.fromRGB(255,220,110); rewardBarFill.BorderSizePixel=0; Instance.new("UICorner", rewardBarFill).CornerRadius=UDim.new(0,4)
 	rewardBarLabel = Instance.new("TextLabel", progressCard); rewardBarLabel.Size=UDim2.new(0.4,0,0,16); rewardBarLabel.Position=UDim2.new(0.56,0,0,64); rewardBarLabel.BackgroundTransparency=1; rewardBarLabel.Font=Enum.Font.GothamBold; rewardBarLabel.TextSize=12; rewardBarLabel.TextColor3=Color3.fromRGB(220,230,245); rewardBarLabel.TextXAlignment=Enum.TextXAlignment.Center
 	searchBox = Instance.new("TextBox", headerPanel); searchBox.Size=UDim2.new(0.55,0,0,30); searchBox.Position=UDim2.fromOffset(0,104); searchBox.PlaceholderText="Search bugs..."; searchBox.Text=""; searchBox.ClearTextOnFocus=false; searchBox.BackgroundColor3=Color3.fromRGB(19,33,50); searchBox.TextColor3=Color3.fromRGB(230,238,248)
-	sortButton = Instance.new("TextButton", headerPanel); sortButton.Size=UDim2.new(0.43,0,0,30); sortButton.Position=UDim2.new(0.57,0,0,104); sortButton.Text="Sort: Rarity"; sortButton.BackgroundColor3=Color3.fromRGB(29,44,61); sortButton.TextColor3=Color3.fromRGB(223,230,236); sortButton.Font=Enum.Font.GothamBold; sortButton.TextSize=13
+	sortButton = Instance.new("TextButton", headerPanel); sortButton.Size=UDim2.new(0.43,0,0,30); sortButton.Position=UDim2.new(0.57,0,0,104); sortButton.Text="Sort: Rarity"; sortButton.BackgroundColor3=Color3.fromRGB(29,44,61); sortButton.TextColor3=Color3.fromRGB(235,245,255); sortButton.Font=Enum.Font.GothamBold; sortButton.TextSize=14; sortButton.TextScaled=false; sortButton.TextWrapped=false; sortButton.TextTruncate=Enum.TextTruncate.AtEnd; sortButton.TextStrokeTransparency=1; sortButton.TextXAlignment=Enum.TextXAlignment.Center; sortButton.TextYAlignment=Enum.TextYAlignment.Center
 	filtersFrame = Instance.new("Frame")
 	filtersFrame.Size = UDim2.new(1, 0, 0, 34)
 	filtersFrame.Position = UDim2.fromOffset(0, 148)
