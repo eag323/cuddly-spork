@@ -21,7 +21,6 @@ local rewardBarFill
 local rewardBarLabel
 local listFrame
 local filtersFrame
-local discoveryFilterFrame
 local searchBox
 local sortButton
 local headerPanel
@@ -29,13 +28,19 @@ local detailOverlay
 local detailPanel
 local stateChangedConn
 local selectedRarityFilter = "All"
-local selectedDiscoveryFilter = "All Bugs"
 local sortModes = { "Rarity", "Name", "Species", "Discovered First", "Undiscovered First" }
-local discoveryFilters = { "All Bugs", "Discovered", "Locked" }
 local sortIndex = 1
 local searchQuery = ""
 local collapsedByRarity = {}
 local closeButtonRef
+
+local function clearTextStrokes(container: Instance)
+	for _, descendant in ipairs(container:GetDescendants()) do
+		if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
+			descendant.TextStrokeTransparency = 1
+		end
+	end
+end
 
 local warnedInvalidBugs = {}
 local makeRarityBadge
@@ -186,7 +191,7 @@ local function createBugRow(parent: Instance, entry, rowZIndex: number, layoutOr
 	statusLabel.Font = Enum.Font.GothamBold
 	statusLabel.TextSize = 13
 	statusLabel.TextXAlignment = Enum.TextXAlignment.Right
-	statusLabel.Text = discoveredEntry and "✓ Discovered" or "🔒 Locked"
+	statusLabel.Text = discoveredEntry and "Discovered" or "Locked"
 	statusLabel.TextColor3 = discoveredEntry and Color3.fromRGB(130, 255, 180) or Color3.fromRGB(154, 169, 186)
 	statusLabel.TextTransparency = 0
 	statusLabel.ZIndex = rowZIndex + 2
@@ -390,16 +395,28 @@ local function makeProgressBar(parent: Instance, percent: number, color: Color3)
 	return barTrack
 end
 
-local function getNextCollectionMilestone(discovered: number)
-	local bestRequired, bestDefinition = math.huge, nil
+
+local function getMilestoneTargets(totalSpecies: number): { number }
+	local targets = {}
 	for _, definition in ipairs(AchievementConfig.Definitions) do
 		if definition.section == "Collection" and definition.stat == "UniqueBugsDiscovered" then
-			if definition.required > discovered and definition.required < bestRequired then
-				bestRequired, bestDefinition = definition.required, definition
+			local required = tonumber(definition.required)
+			if required and required > 0 and required <= totalSpecies then
+				table.insert(targets, required)
 			end
 		end
 	end
-	return bestDefinition
+	if #targets == 0 then
+		for _, fallback in ipairs({ 10, 25, 50, 100, 150, totalSpecies }) do
+			if fallback <= totalSpecies then
+				table.insert(targets, fallback)
+			end
+		end
+	end
+	table.sort(targets)
+	local unique, seen = {}, {}
+	for _, value in ipairs(targets) do if not seen[value] then seen[value] = true table.insert(unique, value) end end
+	return unique
 end
 
 makeRarityBadge = function(parent: Instance, rarity: string)
@@ -422,6 +439,7 @@ makeRarityBadge = function(parent: Instance, rarity: string)
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.Text = rarity
 	label.TextXAlignment = Enum.TextXAlignment.Center
+	label.TextStrokeTransparency = 1
 	label.Parent = badge
 	local padding = Instance.new("UIPadding")
 	padding.PaddingLeft = UDim.new(0, 12)
@@ -451,7 +469,7 @@ local function createSectionTitle(parent: Instance, text: string, accent: Color3
 	label.Parent = holder
 end
 
-local statEmoji = { HP = "❤️", ATK = "⚔️", DEF = "🛡️", SPD = "💨", CR = "🎯", CD = "💥", RES = "🔒", ACC = "👁️" }
+local statEmoji = { HP = "HP", ATK = "ATK", DEF = "DEF", SPD = "SPD", CR = "CR", CD = "CD", RES = "RES", ACC = "ACC" }
 
 local function createStatBox(parent: Instance, labelText: string, valueText: string)
 	local card = Instance.new("Frame")
@@ -649,13 +667,13 @@ openDetailPanel = function(entry)
 		desc.Text = tostring(ability.description or "")
 		desc.Parent = panel
 	end
+	clearTextStrokes(detailPanel)
 end
 
 local function refresh(context)
-	if not root or not listFrame or not milestoneLabel or not filtersFrame or not discoveryFilterFrame then return end
+	if not root or not listFrame or not milestoneLabel or not filtersFrame then return end
 	for _, child in ipairs(listFrame:GetChildren()) do if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then child:Destroy() end end
 	for _, child in ipairs(filtersFrame:GetChildren()) do if not child:IsA("UIListLayout") then child:Destroy() end end
-	for _, child in ipairs(discoveryFilterFrame:GetChildren()) do if not child:IsA("UIListLayout") then child:Destroy() end end
 	local playerData = context.State.PlayerData or {}
 	local bugdexData = playerData.Bugdex or {}
 	local totalsBySpecies = bugdexData.TotalCaughtBySpecies or {}
@@ -677,17 +695,21 @@ local function refresh(context)
 	discoveredLabel.Text = string.format("%s / %s", NumberUtil.FormatNumber(discovered), NumberUtil.FormatNumber(totalSpecies))
 	totalCaughtLabel.Text = NumberUtil.FormatNumber(totalCaught)
 	completionLabel.Text = string.format("%s%%", tostring(completion))
-	local nextMilestone = getNextCollectionMilestone(discovered)
-	if nextMilestone then
-		milestoneLabel.Text = string.format("Next Reward: %s", tostring(nextMilestone.name))
-		local rewardPreview = ({ [10] = "+1% Bug Luck", [25] = "+2% Bug Luck", [50] = "+3% Bug Luck", [100] = "+5% Bug Luck", [200] = "Completion Reward" })[nextMilestone.required] or "Reward preview unavailable"
-		completionLabel.Text = string.format("%s%%", tostring(completion))
-		totalCaughtLabel.Text = NumberUtil.FormatNumber(totalCaught)
-		rewardBarLabel.Text = string.format("%d / %d • Reward: %s", discovered, nextMilestone.required, rewardPreview)
-		rewardBarFill.Size = UDim2.new(math.clamp(discovered / nextMilestone.required, 0, 1), 0, 1, 0)
+	local milestoneTargets = getMilestoneTargets(totalSpecies)
+	local nextTarget = nil
+	for _, target in ipairs(milestoneTargets) do
+		if discovered < target then
+			nextTarget = target
+			break
+		end
+	end
+	if nextTarget then
+		milestoneLabel.Text = "Next Reward"
+		rewardBarLabel.Text = string.format("%d / %d", discovered, nextTarget)
+		rewardBarFill.Size = UDim2.new(math.clamp(discovered / nextTarget, 0, 1), 0, 1, 0)
 	else
-		milestoneLabel.Text = "Next Reward: Collection milestones complete"
-		rewardBarLabel.Text = string.format("%d / %d", discovered, discovered)
+		milestoneLabel.Text = "All rewards claimed"
+		rewardBarLabel.Text = "Bugdex complete"
 		rewardBarFill.Size = UDim2.new(1, 0, 1, 0)
 	end
 	for _, tab in ipairs(rarityTabs) do
@@ -732,23 +754,6 @@ local function refresh(context)
 		end)
 		button.MouseLeave:Connect(function() button.BackgroundColor3 = base end)
 		button.Activated:Connect(function() selectedRarityFilter = tab refresh(context) end)
-	end
-	for _, filterName in ipairs(discoveryFilters) do
-		local filterButton = Instance.new("TextButton")
-		filterButton.Size = UDim2.fromOffset(120, 28)
-		filterButton.Text = filterName
-		filterButton.Font = Enum.Font.GothamBold
-		filterButton.TextSize = 13
-		filterButton.AutoButtonColor = false
-		filterButton.BorderSizePixel = 0
-		filterButton.BackgroundColor3 = selectedDiscoveryFilter == filterName and Color3.fromRGB(52, 92, 132) or Color3.fromRGB(28, 42, 58)
-		filterButton.TextColor3 = selectedDiscoveryFilter == filterName and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(180, 198, 216)
-		Instance.new("UICorner", filterButton).CornerRadius = UDim.new(0, 7)
-		filterButton.Parent = discoveryFilterFrame
-		filterButton.Activated:Connect(function()
-			selectedDiscoveryFilter = filterName
-			refresh(context)
-		end)
 	end
 	local query = string.lower(searchQuery)
 	local rarityOrder = {"Common","Uncommon","Rare","Epic","Legendary","Mythic"}
@@ -818,8 +823,7 @@ local function refresh(context)
 						local rarityText = if type(bug) == "table" then tostring(bug.rarity or "") else ""
 						local role = if type(bug) == "table" then tostring(bug.role or "") else ""
 						local blob = string.lower(string.format("%s %s %s %s %s", displayName, species, rarityText, role, entry.discovered and "discovered" or "undiscovered"))
-						local discoveryMatches = selectedDiscoveryFilter == "All Bugs" or (selectedDiscoveryFilter == "Discovered" and entry.discovered) or (selectedDiscoveryFilter == "Locked" and not entry.discovered)
-						if (query == "" or string.find(blob, query, 1, true)) and discoveryMatches then
+						if (query == "" or string.find(blob, query, 1, true)) then
 							visibleRows += 1
 							anyVisibleRows = true
 							createBugRow(rowsContainer, entry, 1, visibleRows)
@@ -842,11 +846,12 @@ local function refresh(context)
 		emptyText.Font = Enum.Font.Gotham
 		emptyText.TextSize = 16
 		emptyText.TextColor3 = Color3.fromRGB(145, 165, 188)
-		emptyText.Text = "🔍 No bugs found.\nTry another search or filter."
+		emptyText.Text = "No bugs found.\nTry another search or filter."
 		emptyText.Parent = emptyPanel
 	end
 	local layout = listFrame:FindFirstChildOfClass("UIListLayout")
 	if layout then listFrame.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 12) end
+	clearTextStrokes(root)
 end
 
 function BugdexApp.Mount(target: Instance, context): ()
@@ -864,7 +869,7 @@ function BugdexApp.Mount(target: Instance, context): ()
 	rootPadding.Parent = root
 
 	headerPanel = Instance.new("Frame")
-	headerPanel.Size = UDim2.new(1, 0, 0, 188)
+	headerPanel.Size = UDim2.new(1, 0, 0, 152)
 	headerPanel.BackgroundTransparency = 1
 	headerPanel.Parent = root
 	progressCard = Instance.new("Frame")
@@ -874,23 +879,23 @@ function BugdexApp.Mount(target: Instance, context): ()
 	Instance.new("UICorner", progressCard).CornerRadius = UDim.new(0, 10)
 	local st = Instance.new("UIStroke", progressCard); st.Color = Color3.fromRGB(70, 130, 190); st.Thickness = 1
 	local title = Instance.new("TextLabel", progressCard); title.Size=UDim2.new(1,-12,0,18); title.Position=UDim2.fromOffset(8,6); title.BackgroundTransparency=1; title.Font=Enum.Font.GothamBold; title.TextSize=13; title.TextXAlignment=Enum.TextXAlignment.Left; title.TextColor3=Color3.fromRGB(170,210,255); title.Text="BUGDEX PROGRESS"
-	local d = Instance.new("TextLabel", progressCard); d.Size=UDim2.new(0.32,0,0,18); d.Position=UDim2.fromOffset(8,26); d.BackgroundTransparency=1; d.TextXAlignment=Enum.TextXAlignment.Left; d.Font=Enum.Font.GothamBold; d.TextSize=14; d.TextColor3=Color3.fromRGB(220,230,245); d.Text="Unique Discovered:"
-	discoveredLabel = Instance.new("TextLabel", progressCard); discoveredLabel.Size=UDim2.new(0.2,0,0,18); discoveredLabel.Position=UDim2.fromOffset(112,26); discoveredLabel.BackgroundTransparency=1; discoveredLabel.Font=Enum.Font.GothamBold; discoveredLabel.TextXAlignment=Enum.TextXAlignment.Left; discoveredLabel.TextSize=14; discoveredLabel.TextColor3=Color3.fromRGB(90,235,245)
-	local c = d:Clone(); c.Parent=progressCard; c.Position=UDim2.fromOffset(8,46); c.Text="Total Caught:"; totalCaughtLabel = discoveredLabel:Clone(); totalCaughtLabel.Parent=progressCard; totalCaughtLabel.Position=UDim2.fromOffset(112,46)
-	local e = d:Clone(); e.Parent=progressCard; e.Position=UDim2.fromOffset(8,66); e.Text="Completion:"; completionLabel = discoveredLabel:Clone(); completionLabel.Parent=progressCard; completionLabel.Position=UDim2.fromOffset(112,66); completionLabel.TextColor3=Color3.fromRGB(130,255,180)
+	local d = Instance.new("TextLabel", progressCard); d.Size=UDim2.new(0,160,0,18); d.Position=UDim2.fromOffset(8,26); d.BackgroundTransparency=1; d.TextXAlignment=Enum.TextXAlignment.Left; d.Font=Enum.Font.GothamBold; d.TextSize=14; d.TextColor3=Color3.fromRGB(220,230,245); d.Text="Unique Discovered:"
+	discoveredLabel = Instance.new("TextLabel", progressCard); discoveredLabel.Size=UDim2.new(0,110,0,18); discoveredLabel.Position=UDim2.fromOffset(172,26); discoveredLabel.BackgroundTransparency=1; discoveredLabel.Font=Enum.Font.GothamBold; discoveredLabel.TextXAlignment=Enum.TextXAlignment.Left; discoveredLabel.TextSize=14; discoveredLabel.TextColor3=Color3.fromRGB(90,235,245)
+	local c = d:Clone(); c.Parent=progressCard; c.Position=UDim2.fromOffset(8,46); c.Text="Total Caught:"; totalCaughtLabel = discoveredLabel:Clone(); totalCaughtLabel.Parent=progressCard; totalCaughtLabel.Position=UDim2.fromOffset(172,46)
+	local e = d:Clone(); e.Parent=progressCard; e.Position=UDim2.fromOffset(8,66); e.Text="Completion:"; completionLabel = discoveredLabel:Clone(); completionLabel.Parent=progressCard; completionLabel.Position=UDim2.fromOffset(172,66); completionLabel.TextColor3=Color3.fromRGB(130,255,180)
 	milestoneLabel = Instance.new("TextLabel", progressCard); milestoneLabel.Size=UDim2.new(0.4,0,0,18); milestoneLabel.Position=UDim2.new(0.56,0,0,26); milestoneLabel.BackgroundTransparency=1; milestoneLabel.Font=Enum.Font.GothamBold; milestoneLabel.TextSize=14; milestoneLabel.TextXAlignment=Enum.TextXAlignment.Left; milestoneLabel.TextColor3=Color3.fromRGB(255,220,110); milestoneLabel.Text="Budding Collector"
 	local rewardTrack = Instance.new("Frame", progressCard); rewardTrack.Size=UDim2.new(0.4,0,0,10); rewardTrack.Position=UDim2.new(0.56,0,0,52); rewardTrack.BackgroundColor3=Color3.fromRGB(21,33,49); rewardTrack.BorderSizePixel=0; Instance.new("UICorner", rewardTrack).CornerRadius=UDim.new(0,4)
 	rewardBarFill = Instance.new("Frame", rewardTrack); rewardBarFill.Size=UDim2.new(0,0,1,0); rewardBarFill.BackgroundColor3=Color3.fromRGB(255,220,110); rewardBarFill.BorderSizePixel=0; Instance.new("UICorner", rewardBarFill).CornerRadius=UDim.new(0,4)
 	rewardBarLabel = Instance.new("TextLabel", progressCard); rewardBarLabel.Size=UDim2.new(0.4,0,0,16); rewardBarLabel.Position=UDim2.new(0.56,0,0,64); rewardBarLabel.BackgroundTransparency=1; rewardBarLabel.Font=Enum.Font.GothamBold; rewardBarLabel.TextSize=12; rewardBarLabel.TextColor3=Color3.fromRGB(220,230,245); rewardBarLabel.TextXAlignment=Enum.TextXAlignment.Center
-	searchBox = Instance.new("TextBox", headerPanel); searchBox.Size=UDim2.new(0.55,0,0,30); searchBox.Position=UDim2.fromOffset(0,104); searchBox.PlaceholderText="🔍 Search bugs..."; searchBox.Text=""; searchBox.ClearTextOnFocus=false; searchBox.BackgroundColor3=Color3.fromRGB(19,33,50); searchBox.TextColor3=Color3.fromRGB(230,238,248); searchBox.BorderSizePixel=0; searchBox.Font=Enum.Font.Gotham; searchBox.TextSize=14
+	searchBox = Instance.new("TextBox", headerPanel); searchBox.Size=UDim2.new(0.55,0,0,30); searchBox.Position=UDim2.fromOffset(0,104); searchBox.PlaceholderText="Search bugs..."; searchBox.Text=""; searchBox.TextStrokeTransparency=1; searchBox.ClearTextOnFocus=false; searchBox.BackgroundColor3=Color3.fromRGB(19,33,50); searchBox.TextColor3=Color3.fromRGB(230,238,248); searchBox.BorderSizePixel=0; searchBox.Font=Enum.Font.Gotham; searchBox.TextSize=14
 	local searchStroke = Instance.new("UIStroke", searchBox); searchStroke.Color = Color3.fromRGB(72, 95, 124); searchStroke.Thickness = 1
 	Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 7)
-	sortButton = Instance.new("TextButton", headerPanel); sortButton.Size=UDim2.new(0.43,0,0,30); sortButton.Position=UDim2.new(0.57,0,0,104); sortButton.Text="Sort: Rarity ▾"; sortButton.BackgroundColor3=Color3.fromRGB(29,44,61); sortButton.TextColor3=Color3.fromRGB(235,245,255); sortButton.Font=Enum.Font.GothamBold; sortButton.TextSize=14; sortButton.TextScaled=false; sortButton.TextWrapped=false; sortButton.TextTruncate=Enum.TextTruncate.AtEnd; sortButton.TextStrokeTransparency=1; sortButton.TextXAlignment=Enum.TextXAlignment.Center; sortButton.TextYAlignment=Enum.TextYAlignment.Center; sortButton.BorderSizePixel=0
+	sortButton = Instance.new("TextButton", headerPanel); sortButton.Size=UDim2.new(0.43,0,0,30); sortButton.Position=UDim2.new(0.57,0,0,104); sortButton.Text="Sort: Rarity"; sortButton.BackgroundColor3=Color3.fromRGB(29,44,61); sortButton.TextColor3=Color3.fromRGB(235,245,255); sortButton.Font=Enum.Font.GothamBold; sortButton.TextSize=14; sortButton.TextScaled=false; sortButton.TextWrapped=false; sortButton.TextTruncate=Enum.TextTruncate.AtEnd; sortButton.TextStrokeTransparency=1; sortButton.TextXAlignment=Enum.TextXAlignment.Center; sortButton.TextYAlignment=Enum.TextYAlignment.Center; sortButton.BorderSizePixel=0
 	local sortStroke = Instance.new("UIStroke", sortButton); sortStroke.Color = Color3.fromRGB(84, 116, 148); sortStroke.Thickness = 1
 	Instance.new("UICorner", sortButton).CornerRadius = UDim.new(0, 7)
 	filtersFrame = Instance.new("Frame")
 	filtersFrame.Size = UDim2.new(1, 0, 0, 34)
-	filtersFrame.Position = UDim2.fromOffset(0, 148)
+	filtersFrame.Position = UDim2.fromOffset(0, 142)
 	filtersFrame.BackgroundTransparency = 1
 	filtersFrame.Parent = headerPanel
 	local filtersLayout = Instance.new("UIListLayout")
@@ -899,20 +904,9 @@ function BugdexApp.Mount(target: Instance, context): ()
 	filtersLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	filtersLayout.Padding = UDim.new(0, 8)
 	filtersLayout.Parent = filtersFrame
-	discoveryFilterFrame = Instance.new("Frame")
-	discoveryFilterFrame.Size = UDim2.new(1, 0, 0, 30)
-	discoveryFilterFrame.Position = UDim2.fromOffset(0, 184)
-	discoveryFilterFrame.BackgroundTransparency = 1
-	discoveryFilterFrame.Parent = headerPanel
-	local discoveryLayout = Instance.new("UIListLayout")
-	discoveryLayout.FillDirection = Enum.FillDirection.Horizontal
-	discoveryLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-	discoveryLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-	discoveryLayout.Padding = UDim.new(0, 8)
-	discoveryLayout.Parent = discoveryFilterFrame
 	listFrame = Instance.new("ScrollingFrame")
-	listFrame.Size = UDim2.new(1, 0, 1, -228)
-	listFrame.Position = UDim2.fromOffset(0, 228)
+	listFrame.Size = UDim2.new(1, 0, 1, -164)
+	listFrame.Position = UDim2.fromOffset(0, 164)
 	listFrame.BackgroundColor3 = Color3.fromRGB(16, 28, 42)
 	listFrame.BorderSizePixel = 0
 	listFrame.ScrollBarThickness = 8
@@ -980,7 +974,7 @@ function BugdexApp.Mount(target: Instance, context): ()
 	closeButton.MouseLeave:Connect(function() closeButton.BackgroundColor3 = Color3.fromRGB(18, 39, 63) end)
 	closeButton.Activated:Connect(closeDetailPanel)
 	searchBox:GetPropertyChangedSignal("Text"):Connect(function() searchQuery = searchBox.Text refresh(context) end)
-	sortButton.Activated:Connect(function() sortIndex = (sortIndex % #sortModes) + 1 sortButton.Text = "Sort: " .. sortModes[sortIndex] .. " ▾" refresh(context) end)
+	sortButton.Activated:Connect(function() sortIndex = (sortIndex % #sortModes) + 1 sortButton.Text = "Sort: " .. sortModes[sortIndex] refresh(context) end)
 
 	if stateChangedConn then stateChangedConn:Disconnect() stateChangedConn = nil end
 	if context.Events and context.Events.StateChanged then
@@ -996,7 +990,7 @@ end
 function BugdexApp.Unmount(): ()
 	if stateChangedConn then stateChangedConn:Disconnect() stateChangedConn = nil end
 	if windowRef then windowRef.Destroy() end
-	windowRef, root, progressCard, discoveredLabel, totalCaughtLabel, completionLabel, milestoneLabel, rewardBarFill, rewardBarLabel, listFrame, filtersFrame, discoveryFilterFrame, searchBox, sortButton, headerPanel, detailOverlay, detailPanel = nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil
+	windowRef, root, progressCard, discoveredLabel, totalCaughtLabel, completionLabel, milestoneLabel, rewardBarFill, rewardBarLabel, listFrame, filtersFrame, searchBox, sortButton, headerPanel, detailOverlay, detailPanel = nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil
 end
 
 function BugdexApp.GetRootInstance()
