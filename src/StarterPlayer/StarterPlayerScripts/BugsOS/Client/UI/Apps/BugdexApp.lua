@@ -206,16 +206,6 @@ local function createStatBox(parent: Instance, labelText: string, valueText: str
 	value.Parent = card
 end
 
-local function getSpeciesFlavor(species: string, role: string): string
-	local flavorBySpecies = {
-		Ant = "A balanced colony worker that supports the whole team.",
-		Beetle = "A heavy-shelled defender built to absorb pressure.",
-		["Pill Bug"] = "A fortress-like bug that excels at surviving long fights.",
-		Wasp = "A fragile but deadly attacker built for burst damage.",
-	}
-	return flavorBySpecies[species] or string.format("A %s specialist adapted for colony combat.", string.lower(role ~= "" and role or "field"))
-end
-
 local function closeDetailPanel()
 	if detailOverlay then detailOverlay.Visible = false end
 end
@@ -233,7 +223,7 @@ local function openDetailPanel(entry)
 	local stroke = detailPanel:FindFirstChildOfClass("UIStroke")
 	if stroke then stroke.Color = accent end
 	local header = Instance.new("Frame")
-	header.Size = UDim2.new(1, 0, 0, 132)
+	header.Size = UDim2.new(1, 0, 0, 104)
 	header.BackgroundColor3 = Color3.fromRGB(18, 39, 63)
 	header.BorderSizePixel = 0
 	header.Parent = detailPanel
@@ -243,7 +233,7 @@ local function openDetailPanel(entry)
 	headerPadding.PaddingLeft, headerPadding.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
 	headerPadding.Parent = header
 	local iconPanel = Instance.new("Frame")
-	iconPanel.Size = UDim2.fromOffset(112, 112)
+	iconPanel.Size = UDim2.fromOffset(92, 92)
 	iconPanel.BackgroundColor3 = Color3.fromRGB(4, 12, 24)
 	iconPanel.BorderSizePixel = 0
 	iconPanel.Parent = header
@@ -254,7 +244,7 @@ local function openDetailPanel(entry)
 	iconStroke.Thickness = 1
 	iconStroke.Parent = iconPanel
 	local icon = Instance.new("ImageLabel")
-	icon.Size = UDim2.fromOffset(88, 88)
+	icon.Size = UDim2.fromOffset(76, 76)
 	icon.Position = UDim2.new(0.5, 0, 0.5, 0)
 	icon.AnchorPoint = Vector2.new(0.5, 0.5)
 	icon.BackgroundTransparency = 1
@@ -264,43 +254,45 @@ local function openDetailPanel(entry)
 	icon.ImageTransparency = discoveredEntry and 0 or 0.2
 	icon.Parent = iconPanel
 	local info = Instance.new("Frame")
-	info.Size = UDim2.new(1, -124, 1, 0)
-	info.Position = UDim2.fromOffset(124, 0)
+	info.Size = UDim2.new(1, -104, 1, 0)
+	info.Position = UDim2.fromOffset(104, 0)
 	info.BackgroundTransparency = 1
 	info.Parent = header
 	local infoLayout = Instance.new("UIListLayout")
-	infoLayout.Padding = UDim.new(0, 6)
+	infoLayout.Padding = UDim.new(0, 4)
 	infoLayout.Parent = info
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, 0, 0, 34)
+	nameLabel.Size = UDim2.new(1, 0, 0, 38)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.TextSize = 26
+	nameLabel.TextSize = 24
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.TextColor3 = Color3.fromRGB(245, 248, 255)
 	nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
 	nameLabel.Text = discoveredEntry and tostring(bug.displayName) or "???"
 	nameLabel.Parent = info
 	makeRarityBadge(info, rarity)
-	local meta = Instance.new("TextLabel")
-	meta.Size = UDim2.new(1, 0, 0, 40)
-	meta.BackgroundTransparency = 1
-	meta.TextWrapped = true
-	meta.TextXAlignment = Enum.TextXAlignment.Left
-	meta.TextYAlignment = Enum.TextYAlignment.Top
-	meta.Font = Enum.Font.Gotham
-	meta.TextSize = 14
-	meta.TextColor3 = Color3.fromRGB(150, 170, 195)
-	meta.Text = discoveredEntry and string.format("Species: %s\nRole: %s", tostring(bug.species or "Unknown"), tostring(bug.role or "Unknown")) or "Undiscovered Bug\nCatch this bug to reveal its details."
-	meta.Parent = info
+	if not discoveredEntry then
+		local undiscoveredText = Instance.new("TextLabel")
+		undiscoveredText.Size = UDim2.new(1, 0, 0, 32)
+			undiscoveredText.BackgroundTransparency = 1
+		undiscoveredText.TextWrapped = true
+		undiscoveredText.TextXAlignment = Enum.TextXAlignment.Left
+		undiscoveredText.TextYAlignment = Enum.TextYAlignment.Top
+		undiscoveredText.Font = Enum.Font.Gotham
+		undiscoveredText.TextSize = 13
+		undiscoveredText.TextColor3 = Color3.fromRGB(150, 170, 195)
+		undiscoveredText.Text = "Undiscovered Bug\nCatch this bug to reveal its details."
+		undiscoveredText.Parent = info
+	end
 	createSectionTitle(detailPanel, "COMBAT STATS", accent)
 	local statGrid = Instance.new("Frame")
-	statGrid.Size = UDim2.new(1, 0, 0, 122)
+	statGrid.Size = UDim2.new(1, 0, 0, 114)
 	statGrid.BackgroundTransparency = 1
 	statGrid.Parent = detailPanel
 	local grid = Instance.new("UIGridLayout")
 	grid.CellSize = UDim2.new(0.24, 0, 0, 56)
-	grid.CellPadding = UDim2.new(0.013, 0, 0, 8)
+	grid.CellPadding = UDim2.new(0.015, 0, 0, 6)
 	grid.Parent = statGrid
 	local stats = bug.stats or {}
 	local statOrder = {{"HP","HP"},{"ATK","ATK"},{"DEF","DEF"},{"SPD","SPD"},{"CRATE","CritRate"},{"CDMG","CritDamage"},{"RES","RES"},{"ACC","ACC"}}
@@ -316,7 +308,7 @@ local function openDetailPanel(entry)
 		createSectionTitle(detailPanel, "ABILITY", accent)
 		local ability = bug.ability
 		local panel = Instance.new("Frame")
-		panel.Size = UDim2.new(1, 0, 0, 118)
+		panel.Size = UDim2.new(1, 0, 0, 98)
 		panel.BackgroundColor3 = Color3.fromRGB(18, 39, 63)
 		panel.BorderSizePixel = 0
 		panel.Parent = detailPanel
@@ -337,21 +329,20 @@ local function openDetailPanel(entry)
 		name.Text = tostring(ability.name or "Unknown Ability")
 		name.Parent = panel
 		local badgeLine = Instance.new("TextLabel")
-		badgeLine.Size = UDim2.new(1, 0, 0, 20)
-		badgeLine.Position = UDim2.fromOffset(0, 22)
+		badgeLine.Size = UDim2.new(1, 0, 0, 18)
+		badgeLine.Position = UDim2.fromOffset(0, 20)
 		badgeLine.BackgroundTransparency = 1
 		badgeLine.Font = Enum.Font.GothamBold
 		badgeLine.TextSize = 12
 		badgeLine.TextXAlignment = Enum.TextXAlignment.Left
 		badgeLine.TextColor3 = Color3.fromRGB(90, 235, 245)
 		local abilityType = tostring(ability.abilityType or ability.type or "Unknown")
-		local target = tostring(ability.target or "Unknown")
 		local cooldown = tonumber(ability.cooldownTurns or ability.cooldown)
-		badgeLine.Text = cooldown and string.format("[ %s ] [ Cooldown: %d ] [ Target: %s ]", abilityType, cooldown, target) or string.format("[ %s ] [ Target: %s ]", abilityType, target)
+		badgeLine.Text = cooldown and string.format("[ %s ] [ Cooldown: %d ]", abilityType, cooldown) or string.format("[ %s ]", abilityType)
 		badgeLine.Parent = panel
 		local desc = Instance.new("TextLabel")
-		desc.Size = UDim2.new(1, 0, 1, -44)
-		desc.Position = UDim2.fromOffset(0, 44)
+		desc.Size = UDim2.new(1, 0, 1, -38)
+		desc.Position = UDim2.fromOffset(0, 38)
 		desc.BackgroundTransparency = 1
 		desc.Font = Enum.Font.Gotham
 		desc.TextSize = 13
@@ -361,29 +352,7 @@ local function openDetailPanel(entry)
 		desc.TextColor3 = Color3.fromRGB(150, 170, 195)
 		desc.Text = tostring(ability.description or "")
 		desc.Parent = panel
-	elseif not discoveredEntry and (rarity == "Legendary" or rarity == "Mythic") then
-		createSectionTitle(detailPanel, "ABILITY", accent)
-		local locked = Instance.new("TextLabel")
-		locked.Size = UDim2.new(1, 0, 0, 24)
-		locked.BackgroundTransparency = 1
-		locked.Font = Enum.Font.GothamBold
-		locked.TextSize = 14
-		locked.TextXAlignment = Enum.TextXAlignment.Left
-		locked.TextColor3 = Color3.fromRGB(150, 170, 195)
-		locked.Text = "Ability: ???"
-		locked.Parent = detailPanel
 	end
-	local flavor = Instance.new("TextLabel")
-	flavor.Size = UDim2.new(1, 0, 0, 48)
-	flavor.BackgroundTransparency = 1
-	flavor.TextWrapped = true
-	flavor.TextXAlignment = Enum.TextXAlignment.Left
-	flavor.TextYAlignment = Enum.TextYAlignment.Top
-	flavor.Font = Enum.Font.Gotham
-	flavor.TextSize = 14
-	flavor.TextColor3 = Color3.fromRGB(150, 170, 195)
-	flavor.Text = discoveredEntry and ("Status: Discovered\n" .. getSpeciesFlavor(tostring(bug.species or ""), tostring(bug.role or ""))) or "Status: Undiscovered\nCatch this bug to reveal its details."
-	flavor.Parent = detailPanel
 end
 
 local function refresh(context)
@@ -558,7 +527,9 @@ local function refresh(context)
 end
 
 function BugdexApp.Mount(target: Instance, context): ()
-	if root then return end
+	if windowRef and windowRef.Content and windowRef.Content.Parent then return end
+	windowRef = nil
+	root = nil
 	windowRef = Window.Create({ Title = "Bugdex.exe", Size = UDim2.fromOffset(780, 540), Position = UDim2.fromScale(0.1, 0.1), Parent = target, OnClose = function() context.Controllers.Window.Close("Bugdex") end })
 	root = Instance.new("Frame")
 	root.Size = UDim2.fromScale(1, 1)
@@ -625,7 +596,7 @@ function BugdexApp.Mount(target: Instance, context): ()
 	detailOverlay.Parent = root
 	detailOverlay.Activated:Connect(closeDetailPanel)
 	detailPanel = Instance.new("Frame")
-	detailPanel.Size = UDim2.fromOffset(610, 500)
+	detailPanel.Size = UDim2.fromOffset(470, 400)
 	detailPanel.Position = UDim2.fromScale(0.5, 0.5)
 	detailPanel.AnchorPoint = Vector2.new(0.5, 0.5)
 	detailPanel.BackgroundColor3 = Color3.fromRGB(8, 20, 36)
@@ -636,11 +607,11 @@ function BugdexApp.Mount(target: Instance, context): ()
 	detailPanelCorner.CornerRadius = UDim.new(0, 10)
 	detailPanelCorner.Parent = detailPanel
 	local panelPadding = Instance.new("UIPadding")
-	panelPadding.PaddingTop = UDim.new(0, 12) panelPadding.PaddingBottom = UDim.new(0, 12)
-	panelPadding.PaddingLeft = UDim.new(0, 12) panelPadding.PaddingRight = UDim.new(0, 12)
+	panelPadding.PaddingTop = UDim.new(0, 10) panelPadding.PaddingBottom = UDim.new(0, 10)
+	panelPadding.PaddingLeft = UDim.new(0, 10) panelPadding.PaddingRight = UDim.new(0, 10)
 	panelPadding.Parent = detailPanel
 	local panelLayout = Instance.new("UIListLayout")
-	panelLayout.Padding = UDim.new(0, 10)
+	panelLayout.Padding = UDim.new(0, 8)
 	panelLayout.Parent = detailPanel
 	local detailStroke = Instance.new("UIStroke")
 	detailStroke.Color = Color3.fromRGB(88, 170, 255)
@@ -673,6 +644,10 @@ function BugdexApp.Mount(target: Instance, context): ()
 		stateChangedConn = context.Events.StateChanged.Event:Connect(function() refresh(context) end)
 	end
 	refresh(context)
+end
+
+function BugdexApp.IsMounted(): boolean
+	return windowRef ~= nil and windowRef.Content ~= nil and windowRef.Content.Parent ~= nil
 end
 
 function BugdexApp.Unmount(): ()
