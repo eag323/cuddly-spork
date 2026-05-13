@@ -477,7 +477,7 @@ local function createSectionTitle(parent: Instance, text: string, accent: Color3
 	label.Parent = holder
 end
 
-local statEmoji = { HP = "♥", ATK = "♦", DEF = "■", SPD = "▶", CR = "★", CD = "✸", RES = "⬢", ACC = "◎" }
+local statEmoji = { HP = "❤️", ATK = "⚔️", DEF = "🛡️", SPD = "💨", CR = "🎯", CD = "💥", RES = "🧠", ACC = "👁️" }
 
 local function createStatBox(parent: Instance, labelText: string, valueText: string)
 	local card = Instance.new("Frame")
