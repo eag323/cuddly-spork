@@ -73,11 +73,11 @@ local function refreshForPatch(path: { any }?): ()
 		MarketApp.Refresh(context)
 	end
 
-	if root == "Upgrades" or root == "ClickTools" or (root == "Currencies" and key == "Coins") then
+	if (root == "Upgrades" or root == "ClickTools" or (root == "Currencies" and key == "Coins")) and context.Controllers.Upgrade then
 		context.Controllers.Upgrade.Refresh()
 	end
 
-	if root == "Generators" or root == "Prestige" then
+	if (root == "Generators" or root == "Prestige") and context.Controllers.Generator then
 		context.Controllers.Generator.Refresh()
 	end
 end
