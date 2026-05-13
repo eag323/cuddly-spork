@@ -35,6 +35,160 @@ local searchQuery = ""
 local collapsedByRarity = {}
 local closeButtonRef
 
+local warnedInvalidBugs = {}
+
+local function warnInvalidBugEntry(bug)
+	local key = "missing"
+	if type(bug) == "table" then
+		key = tostring(bug.id or bug.displayName or bug.species or "missing")
+	end
+	if warnedInvalidBugs[key] then return end
+	warnedInvalidBugs[key] = true
+	warn(string.format("[BugdexApp] Invalid bug entry encountered while rendering row (%s)", key))
+end
+
+local function createBugRow(parent: Instance, entry, rowZIndex: number)
+	local bug = if type(entry) == "table" then entry.bug else nil
+	if type(bug) ~= "table" then
+		warnInvalidBugEntry(bug)
+		bug = {}
+	end
+	local discoveredEntry = type(entry) == "table" and entry.discovered == true
+	local rarity = tostring(bug.rarity or "Unknown")
+	local iconImage = tostring(bug.icon or "")
+	local displayName = tostring(bug.displayName or bug.id or "Unknown Bug")
+	local species = tostring(bug.species or "Unknown")
+
+	if bug.id == nil or bug.rarity == nil then
+		warnInvalidBugEntry(bug)
+	end
+
+	local row = Instance.new("TextButton")
+	row.Name = "BugRow"
+	row.Size = UDim2.new(1, 0, 0, 68)
+	row.BackgroundColor3 = discoveredEntry and Color3.fromRGB(32, 52, 74) or Color3.fromRGB(20, 28, 40)
+	row.BorderColor3 = Color3.fromRGB(58, 78, 102)
+	row.BorderSizePixel = 1
+	row.AutoButtonColor = false
+	row.Text = ""
+	row.ZIndex = rowZIndex
+	row.Parent = parent
+	Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+
+	local rowPadding = Instance.new("UIPadding")
+	rowPadding.PaddingLeft = UDim.new(0, 10)
+	rowPadding.PaddingRight = UDim.new(0, 10)
+	rowPadding.Parent = row
+
+	local rowContent = Instance.new("Frame")
+	rowContent.Name = "RowContent"
+	rowContent.BackgroundTransparency = 1
+	rowContent.Size = UDim2.fromScale(1, 1)
+	rowContent.ZIndex = rowZIndex + 1
+	rowContent.Parent = row
+
+	local iconHolder = Instance.new("Frame")
+	iconHolder.Name = "IconHolder"
+	iconHolder.Size = UDim2.fromOffset(48, 48)
+	iconHolder.AnchorPoint = Vector2.new(0, 0.5)
+	iconHolder.Position = UDim2.new(0, 0, 0.5, 0)
+	iconHolder.BackgroundColor3 = Color3.fromRGB(9, 18, 30)
+	iconHolder.BorderSizePixel = 0
+	iconHolder.ZIndex = rowZIndex + 1
+	iconHolder.Parent = rowContent
+	Instance.new("UICorner", iconHolder).CornerRadius = UDim.new(0, 8)
+
+	local icon = Instance.new("ImageLabel")
+	icon.Name = "BugIcon"
+	icon.Size = UDim2.fromOffset(40, 40)
+	icon.AnchorPoint = Vector2.new(0.5, 0.5)
+	icon.Position = UDim2.fromScale(0.5, 0.5)
+	icon.BackgroundTransparency = 1
+	icon.Image = iconImage
+	icon.ScaleType = Enum.ScaleType.Fit
+	icon.ZIndex = rowZIndex + 2
+	if discoveredEntry then
+		icon.ImageColor3 = Color3.new(1, 1, 1)
+		icon.ImageTransparency = 0
+	else
+		icon.ImageColor3 = Color3.new(0, 0, 0)
+		icon.ImageTransparency = 0.22
+	end
+	icon.Parent = iconHolder
+
+	local textBlock = Instance.new("Frame")
+	textBlock.Name = "TextBlock"
+	textBlock.BackgroundTransparency = 1
+	textBlock.Position = UDim2.fromOffset(64, 0)
+	textBlock.Size = UDim2.new(1, -290, 1, 0)
+	textBlock.ZIndex = rowZIndex + 1
+	textBlock.Parent = rowContent
+
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Name = "NameLabel"
+	nameLabel.Size = UDim2.new(1, 0, 0, 24)
+	nameLabel.Position = UDim2.new(0, 0, 0.5, -21)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextSize = 17
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.TextColor3 = Color3.fromRGB(245, 248, 255)
+	nameLabel.TextTransparency = 0
+	nameLabel.Text = discoveredEntry and displayName or "???"
+	nameLabel.ZIndex = rowZIndex + 2
+	nameLabel.Parent = textBlock
+
+	local subTextLabel = Instance.new("TextLabel")
+	subTextLabel.Name = "SubTextLabel"
+	subTextLabel.Size = UDim2.new(1, 0, 0, 18)
+	subTextLabel.Position = UDim2.new(0, 0, 0.5, 3)
+	subTextLabel.BackgroundTransparency = 1
+	subTextLabel.Font = Enum.Font.Gotham
+	subTextLabel.TextSize = 13
+	subTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+	subTextLabel.TextColor3 = Color3.fromRGB(155, 175, 198)
+	subTextLabel.TextTransparency = 0
+	subTextLabel.Text = discoveredEntry and string.format("Species: %s", species) or "Undiscovered"
+	subTextLabel.ZIndex = rowZIndex + 2
+	subTextLabel.Parent = textBlock
+
+	local rarityAnchor = Instance.new("Frame")
+	rarityAnchor.Name = "RarityBadge"
+	rarityAnchor.BackgroundTransparency = 1
+	rarityAnchor.AnchorPoint = Vector2.new(0.5, 0.5)
+	rarityAnchor.Position = UDim2.new(0.67, 0, 0.5, 0)
+	rarityAnchor.Size = UDim2.fromOffset(140, 28)
+	rarityAnchor.ZIndex = rowZIndex + 2
+	rarityAnchor.Parent = rowContent
+	makeRarityBadge(rarityAnchor, rarity)
+
+	local statusLabel = Instance.new("TextLabel")
+	statusLabel.Name = "StatusLabel"
+	statusLabel.AnchorPoint = Vector2.new(1, 0.5)
+	statusLabel.Position = UDim2.new(1, -10, 0.5, 0)
+	statusLabel.Size = UDim2.fromOffset(120, 24)
+	statusLabel.BackgroundTransparency = 1
+	statusLabel.Font = Enum.Font.GothamBold
+	statusLabel.TextSize = 13
+	statusLabel.TextXAlignment = Enum.TextXAlignment.Right
+	statusLabel.Text = discoveredEntry and "✓ Discovered" or "🔒 Locked"
+	statusLabel.TextColor3 = discoveredEntry and Color3.fromRGB(130, 255, 180) or Color3.fromRGB(154, 169, 186)
+	statusLabel.TextTransparency = 0
+	statusLabel.ZIndex = rowZIndex + 2
+	statusLabel.Parent = rowContent
+
+	local base = row.BackgroundColor3
+	row.MouseEnter:Connect(function()
+		row.BackgroundColor3 = base:Lerp(Color3.fromRGB(74, 99, 128), 0.2)
+	end)
+	row.MouseLeave:Connect(function()
+		row.BackgroundColor3 = base
+	end)
+	row.Activated:Connect(function()
+		openDetailPanel(entry)
+	end)
+end
+
 local rarityColors = {
 	Common = Color3.fromRGB(185, 185, 185),
 	Uncommon = Color3.fromRGB(105, 214, 134),
@@ -454,12 +608,31 @@ local function refresh(context)
 				headerBtn.Activated:Connect(function() collapsedByRarity[rarity] = not collapsedByRarity[rarity] refresh(context) end)
 				makeProgressBar(section, if group.total>0 then group.discovered/group.total else 0, getRarityColor(rarity))
 				if not collapsedByRarity[rarity] then
+					local visibleRows = 0
 					for _, entry in ipairs(group.entries) do
-						local blob = string.lower(string.format("%s %s %s %s %s", tostring(entry.bug.displayName or ""), tostring(entry.bug.species or ""), tostring(entry.bug.rarity or ""), tostring(entry.bug.role or ""), entry.discovered and "discovered" or "undiscovered"))
+						local bug = if type(entry) == "table" then entry.bug else nil
+						local displayName = if type(bug) == "table" then tostring(bug.displayName or bug.id or "") else ""
+						local species = if type(bug) == "table" then tostring(bug.species or "") else ""
+						local rarityText = if type(bug) == "table" then tostring(bug.rarity or "") else ""
+						local role = if type(bug) == "table" then tostring(bug.role or "") else ""
+						local blob = string.lower(string.format("%s %s %s %s %s", displayName, species, rarityText, role, entry.discovered and "discovered" or "undiscovered"))
 						if query == "" or string.find(blob, query, 1, true) then
-							local row = Instance.new("TextButton"); row.Size=UDim2.new(1,0,0,62); row.BackgroundColor3=entry.discovered and Color3.fromRGB(32,52,74) or Color3.fromRGB(20,28,40); row.BorderColor3=Color3.fromRGB(58,78,102); row.BorderSizePixel=1; row.AutoButtonColor=false; row.Text=""; row.Parent=section; Instance.new("UICorner",row).CornerRadius=UDim.new(0,8)
-							local base=row.BackgroundColor3; row.MouseEnter:Connect(function() row.BackgroundColor3=base:Lerp(Color3.fromRGB(74, 99, 128), 0.2) end); row.MouseLeave:Connect(function() row.BackgroundColor3=base end); row.Activated:Connect(function() openDetailPanel(entry) end)
+							visibleRows += 1
+							createBugRow(section, entry, 1)
 						end
+					end
+					if visibleRows == 0 then
+						local empty = Instance.new("TextLabel")
+						empty.Size = UDim2.new(1, 0, 0, 40)
+						empty.BackgroundColor3 = Color3.fromRGB(20, 28, 40)
+						empty.BorderColor3 = Color3.fromRGB(58, 78, 102)
+						empty.BorderSizePixel = 1
+						empty.Font = Enum.Font.Gotham
+						empty.TextSize = 14
+						empty.TextColor3 = Color3.fromRGB(155, 175, 198)
+						empty.Text = "No bugs found."
+						empty.Parent = section
+						Instance.new("UICorner", empty).CornerRadius = UDim.new(0, 8)
 					end
 				end
 			end
