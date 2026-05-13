@@ -40,7 +40,10 @@ local function render(context)
 	for _,it in ipairs(ownedList(inv)) do
 		local uid,bug=it.Uid,it.Bug; local cfg=getBugCfg(bug.BugId)
 		local row=Instance.new("Frame"); row.Size=UDim2.new(1,-8,0,70); row.BackgroundColor3=Color3.fromRGB(15,23,42); row.BorderSizePixel=0; row.Parent=list
-		local tx=Instance.new("TextLabel"); tx.Size=UDim2.new(1,-260,1,0); tx.Position=UDim2.fromOffset(8,0); tx.BackgroundTransparency=1; tx.TextXAlignment=Enum.TextXAlignment.Left; tx.TextSize=14; tx.TextColor3=Color3.fromRGB(230,240,255); tx.Text=(cfg and cfg.displayName or bug.BugId).."  "..tostring((cfg and cfg.rarity) or "Common"); tx.Parent=row
+		local bugId = bug and bug.BugId
+		local displayName = (cfg and cfg.displayName) or bugId or "Unknown Bug"
+		local rarity = (cfg and cfg.rarity) or bug.Rarity or "Common"
+		local tx=Instance.new("TextLabel"); tx.Size=UDim2.new(1,-260,1,0); tx.Position=UDim2.fromOffset(8,0); tx.BackgroundTransparency=1; tx.TextXAlignment=Enum.TextXAlignment.Left; tx.TextSize=14; tx.TextColor3=Color3.fromRGB(230,240,255); tx.Text=tostring(displayName).."  "..tostring(rarity); tx.Parent=row
 		local lock=Instance.new("TextButton"); lock.Size=UDim2.fromOffset(70,24); lock.Position=UDim2.new(1,-250,0.5,-12); lock.Text=(bug.Locked and "Unlock" or "Lock"); lock.Parent=row; lock.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid) end)
 		if selectedTab=="Recycling" then
 			local sel=Instance.new("TextButton"); sel.Size=UDim2.fromOffset(70,24); sel.Position=UDim2.new(1,-170,0.5,-12); sel.Text=(selectedRecycle[uid] and "Selected" or "Select"); sel.Parent=row
