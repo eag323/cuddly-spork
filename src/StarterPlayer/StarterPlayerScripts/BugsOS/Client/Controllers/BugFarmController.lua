@@ -49,16 +49,24 @@ function BugFarmController.ToggleLock(bugUid: string): ()
 	fire({"BugFarm_ToggleLock", "Bug_ToggleLock", "BugToggleLock"}, { Uid = bugUid })
 end
 
-function BugFarmController.RecycleSelected(uids: {string}, confirmHighRarity: boolean?): ()
+function BugFarmController.Recycle(uids: {string}, confirmHighRarity: boolean?): ()
 	fire({"BugFarm_Recycle", "Bug_Recycle", "BugRecycle"}, { Uids = uids, ConfirmHighRarity = confirmHighRarity == true })
+end
+
+function BugFarmController.RecycleSelected(uids: {string}, confirmHighRarity: boolean?): ()
+	BugFarmController.Recycle(uids, confirmHighRarity)
 end
 
 function BugFarmController.Ascend(bugUid: string): ()
 	fire({"BugFarm_Ascend"}, { Uid = bugUid })
 end
 
-function BugFarmController.PromptBuyExtraFarmerSlot(): ()
+function BugFarmController.PromptExtraFarmerSlotPurchase(): ()
 	fire({"BugFarm_PromptExtraFarmerSlotPurchase", "BugFarm_BuyExtraFarmerSlot", "BugFarmBuyExtraFarmerSlot"}, {})
+end
+
+function BugFarmController.PromptBuyExtraFarmerSlot(): ()
+	BugFarmController.PromptExtraFarmerSlotPurchase()
 end
 
 return BugFarmController

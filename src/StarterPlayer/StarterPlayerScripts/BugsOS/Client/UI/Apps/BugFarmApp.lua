@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
 local BugConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugConfig"))
 local Window = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("Window"))
+local BugdexView = require(script.Parent:WaitForChild("Views"):WaitForChild("BugdexView"))
 
 local BugFarmApp = {}
 
@@ -18,6 +19,7 @@ local selectedRecycle: {[string]: boolean} = {}
 local searchQuery = ""
 local sortMode = "Rarity"
 local detailOverlay
+local bugdexInlineHost
 
 local COLORS = {
 	bg = Color3.fromRGB(6, 16, 30),
@@ -355,15 +357,22 @@ end
 	end
 
 	if selectedTab == "Bugdex" then
-		local openDex = makeCard(scroll, UDim2.new(1, -20, 0, 80))
-		local msg = Instance.new("TextLabel")
-		msg.Size = UDim2.new(1, -20, 0, 24)
-		msg.Position = UDim2.fromOffset(10, 10)
-		msg.TextXAlignment = Enum.TextXAlignment.Left
-		msg.Text = "Open full Bugdex from desktop icon for detailed discovery view"
-		msg.TextSize = 14
-		styleLabel(msg, false)
-		msg.Parent = openDex
+		if bugdexInlineHost then
+			BugdexView.Unmount()
+			bugdexInlineHost:Destroy()
+			bugdexInlineHost = nil
+		end
+		bugdexInlineHost = Instance.new("Frame")
+		bugdexInlineHost.Name = "BugdexInlineHost"
+		bugdexInlineHost.BackgroundTransparency = 1
+		bugdexInlineHost.Size = UDim2.new(1, -20, 1, -20)
+		bugdexInlineHost.Parent = contentHost
+		BugdexView.Mount(bugdexInlineHost, context)
+		return
+	elseif bugdexInlineHost then
+		BugdexView.Unmount()
+		bugdexInlineHost:Destroy()
+		bugdexInlineHost = nil
 	end
 
 	if selectedTab == "Recycling" then
@@ -425,6 +434,11 @@ end
 
 function BugFarmApp.Unmount()
 	if stateConn then stateConn:Disconnect() end
+	if bugdexInlineHost then
+		BugdexView.Unmount()
+		bugdexInlineHost:Destroy()
+		bugdexInlineHost = nil
+	end
 	if windowRef then windowRef.Destroy() end
 	stateConn = nil
 	windowRef = nil
