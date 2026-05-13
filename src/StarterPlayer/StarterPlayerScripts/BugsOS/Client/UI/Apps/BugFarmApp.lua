@@ -13,7 +13,7 @@ local root
 local tabButtons: {[string]: TextButton} = {}
 local contentHost
 local stateConn
-local selectedTab = "Farmers"
+local selectedTab = "My Bugs"
 local selectedRecycle: {[string]: boolean} = {}
 local searchQuery = ""
 local sortMode = "Rarity"
@@ -204,7 +204,7 @@ local function render(context)
 	title.Size = UDim2.new(1, -14, 0, 24)
 	title.Position = UDim2.fromOffset(10, 8)
 	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Text = selectedTab == "Farmers" and "FARMER BUGS" or (selectedTab == "Combat Team" and "COMBAT TEAM" or "BUG RECYCLING")
+	title.Text = (selectedTab == "My Bugs" and "MY BUGS") or (selectedTab == "Farmers" and "FARMER BUGS") or (selectedTab == "Combat Team" and "COMBAT TEAM") or (selectedTab == "Recycling" and "BUG RECYCLING") or "BUGDEX"
 	title.TextSize = 18
 	styleLabel(title, true)
 	title.Parent = summary
@@ -222,7 +222,13 @@ local function render(context)
 	summaryText.TextSize = 14
 	styleLabel(summaryText, false)
 	summaryText.TextColor3 = COLORS.muted
-	summaryText.Text = string.format("Equipped: %d / %d\nExtra Slots: %d / 10", #farmerSlots, 5 + tonumber(bugs.ExtraFarmerSlotsPurchased or 0), tonumber(bugs.ExtraFarmerSlotsPurchased or 0))
+	summaryText.Text = string.format("Owned Bugs: %d\nLocked: %d\nBug Essence: %s", #owned, 0, tostring((context.State.PlayerData or {}).Currencies and (context.State.PlayerData or {}).Currencies.BugEssence or 0))
+	local lockedCount = 0
+	for _, b in pairs(inventory) do if b.Locked then lockedCount += 1 end end
+	summaryText.Text = string.format("Owned Bugs: %d\nLocked: %d\nBug Essence: %s\nFarmer Assigned: %d\nCombat Assigned: %d", #owned, lockedCount, tostring((context.State.PlayerData or {}).Currencies and (context.State.PlayerData or {}).Currencies.BugEssence or 0), #farmerSlots, #combatSlots)
+	if selectedTab == "Farmers" then
+		summaryText.Text = string.format("Equipped: %d / %d\nExtra Slots: %d / 10", #farmerSlots, 5 + tonumber(bugs.ExtraFarmerSlotsPurchased or 0), tonumber(bugs.ExtraFarmerSlotsPurchased or 0))
+	end
 	if selectedTab == "Combat Team" then
 		summaryText.Text = string.format("Equipped: %d / 5\nTeam Power: %d", #combatSlots, 0)
 	elseif selectedTab == "Recycling" then
@@ -248,6 +254,7 @@ local function render(context)
 	sort.Position = UDim2.new(0.62, 0, 0, 8)
 	sort.Activated:Connect(function() sortMode = (sortMode == "Rarity") and "Name" or "Rarity" render(context) end)
 
+	if selectedTab == "Farmers" or selectedTab == "Combat Team" then
 	for i = 1, (selectedTab == "Combat Team" and 5 or 5 + tonumber(bugs.ExtraFarmerSlotsPurchased or 0)) do
 		local slot = makeCard(scroll, UDim2.new(1, -20, 0, 76))
 		local uid = selectedTab == "Combat Team" and combatSlots[i] or farmerSlots[i]
@@ -284,6 +291,7 @@ local function render(context)
 			add.Parent = slot
 		end
 	end
+end
 
 	for _, entry in ipairs(owned) do
 		local uid, bug = entry.Uid, entry.Bug
@@ -328,7 +336,7 @@ local function render(context)
 				if not disabled then
 					selectBtn.Activated:Connect(function() selectedRecycle[uid] = not selectedRecycle[uid] render(context) end)
 				end
-			else
+			elseif selectedTab == "Farmers" or selectedTab == "Combat Team" then
 				local equip = makeButton(row, "Equip", COLORS.accent, UDim2.fromOffset(72, 28))
 				equip.TextColor3 = Color3.fromRGB(8, 20, 34)
 				equip.Position = UDim2.new(1, -74, 0.5, -14)
@@ -336,8 +344,26 @@ local function render(context)
 					if selectedTab == "Combat Team" then context.Controllers.BugFarm.EquipCombat(uid, nil) else context.Controllers.BugFarm.EquipFarmer(uid, nil) end
 				end)
 			end
+			if selectedTab == "My Bugs" then
+				local manage = makeButton(row, "Manage", COLORS.accent, UDim2.fromOffset(84, 28))
+				manage.TextColor3 = Color3.fromRGB(8, 20, 34)
+				manage.Position = UDim2.new(1, -86, 0.5, -14)
+				manage.Activated:Connect(function() makeDetailPopup(context, uid, bug) end)
+			end
 			row.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then makeDetailPopup(context, uid, bug) end end)
 		end
+	end
+
+	if selectedTab == "Bugdex" then
+		local openDex = makeCard(scroll, UDim2.new(1, -20, 0, 80))
+		local msg = Instance.new("TextLabel")
+		msg.Size = UDim2.new(1, -20, 0, 24)
+		msg.Position = UDim2.fromOffset(10, 10)
+		msg.TextXAlignment = Enum.TextXAlignment.Left
+		msg.Text = "Open full Bugdex from desktop icon for detailed discovery view"
+		msg.TextSize = 14
+		styleLabel(msg, false)
+		msg.Parent = openDex
 	end
 
 	if selectedTab == "Recycling" then
@@ -361,7 +387,7 @@ end
 function BugFarmApp.Mount(target, context)
 	if root then return end
 	windowRef = Window.Create({
-		Title = "Bug Farm.exe",
+		Title = "Bugs.exe",
 		Size = UDim2.fromOffset(940, 640),
 		Position = UDim2.fromScale(0.08, 0.1),
 		Parent = target,
@@ -378,7 +404,7 @@ function BugFarmApp.Mount(target, context)
 	tabs.Position = UDim2.fromOffset(8, 8)
 	tabs.BackgroundTransparency = 1
 	tabs.Parent = root
-	for i, name in ipairs({"Farmers", "Combat Team", "Recycling"}) do
+	for i, name in ipairs({"My Bugs", "Farmers", "Combat Team", "Recycling", "Bugdex"}) do
 		local tab = makeButton(tabs, name, COLORS.cardDark, UDim2.fromOffset(170, 32))
 		tab.Position = UDim2.fromOffset((i - 1) * 178, 4)
 		tab.Activated:Connect(function() selectedTab = name render(context) end)
