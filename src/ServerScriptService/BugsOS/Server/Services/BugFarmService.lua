@@ -73,7 +73,10 @@ function BugFarmService.Init()
 	remotes.ToggleLock = ensureRemote(RemoteNames.BugFarm_ToggleLock)
 	remotes.Recycle = ensureRemote(RemoteNames.BugFarm_Recycle)
 	remotes.Ascend = ensureRemote(RemoteNames.BugFarm_Ascend)
-	remotes.BuyExtraSlot = ensureRemote(RemoteNames.BugFarm_PromptExtraFarmerSlotPurchase)
+	-- Canonical remote expected by client startup checks.
+	remotes.BuyExtraSlot = ensureRemote(RemoteNames.BugFarm_BuyExtraFarmerSlot)
+	-- Backward compatibility for any legacy callers still firing the older prompt name.
+	remotes.BuyExtraSlotLegacy = ensureRemote(RemoteNames.BugFarm_PromptExtraFarmerSlotPurchase)
 	remotes.NotificationPush = ensureRemote(RemoteNames.Notification_Push)
 end
 
@@ -146,6 +149,13 @@ function BugFarmService.Start()
 		ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
 	end)
 	remotes.BuyExtraSlot.OnServerEvent:Connect(function(player)
+		local d=ProfileService.GetPlayerData(player); if not d then return end; ensureData(d)
+		local productId = tonumber(MarketplaceConfig.ExtraFarmerBugSlotProductId) or 0
+		if productId <= 0 then notify(player, "Extra farmer slot product is not configured.", "Warning"); return end
+		if d.Bugs.ExtraFarmerSlotsPurchased >= EXTRA_SLOT_CAP then notify(player, "You already own the max extra farmer slots.", "Info"); return end
+		MarketplaceService:PromptProductPurchase(player, productId)
+	end)
+	remotes.BuyExtraSlotLegacy.OnServerEvent:Connect(function(player)
 		local d=ProfileService.GetPlayerData(player); if not d then return end; ensureData(d)
 		local productId = tonumber(MarketplaceConfig.ExtraFarmerBugSlotProductId) or 0
 		if productId <= 0 then notify(player, "Extra farmer slot product is not configured.", "Warning"); return end
