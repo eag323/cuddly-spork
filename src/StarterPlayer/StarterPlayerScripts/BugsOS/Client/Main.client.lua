@@ -57,10 +57,13 @@ local requiredRemoteNames = {
 	BugEscaped = RemoteNames.Bug_Escaped,
 	BugAttemptCatch = RemoteNames.Bug_AttemptCatch,
 	BugHitUpdate = RemoteNames.Bug_HitUpdate,
-	BugEquip = RemoteNames.Bug_Equip,
-	BugUnequip = RemoteNames.Bug_Unequip,
-	BugLock = RemoteNames.Bug_Lock,
-	BugSacrifice = RemoteNames.Bug_Sacrifice,
+	BugFarmEquipFarmer = RemoteNames.BugFarm_EquipFarmer,
+	BugFarmUnequipFarmer = RemoteNames.BugFarm_UnequipFarmer,
+	BugFarmEquipCombat = RemoteNames.BugFarm_EquipCombat,
+	BugFarmUnequipCombat = RemoteNames.BugFarm_UnequipCombat,
+	BugToggleLock = RemoteNames.Bug_ToggleLock,
+	BugRecycle = RemoteNames.Bug_Recycle,
+	BugFarmBuyExtraFarmerSlot = RemoteNames.BugFarm_BuyExtraFarmerSlot,
 	AchievementClaim = RemoteNames.Achievement_Claim,
 }
 

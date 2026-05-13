@@ -8,24 +8,39 @@ end
 
 function BugFarmController.Start(): () end
 
-function BugFarmController.Equip(slotIndex: number, bugUid: string): ()
-	local bugEquipRemote = contextRef.Remotes.BugEquip
-	bugEquipRemote:FireServer({ SlotIndex = slotIndex, BugUid = bugUid })
+local function fire(remoteName: string, payload: {[string]: any}): ()
+	local remote = contextRef.Remotes[remoteName]
+	if remote then
+		remote:FireServer(payload)
+	end
 end
 
-function BugFarmController.Unequip(slotIndex: number): ()
-	local bugUnequipRemote = contextRef.Remotes.BugUnequip
-	bugUnequipRemote:FireServer({ SlotIndex = slotIndex })
+function BugFarmController.EquipFarmer(bugUid: string, slotIndex: number?): ()
+	fire("BugFarmEquipFarmer", { Uid = bugUid, SlotIndex = slotIndex })
+end
+
+function BugFarmController.UnequipFarmer(slotIndex: number): ()
+	fire("BugFarmUnequipFarmer", { SlotIndex = slotIndex })
+end
+
+function BugFarmController.EquipCombat(bugUid: string, slotIndex: number?): ()
+	fire("BugFarmEquipCombat", { Uid = bugUid, SlotIndex = slotIndex })
+end
+
+function BugFarmController.UnequipCombat(slotIndex: number): ()
+	fire("BugFarmUnequipCombat", { SlotIndex = slotIndex })
 end
 
 function BugFarmController.ToggleLock(bugUid: string): ()
-	local bugLockRemote = contextRef.Remotes.BugLock
-	bugLockRemote:FireServer({ BugUid = bugUid })
+	fire("BugToggleLock", { Uid = bugUid })
 end
 
-function BugFarmController.Sacrifice(bugUid: string): ()
-	local bugSacrificeRemote = contextRef.Remotes.BugSacrifice
-	bugSacrificeRemote:FireServer({ BugUid = bugUid })
+function BugFarmController.RecycleSelected(uids: {string}): ()
+	fire("BugRecycle", { Uids = uids })
+end
+
+function BugFarmController.PromptBuyExtraFarmerSlot(): ()
+	fire("BugFarmBuyExtraFarmerSlot", {})
 end
 
 return BugFarmController

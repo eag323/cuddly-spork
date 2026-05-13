@@ -78,7 +78,7 @@ function BuffService.GetPlayerBuffs(player: Player): BuffTotals
 		return buffs
 	end
 
-	local equipped = bugs.Equipped
+	local equipped = bugs.FarmerSlots or bugs.Equipped
 	local inventory = bugs.Inventory
 	if type(equipped) ~= "table" or type(inventory) ~= "table" then
 		return buffs

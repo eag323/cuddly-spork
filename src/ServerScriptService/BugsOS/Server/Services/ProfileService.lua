@@ -43,6 +43,7 @@ local DEFAULT_PLAYER_DATA: PlayerData = {
 		Coins = 0,
 		Nectar = 0,
 		BugDust = 0,
+		BugEssence = 0,
 		LifetimeFood = 0,
 	},
 
@@ -62,8 +63,9 @@ local DEFAULT_PLAYER_DATA: PlayerData = {
 
 	Bugs = {
 		Inventory = {},
-		Equipped = {},
-		SlotsUnlocked = 5,
+		FarmerSlots = {},
+		CombatSlots = {},
+		ExtraFarmerSlotsPurchased = 0,
 	},
 
 	Treasures = {
