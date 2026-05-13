@@ -262,9 +262,31 @@ local function refresh(context)
 					row.BackgroundTransparency = 0.35
 				end
 
+				local contentFrame = Instance.new("Frame")
+				contentFrame.Size = UDim2.new(1, 0, 1, 0)
+				contentFrame.BackgroundTransparency = 1
+				contentFrame.Parent = row
+
+				local contentPadding = Instance.new("UIPadding")
+				contentPadding.PaddingLeft = UDim.new(0, 10)
+				contentPadding.PaddingRight = UDim.new(0, 10)
+				contentPadding.Parent = contentFrame
+
+				local contentLayout = Instance.new("UIListLayout")
+				contentLayout.FillDirection = Enum.FillDirection.Horizontal
+				contentLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+				contentLayout.Padding = UDim.new(0, 10)
+				contentLayout.Parent = contentFrame
+
+				local iconHolder = Instance.new("Frame")
+				iconHolder.Size = UDim2.fromOffset(28, 28)
+				iconHolder.BackgroundTransparency = 1
+				iconHolder.Parent = contentFrame
+
 				local iconLabel = Instance.new("ImageLabel")
-				iconLabel.Size = UDim2.fromOffset(28, 28)
-				iconLabel.Position = UDim2.fromOffset(8, 8)
+				iconLabel.Size = UDim2.fromScale(1, 1)
+				iconLabel.Position = UDim2.fromScale(0.5, 0.5)
+				iconLabel.AnchorPoint = Vector2.new(0.5, 0.5)
 				iconLabel.BackgroundTransparency = 1
 				iconLabel.ScaleType = Enum.ScaleType.Fit
 				local icon = entry.bug.icon or "rbxassetid://0"
@@ -276,46 +298,47 @@ local function refresh(context)
 					iconLabel.ImageColor3 = Color3.fromRGB(0, 0, 0)
 					iconLabel.ImageTransparency = 0.2
 				end
-				iconLabel.Parent = row
+				iconLabel.Parent = iconHolder
 
 				local nameLabel = Instance.new("TextLabel")
-				nameLabel.Size = UDim2.new(0.42, -8, 1, 0)
-				nameLabel.Position = UDim2.fromOffset(32, 0)
+				nameLabel.Size = UDim2.new(0.38, 0, 1, 0)
 				nameLabel.BackgroundTransparency = 1
 				nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+				nameLabel.TextYAlignment = Enum.TextYAlignment.Center
 				nameLabel.TextColor3 = if discoveredEntry then Color3.new(1, 1, 1) else Color3.fromRGB(140, 140, 140)
 				nameLabel.TextSize = 15
 				nameLabel.Text = if discoveredEntry then tostring(entry.bug.displayName) else "???"
-				nameLabel.Parent = row
+				nameLabel.Parent = contentFrame
 
 				local rarityLabel = Instance.new("TextLabel")
 				rarityLabel.Size = UDim2.new(0.2, -6, 1, 0)
-				rarityLabel.Position = UDim2.new(0.48, 0, 0, 0)
 				rarityLabel.BackgroundTransparency = 1
 				rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
+				rarityLabel.TextYAlignment = Enum.TextYAlignment.Center
 				rarityLabel.TextColor3 = getRarityColor(rarity)
 				rarityLabel.TextSize = 14
 				rarityLabel.Text = rarity
-				rarityLabel.Parent = row
+				rarityLabel.Parent = contentFrame
 
 				local caughtLabel = Instance.new("TextLabel")
 				caughtLabel.Size = UDim2.new(0.2, -6, 1, 0)
-				caughtLabel.Position = UDim2.new(0.68, 0, 0, 0)
 				caughtLabel.BackgroundTransparency = 1
 				caughtLabel.TextXAlignment = Enum.TextXAlignment.Left
+				caughtLabel.TextYAlignment = Enum.TextYAlignment.Center
 				caughtLabel.TextColor3 = if discoveredEntry then Color3.fromRGB(206, 206, 206) else Color3.fromRGB(120, 120, 120)
 				caughtLabel.TextSize = 14
 				caughtLabel.Text = if discoveredEntry then tostring(entry.bug.species or "Unknown") else "Undiscovered"
-				caughtLabel.Parent = row
+				caughtLabel.Parent = contentFrame
 
 				local checkLabel = Instance.new("TextLabel")
-				checkLabel.Size = UDim2.new(0.12, 0, 1, 0)
-				checkLabel.Position = UDim2.new(0.88, 0, 0, 0)
+				checkLabel.Size = UDim2.new(0.08, 0, 1, 0)
 				checkLabel.BackgroundTransparency = 1
+				checkLabel.TextXAlignment = Enum.TextXAlignment.Center
+				checkLabel.TextYAlignment = Enum.TextYAlignment.Center
 				checkLabel.TextColor3 = if discoveredEntry then Color3.fromRGB(121, 255, 163) else Color3.fromRGB(120, 120, 120)
 				checkLabel.TextSize = 18
 				checkLabel.Text = if discoveredEntry then "✓" else ""
-				checkLabel.Parent = row
+				checkLabel.Parent = contentFrame
 			end
 		end
 	end
