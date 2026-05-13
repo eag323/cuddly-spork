@@ -61,7 +61,9 @@ function BugFarmApp.Mount(target, context)
 	if root then return end
 	windowRef = Window.Create({ Title = "Bug Farm.exe", Size = UDim2.fromOffset(920, 620), Position = UDim2.fromScale(0.08, 0.1), Parent = target, OnClose = function() context.Controllers.Window.Close("BugFarm") end })
 	root = Instance.new("Frame"); root.Size=UDim2.fromScale(1,1); root.BackgroundColor3=Color3.fromRGB(2,6,23); root.BorderSizePixel=0; root.Parent=windowRef.Content
-	stateConn = context.Events.StateChanged.Event:Connect(function() render(context) end)
+	if context.Events and context.Events.StateChanged then
+		stateConn = context.Events.StateChanged.Event:Connect(function() render(context) end)
+	end
 	render(context)
 end
 
