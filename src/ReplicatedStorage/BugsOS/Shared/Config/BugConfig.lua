@@ -7829,6 +7829,104 @@ BugConfig.Bugs = {
     },
 }
 
+
+
+BugConfig.StatTypes = {
+    "BugPoints",
+    "ShinyChance",
+    "BugPower",
+    "BugLuck",
+    "MinigameTime",
+    "MinigameSpawnChance",
+}
+
+BugConfig.RarityWeights = {
+    Common = 65,
+    Uncommon = 22,
+    Rare = 8,
+    Epic = 3.5,
+    Legendary = 1.2,
+    Mythic = 0.3,
+}
+
+BugConfig.BaseBugPoints = {
+    Common = 1,
+    Uncommon = 2,
+    Rare = 4,
+    Epic = 8,
+    Legendary = 16,
+    Mythic = 32,
+}
+
+local DEFAULT_BEHAVIOR_POOL = { "Straight", "ZigZag", "Sine", "Burst" }
+
+local function getPrimaryStatTypeForRarity(rarity: string): string
+    if rarity == "Mythic" then
+        return "BugPower"
+    end
+    if rarity == "Legendary" then
+        return "BugLuck"
+    end
+    if rarity == "Epic" then
+        return "ShinyChance"
+    end
+    if rarity == "Rare" then
+        return "MinigameSpawnChance"
+    end
+    if rarity == "Uncommon" then
+        return "MinigameTime"
+    end
+    return "BugPoints"
+end
+
+local function getPrimaryStatValueForRarity(rarity: string): number
+    if rarity == "Mythic" then
+        return 0.25
+    end
+    if rarity == "Legendary" then
+        return 0.18
+    end
+    if rarity == "Epic" then
+        return 0.12
+    end
+    if rarity == "Rare" then
+        return 0.08
+    end
+    if rarity == "Uncommon" then
+        return 0.05
+    end
+    return 0.03
+end
+
+BugConfig.Species = {}
+for bugId, bug in pairs(BugConfig.Bugs) do
+    local rarity = bug.rarity
+    local speciesEntry = {
+        id = bugId,
+        displayName = bug.displayName,
+        rarity = rarity,
+        icon = bug.icon,
+        sprite = bug.sprite,
+        role = bug.role,
+        spawnWeight = 1,
+        behaviorPool = DEFAULT_BEHAVIOR_POOL,
+        baseTimer = 12,
+        hitsRequired = math.max(1, BugConfig.RarityOrder[rarity] or 1),
+        primaryStatType = getPrimaryStatTypeForRarity(rarity),
+        primaryStatValue = getPrimaryStatValueForRarity(rarity),
+        sourceBugId = bugId,
+    }
+    table.insert(BugConfig.Species, speciesEntry)
+end
+
+table.sort(BugConfig.Species, function(a, b)
+    local rarityA = BugConfig.RarityOrder[a.rarity] or 0
+    local rarityB = BugConfig.RarityOrder[b.rarity] or 0
+    if rarityA ~= rarityB then
+        return rarityA < rarityB
+    end
+    return a.displayName < b.displayName
+end)
 function BugConfig.GetBug(bugId: string)
     return BugConfig.Bugs[bugId]
 end
