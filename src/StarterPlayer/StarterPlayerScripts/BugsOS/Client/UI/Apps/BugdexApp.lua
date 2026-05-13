@@ -451,43 +451,44 @@ local function createSectionTitle(parent: Instance, text: string, accent: Color3
 	label.Parent = holder
 end
 
-local statEmoji = { HP = "❤️", ATK = "⚔️", DEF = "🛡️", SPD = "💨", CRATE = "🎯", CDMG = "💥", RES = "🔒", ACC = "👁️" }
+local statEmoji = { HP = "❤️", ATK = "⚔️", DEF = "🛡️", SPD = "💨", CR = "🎯", CD = "💥", RES = "🔒", ACC = "👁️" }
 
 local function createStatBox(parent: Instance, labelText: string, valueText: string)
 	local card = Instance.new("Frame")
+	card.Size = UDim2.new(0.125, -6, 0, 42)
 	card.BackgroundColor3 = Color3.fromRGB(4, 12, 24)
 	card.BorderSizePixel = 0
 	card.Parent = parent
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
+	corner.CornerRadius = UDim.new(0, 7)
 	corner.Parent = card
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = Color3.fromRGB(52, 74, 98)
 	stroke.Thickness = 1
 	stroke.Parent = card
-	local padding = Instance.new("UIPadding")
-	padding.PaddingTop = UDim.new(0, 8)
-	padding.PaddingBottom = UDim.new(0, 8)
-	padding.PaddingLeft = UDim.new(0, 8)
-	padding.PaddingRight = UDim.new(0, 8)
-	padding.Parent = card
+	local layout = Instance.new("UIListLayout")
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	layout.Padding = UDim.new(0, 1)
+	layout.Parent = card
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 0, 13)
+	label.Size = UDim2.new(1, -6, 0, 12)
 	label.BackgroundTransparency = 1
 	label.Text = string.format("%s %s", statEmoji[labelText] or "•", labelText)
 	label.Font = Enum.Font.GothamBold
-	label.TextSize = 11
+	label.TextSize = 10
 	label.TextColor3 = Color3.fromRGB(150, 170, 195)
-	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextXAlignment = Enum.TextXAlignment.Center
+	label.TextTruncate = Enum.TextTruncate.AtEnd
 	label.Parent = card
 	local value = Instance.new("TextLabel")
-	value.Size = UDim2.new(1, 0, 0, 22)
-	value.Position = UDim2.fromOffset(0, 16)
+	value.Size = UDim2.new(1, -6, 0, 16)
 	value.BackgroundTransparency = 1
 	value.Font = Enum.Font.GothamBold
-	value.TextSize = 18
+	value.TextSize = 14
 	value.TextColor3 = Color3.fromRGB(245, 248, 255)
-	value.TextXAlignment = Enum.TextXAlignment.Left
+	value.TextXAlignment = Enum.TextXAlignment.Center
+	value.TextTruncate = Enum.TextTruncate.AtEnd
 	value.Text = valueText
 	value.Parent = card
 end
@@ -573,24 +574,30 @@ openDetailPanel = function(entry)
 		undiscoveredText.Parent = info
 	end
 	createSectionTitle(detailPanel, "COMBAT STATS", accent)
-	local statGrid = Instance.new("Frame")
-	statGrid.Size = UDim2.new(1, 0, 0, 124)
-	statGrid.BackgroundTransparency = 1
-	statGrid.Parent = detailPanel
-	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.new(0.245, 0, 0, 58)
-	grid.CellPadding = UDim2.new(0, 7, 0, 7)
-	grid.Parent = statGrid
+	local statRow = Instance.new("Frame")
+	statRow.Size = UDim2.new(1, 0, 0, 42)
+	statRow.BackgroundTransparency = 1
+	statRow.Parent = detailPanel
+	local rowLayout = Instance.new("UIListLayout")
+	rowLayout.FillDirection = Enum.FillDirection.Horizontal
+	rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	rowLayout.Padding = UDim.new(0, 4)
+	rowLayout.Parent = statRow
 	local stats = bug.stats or {}
-	local statOrder = {{"HP","HP"},{"ATK","ATK"},{"DEF","DEF"},{"SPD","SPD"},{"CRATE","CritRate"},{"CDMG","CritDamage"},{"RES","RES"},{"ACC","ACC"}}
+	local statOrder = {{"HP","HP"},{"ATK","ATK"},{"DEF","DEF"},{"SPD","SPD"},{"CR","CritRate"},{"CD","CritDamage"},{"RES","RES"},{"ACC","ACC"}}
 	for _, mapping in ipairs(statOrder) do
 		local value = "???"
 		if discoveredEntry then
 			local raw = tonumber(stats[mapping[2]]) or 0
-			value = (mapping[1] == "CRATE" or mapping[1] == "CDMG") and string.format("%d%%", raw) or tostring(raw)
+			value = (mapping[1] == "CR" or mapping[1] == "CD") and string.format("%d%%", raw) or tostring(raw)
 		end
-		createStatBox(statGrid, mapping[1], value)
+		createStatBox(statRow, mapping[1], value)
 	end
+	local statSpacing = Instance.new("Frame")
+	statSpacing.Size = UDim2.new(1, 0, 0, 10)
+	statSpacing.BackgroundTransparency = 1
+	statSpacing.Parent = detailPanel
 	if discoveredEntry and bug.ability then
 		createSectionTitle(detailPanel, "ABILITY", accent)
 		local ability = bug.ability
@@ -634,7 +641,7 @@ openDetailPanel = function(entry)
 		desc.Position = UDim2.fromOffset(0, 48)
 		desc.BackgroundTransparency = 1
 		desc.Font = Enum.Font.Gotham
-		desc.TextSize = 14
+		desc.TextSize = 13
 		desc.TextWrapped = true
 		desc.TextYAlignment = Enum.TextYAlignment.Top
 		desc.TextXAlignment = Enum.TextXAlignment.Left
@@ -930,7 +937,7 @@ function BugdexApp.Mount(target: Instance, context): ()
 	detailOverlay.Activated:Connect(closeDetailPanel)
 	detailPanel = Instance.new("Frame")
 	detailPanel.AutomaticSize = Enum.AutomaticSize.Y
-	detailPanel.Size = UDim2.fromOffset(470, 0)
+	detailPanel.Size = UDim2.fromOffset(560, 0)
 	detailPanel.Position = UDim2.fromScale(0.5, 0.5)
 	detailPanel.AnchorPoint = Vector2.new(0.5, 0.5)
 	detailPanel.BackgroundColor3 = Color3.fromRGB(8, 20, 36)
