@@ -18,6 +18,8 @@ local selectedTab = "My Bugs"
 local selectedRecycle: {[string]: boolean} = {}
 local searchQuery = ""
 local sortMode = "Rarity"
+local rarityFilter = "All"
+local sortModes = {"Rarity","Name","Species","Newest","Locked First","Farmer Equipped","Combat Equipped","Power"}
 local detailOverlay
 local bugdexInlineHost
 
@@ -45,6 +47,42 @@ local function getBugCfg(id)
 	return BugConfig.Bugs[id]
 end
 
+
+
+local FALLBACK_ASCENSION_COSTS = {
+	Common = {5, 10, 20, 40, 80},
+	Uncommon = {10, 20, 40, 80, 160},
+	Rare = {25, 50, 100, 200, 400},
+	Epic = {75, 150, 300, 600, 1200},
+	Legendary = {250, 500, 1000, 2000, 4000},
+	Mythic = {1000, 2000, 4000, 8000, 16000},
+}
+
+local function getOwnedBugUid(ownedBug, fallbackUid)
+	if type(ownedBug) ~= "table" then return fallbackUid end
+	return ownedBug.Uid or ownedBug.Id or ownedBug.InstanceId or fallbackUid
+end
+
+local function getOwnedBugBugId(ownedBug)
+	if type(ownedBug) ~= "table" then return nil end
+	return ownedBug.BugId or ownedBug.SpeciesId or ownedBug.Species
+end
+
+local function getBugConfig(ownedBug)
+	local bugId = getOwnedBugBugId(ownedBug)
+	if type(bugId) ~= "string" then return nil end
+	return BugConfig.GetBug(bugId) or BugConfig.Bugs[bugId]
+end
+
+local function isBugLocked(ownedBug)
+	return type(ownedBug) == "table" and (ownedBug.Locked == true or ownedBug.IsLocked == true)
+end
+
+local function getBugAscension(ownedBug)
+	if type(ownedBug) ~= "table" then return 0 end
+	return math.max(0, math.min(5, tonumber(ownedBug.Ascension) or 0))
+end
+
 local function clear(container)
 	for _, child in ipairs(container:GetChildren()) do
 		child:Destroy()
@@ -53,6 +91,33 @@ end
 
 local function getBugsState(context)
 	return ((context.State.PlayerData or {}).Bugs or {})
+end
+
+
+local function isAssignedFarmer(uid, farmerSlots)
+	return table.find(farmerSlots, uid) ~= nil
+end
+
+local function isAssignedCombat(uid, combatSlots)
+	return table.find(combatSlots, uid) ~= nil
+end
+
+local function getAssignmentStatus(uid, farmerSlots, combatSlots)
+	if isAssignedFarmer(uid, farmerSlots) then return "Farmer" end
+	if isAssignedCombat(uid, combatSlots) then return "Combat" end
+	return "Unassigned"
+end
+
+local function getBugPower(bugConfig)
+	local stats = (bugConfig and bugConfig.stats) or {}
+	return math.floor((tonumber(stats.HP) or 0)
+		+ (tonumber(stats.ATK) or 0) * 4
+		+ (tonumber(stats.DEF) or 0) * 3
+		+ (tonumber(stats.SPD) or 0) * 2
+		+ (tonumber(stats.CritRate) or 0) * 8
+		+ (tonumber(stats.CritDamage) or 0)
+		+ (tonumber(stats.RES) or 0) * 2
+		+ (tonumber(stats.ACC) or 0) * 2)
 end
 
 local function getOwnedList(inventory)
@@ -137,8 +202,8 @@ local function makeDetailPopup(context, uid, bug)
 	detailOverlay.BackgroundTransparency = 0.3
 	detailOverlay.Size = UDim2.fromScale(1, 1)
 	detailOverlay.Parent = root
-	local panel = makeCard(detailOverlay, UDim2.fromOffset(520, 300))
-	panel.Position = UDim2.fromScale(0.5, 0.5) - UDim2.fromOffset(260, 150)
+	local panel = makeCard(detailOverlay, UDim2.fromOffset(620, 420))
+	panel.Position = UDim2.fromScale(0.5, 0.5) - UDim2.fromOffset(310, 210)
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, -20, 0, 26)
 	title.Position = UDim2.fromOffset(10, 10)
@@ -151,28 +216,47 @@ local function makeDetailPopup(context, uid, bug)
 	local badge = makeBadge(panel, rarity)
 	badge.Position = UDim2.fromOffset(12, 44)
 	local info = Instance.new("TextLabel")
-	info.Size = UDim2.new(1, -20, 1, -84)
+	info.Size = UDim2.new(1, -20, 0, 220)
 	info.Position = UDim2.fromOffset(10, 72)
 	info.TextXAlignment = Enum.TextXAlignment.Left
 	info.TextYAlignment = Enum.TextYAlignment.Top
 	info.TextWrapped = true
 	info.TextSize = 14
 	local stats = cfg.stats or {}
-	local buffs = cfg.farmBuffs or {}
-	info.Text = string.format("HP %s  ATK %s  DEF %s  SPD %s\nAbility: %s\nBuffs: Earnings +%s%%  Click +%s%%  Food/sec +%s%%",
-		tostring(stats.hp or 0), tostring(stats.atk or 0), tostring(stats.def or 0), tostring(stats.spd or 0),
-		tostring(cfg.ability or "None"), tostring(math.floor(((buffs.EarningsMultiplier or 1) - 1) * 100)),
-		tostring(math.floor((buffs.ClickPowerBonus or 0) * 100)), tostring(math.floor((buffs.FoodPerSecondBonus or 0) * 100)))
+	local idleBonuses = cfg.idleBonuses or {}
+	local ability = cfg.ability
+	local bonusText = #idleBonuses == 0 and "No farming buffs" or table.concat(idleBonuses, ", ")
+	local abilityText = ability and (tostring(ability.name or "Ability") .. " (" .. tostring(ability.type or "Passive") .. ")\n" .. tostring(ability.description or "")) or "No ability"
+	info.Text = string.format("STATS\nHP %s  ATK %s  DEF %s  SPD %s  CR %s  CD %s  RES %s  ACC %s\n\nFARMING BUFFS\n%s\n\nABILITY\n%s\n\nEQUIPMENT\nWeapon | Helmet | Chestplate | Boots | Charm\nEquipment Coming Soon",
+		tostring(stats.HP or 0), tostring(stats.ATK or 0), tostring(stats.DEF or 0), tostring(stats.SPD or 0), tostring(stats.CritRate or 0), tostring(stats.CritDamage or 0), tostring(stats.RES or 0), tostring(stats.ACC or 0),
+		bonusText, abilityText)
 	styleLabel(info, false)
 	info.TextColor3 = COLORS.muted
 	info.Parent = panel
-	local lockButton = makeButton(panel, bug.Locked and "Unlock" or "Lock", bug.Locked and COLORS.gold or COLORS.cardDark, UDim2.fromOffset(110, 30))
-	lockButton.Position = UDim2.new(1, -122, 1, -40)
+	local rank = getBugAscension(bug)
+	local rarity = tostring(cfg.rarity or bug.Rarity or "Common")
+	local costTable = ((cfg.ascension or {}).essenceRequiredByRank) or FALLBACK_ASCENSION_COSTS[rarity] or FALLBACK_ASCENSION_COSTS.Common
+	local cost = tonumber(costTable[rank + 1]) or tonumber(costTable[rank + 2]) or 0
+	local essence = tonumber((((context.State.PlayerData or {}).Currencies or {}).BugEssence)) or 0
+	local asc = makeButton(panel, rank >= 5 and "Max Ascension" or ("Ascend ("..cost.." Essence)"), COLORS.accent, UDim2.fromOffset(170, 30))
+	asc.Position = UDim2.new(1, -182, 1, -40)
+	asc.TextColor3 = Color3.fromRGB(8,20,34)
+	if rank >= 5 or essence < cost then asc.BackgroundColor3 = COLORS.cardDark asc.TextColor3 = COLORS.muted else
+		asc.Activated:Connect(function() context.Controllers.BugFarm.Ascend(uid) if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end)
+	end
+	local lockButton = makeButton(panel, isBugLocked(bug) and "Unlock" or "Lock", isBugLocked(bug) and COLORS.gold or COLORS.cardDark, UDim2.fromOffset(90, 30))
+	lockButton.Position = UDim2.new(1, -278, 1, -40)
 	lockButton.Activated:Connect(function()
 		context.Controllers.BugFarm.ToggleLock(uid)
 		detailOverlay:Destroy()
 		detailOverlay = nil
 	end)
+	local farmerBtn = makeButton(panel, "Equip Farmer", COLORS.cardDark, UDim2.fromOffset(120, 30))
+	farmerBtn.Position = UDim2.fromOffset(10, 380)
+	farmerBtn.Activated:Connect(function() context.Controllers.BugFarm.EquipFarmer(uid, nil) end)
+	local combatBtn = makeButton(panel, "Add Combat", COLORS.cardDark, UDim2.fromOffset(120, 30))
+	combatBtn.Position = UDim2.fromOffset(138, 380)
+	combatBtn.Activated:Connect(function() context.Controllers.BugFarm.EquipCombat(uid, nil) end)
 	detailOverlay.Activated:Connect(function() if detailOverlay then detailOverlay:Destroy() detailOverlay = nil end end)
 end
 
@@ -240,7 +324,7 @@ local function render(context)
 
 	local controls = makeCard(scroll, UDim2.new(1, -20, 0, 46))
 	local search = Instance.new("TextBox")
-	search.PlaceholderText = "Search bugs"
+	search.PlaceholderText = "Search bugs..."
 	search.Text = searchQuery
 	search.Size = UDim2.new(0.6, -10, 0, 30)
 	search.Position = UDim2.fromOffset(8, 8)
@@ -251,10 +335,14 @@ local function render(context)
 	search.TextXAlignment = Enum.TextXAlignment.Left
 	search.Parent = controls
 	Instance.new("UICorner", search).CornerRadius = UDim.new(0, 8)
-	search.FocusLost:Connect(function() searchQuery = search.Text render(context) end)
+	search:GetPropertyChangedSignal("Text"):Connect(function() searchQuery = search.Text render(context) end)
 	local sort = makeButton(controls, "Sort: " .. sortMode, COLORS.cardDark, UDim2.new(0.38, 0, 0, 30))
 	sort.Position = UDim2.new(0.62, 0, 0, 8)
-	sort.Activated:Connect(function() sortMode = (sortMode == "Rarity") and "Name" or "Rarity" render(context) end)
+	sort.Activated:Connect(function()
+		local idx = table.find(sortModes, sortMode) or 1
+		sortMode = sortModes[(idx % #sortModes) + 1]
+		render(context)
+	end)
 
 	if selectedTab == "Farmers" or selectedTab == "Combat Team" then
 	for i = 1, (selectedTab == "Combat Team" and 5 or 5 + tonumber(bugs.ExtraFarmerSlotsPurchased or 0)) do
@@ -295,7 +383,74 @@ local function render(context)
 	end
 end
 
-	for _, entry in ipairs(owned) do
+	if selectedTab == "My Bugs" then
+		local filterBar = makeCard(scroll, UDim2.new(1, -20, 0, 40))
+		local tabs = {"All","Common","Uncommon","Rare","Epic","Legendary","Mythic"}
+		for i, r in ipairs(tabs) do
+			local b = makeButton(filterBar, r, r == rarityFilter and getRarityColor(r) or COLORS.cardDark, UDim2.fromOffset(95, 28))
+			b.Position = UDim2.fromOffset(8 + (i - 1) * 98, 6)
+			b.TextColor3 = r == rarityFilter and Color3.fromRGB(12, 20, 30) or COLORS.text
+			b.Activated:Connect(function() rarityFilter = r render(context) end)
+		end
+		local gridWrap = makeCard(scroll, UDim2.new(1, -20, 0, 500))
+		local gridScroll = Instance.new("ScrollingFrame")
+		gridScroll.Size = UDim2.new(1, -12, 1, -12)
+		gridScroll.Position = UDim2.fromOffset(6, 6)
+		gridScroll.BackgroundTransparency = 1
+		gridScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		gridScroll.CanvasSize = UDim2.fromOffset(0, 0)
+		gridScroll.ScrollBarThickness = 7
+		gridScroll.Parent = gridWrap
+		local grid = Instance.new("UIGridLayout")
+		grid.CellSize = UDim2.fromOffset(160, 225)
+		grid.CellPadding = UDim2.fromOffset(10, 10)
+		grid.Parent = gridScroll
+
+		local display = {}
+		for _, entry in ipairs(owned) do table.insert(display, entry) end
+		table.sort(display, function(a, b)
+			local aCfg, bCfg = getBugConfig(a.Bug), getBugConfig(b.Bug)
+			local aUid, bUid = tostring(a.Uid), tostring(b.Uid)
+			if sortMode == "Name" then return tostring((aCfg and aCfg.displayName) or getOwnedBugBugId(a.Bug) or "") < tostring((bCfg and bCfg.displayName) or getOwnedBugBugId(b.Bug) or "") end
+			if sortMode == "Species" then return tostring((aCfg and aCfg.species) or "") < tostring((bCfg and bCfg.species) or "") end
+			if sortMode == "Locked First" then return (isBugLocked(a.Bug) and 1 or 0) > (isBugLocked(b.Bug) and 1 or 0) end
+			if sortMode == "Farmer Equipped" then return (isAssignedFarmer(aUid, farmerSlots) and 1 or 0) > (isAssignedFarmer(bUid, farmerSlots) and 1 or 0) end
+			if sortMode == "Combat Equipped" then return (isAssignedCombat(aUid, combatSlots) and 1 or 0) > (isAssignedCombat(bUid, combatSlots) and 1 or 0) end
+			if sortMode == "Power" then return getBugPower(aCfg) > getBugPower(bCfg) end
+			local ar = BugConfig.RarityOrder[tostring((aCfg and aCfg.rarity) or a.Bug.Rarity or "Common")] or 1
+			local br = BugConfig.RarityOrder[tostring((bCfg and bCfg.rarity) or b.Bug.Rarity or "Common")] or 1
+			return ar > br
+		end)
+		local shown = 0
+		for _, entry in ipairs(display) do
+			local uid, bug = entry.Uid, entry.Bug
+			local cfg = getBugConfig(bug) or {}
+			local rarity = tostring(cfg.rarity or bug.Rarity or "Common")
+			local assign = getAssignmentStatus(uid, farmerSlots, combatSlots)
+			local hay = string.lower(table.concat({tostring(cfg.displayName or "Unknown Bug"), tostring(cfg.species or ""), tostring(cfg.role or ""), rarity, assign}, " "))
+			if (rarityFilter == "All" or rarity == rarityFilter) and (searchQuery == "" or string.find(hay, string.lower(searchQuery), 1, true)) then
+				shown += 1
+				local card = makeCard(gridScroll, UDim2.fromOffset(160, 225))
+				card.BackgroundColor3 = COLORS.card
+				local stroke = card:FindFirstChildOfClass("UIStroke")
+				if stroke then stroke.Color = getRarityColor(rarity) stroke.Thickness = 2 end
+				local icon = Instance.new("ImageLabel"); icon.BackgroundTransparency = 1; icon.Size = UDim2.fromOffset(82, 82); icon.Position = UDim2.new(0.5, -41, 0, 28); icon.Image = tostring(cfg.icon or ""); icon.Parent = card
+				local name = Instance.new("TextLabel"); name.BackgroundTransparency = 1; name.Size = UDim2.new(1, -12, 0, 34); name.Position = UDim2.fromOffset(6, 114); name.Text = tostring(cfg.displayName or "Unknown Bug"); name.TextWrapped = true; name.TextSize = 14; styleLabel(name, true); name.Parent = card
+				local sub = Instance.new("TextLabel"); sub.BackgroundTransparency = 1; sub.Size = UDim2.new(1, -12, 0, 16); sub.Position = UDim2.fromOffset(6, 148); sub.Text = tostring(cfg.role or cfg.species or "Unknown"); sub.TextSize = 12; sub.TextColor3 = COLORS.muted; styleLabel(sub, false); sub.Parent = card
+				local asn = makeBadge(card, assign); asn.Size = UDim2.fromOffset(96, 20); asn.Position = UDim2.new(0.5, -48, 0, 168)
+				local p = Instance.new("TextLabel"); p.BackgroundTransparency = 1; p.Size = UDim2.new(1, -10, 0, 14); p.Position = UDim2.fromOffset(5, 190); p.Text = "Power: "..tostring(getBugPower(cfg)); p.TextSize = 12; styleLabel(p, false); p.Parent = card
+				if isBugLocked(bug) then local l=makeBadge(card, "Locked"); l.Size=UDim2.fromOffset(64,18); l.Position=UDim2.new(1,-70,0,6); l.BackgroundColor3 = COLORS.gold end
+				local asc = getBugAscension(bug); if asc > 0 then local a=makeBadge(card, "A"..tostring(asc)); a.Size=UDim2.fromOffset(42,18); a.Position=UDim2.fromOffset(6,6) end
+				card.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then makeDetailPopup(context, uid, bug) end end)
+			end
+		end
+		if shown == 0 then
+			local empty = Instance.new("TextLabel")
+			empty.Size = UDim2.new(1, -20, 0, 80); empty.Position = UDim2.fromOffset(10, 180); empty.BackgroundTransparency = 1; empty.TextSize = 18
+			empty.Text = (#owned == 0) and "No bugs owned.\nCatch bugs to build your collection." or "No bugs found.\nTry another search or filter."
+			styleLabel(empty, true); empty.TextColor3 = COLORS.muted; empty.Parent = gridWrap
+		end
+	else for _, entry in ipairs(owned) do
 		local uid, bug = entry.Uid, entry.Bug
 		local cfg = getBugCfg(bug.BugId) or {}
 		local text = string.lower(tostring(cfg.displayName or bug.BugId))
@@ -354,7 +509,7 @@ end
 			end
 			row.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then makeDetailPopup(context, uid, bug) end end)
 		end
-	end
+	end end
 
 	if selectedTab == "Bugdex" then
 		if bugdexInlineHost then
