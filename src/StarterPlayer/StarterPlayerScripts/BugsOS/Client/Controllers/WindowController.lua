@@ -21,9 +21,11 @@ local function isAppInstanceValid(app): boolean
 	end
 	if app.Module.IsMounted then
 		local ok, mounted = pcall(app.Module.IsMounted)
-		if not ok or not mounted then
-			return false
-		end
+		if not ok or not mounted then return false end
+	end
+	if app.Module.GetRootInstance then
+		local ok, root = pcall(app.Module.GetRootInstance)
+		if not ok or root == nil or root.Parent == nil then return false end
 	end
 	return true
 end
@@ -99,6 +101,13 @@ function WindowController.Open(id: string)
 	if not taskbarButtons[id] and taskbarHolder then
 		local btn, setActive = TaskbarButton.Create(taskbarHolder, app.Title, app.IconImage, false, function()
 			if openApps[app.Id] then
+				if not isAppInstanceValid(app) then
+					openApps[app.Id] = nil
+					minimizedApps[app.Id] = nil
+					clearTaskbarBinding(app.Id)
+					WindowController.Open(app.Id)
+					return
+				end
 				if app.Module.SetVisible and minimizedApps[app.Id] then
 					app.Module.SetVisible(true)
 					minimizedApps[app.Id] = nil
@@ -131,7 +140,6 @@ end
 function WindowController.Minimize(id: string)
 	if not openApps[id] then return end
 	minimizedApps[id] = true
-	openApps[id] = nil
 	local app = registryById[id]
 	if app and app.Module and app.Module.SetVisible then
 		app.Module.SetVisible(false)
