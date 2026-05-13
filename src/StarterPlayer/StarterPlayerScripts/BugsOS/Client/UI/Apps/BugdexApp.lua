@@ -419,6 +419,8 @@ local function createSectionTitle(parent: Instance, text: string, accent: Color3
 	label.Parent = holder
 end
 
+local statEmoji = { HP = "❤️", ATK = "⚔️", DEF = "🛡️", SPD = "💨", CRATE = "🎯", CDMG = "💥", RES = "🔒", ACC = "👁️" }
+
 local function createStatBox(parent: Instance, labelText: string, valueText: string)
 	local card = Instance.new("Frame")
 	card.BackgroundColor3 = Color3.fromRGB(4, 12, 24)
@@ -432,26 +434,26 @@ local function createStatBox(parent: Instance, labelText: string, valueText: str
 	stroke.Thickness = 1
 	stroke.Parent = card
 	local padding = Instance.new("UIPadding")
-	padding.PaddingTop = UDim.new(0, 6)
-	padding.PaddingBottom = UDim.new(0, 6)
+	padding.PaddingTop = UDim.new(0, 8)
+	padding.PaddingBottom = UDim.new(0, 8)
 	padding.PaddingLeft = UDim.new(0, 8)
 	padding.PaddingRight = UDim.new(0, 8)
 	padding.Parent = card
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 0, 14)
+	label.Size = UDim2.new(1, 0, 0, 13)
 	label.BackgroundTransparency = 1
-	label.Text = labelText
+	label.Text = string.format("%s %s", statEmoji[labelText] or "•", labelText)
 	label.Font = Enum.Font.GothamBold
-	label.TextSize = 12
+	label.TextSize = 11
 	label.TextColor3 = Color3.fromRGB(150, 170, 195)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = card
 	local value = Instance.new("TextLabel")
-	value.Size = UDim2.new(1, 0, 0, 18)
-	value.Position = UDim2.fromOffset(0, 14)
+	value.Size = UDim2.new(1, 0, 0, 22)
+	value.Position = UDim2.fromOffset(0, 16)
 	value.BackgroundTransparency = 1
 	value.Font = Enum.Font.GothamBold
-	value.TextSize = 16
+	value.TextSize = 18
 	value.TextColor3 = Color3.fromRGB(245, 248, 255)
 	value.TextXAlignment = Enum.TextXAlignment.Left
 	value.Text = valueText
@@ -475,7 +477,7 @@ openDetailPanel = function(entry)
 	local stroke = detailPanel:FindFirstChildOfClass("UIStroke")
 	if stroke then stroke.Color = accent end
 	local header = Instance.new("Frame")
-	header.Size = UDim2.new(1, 0, 0, 104)
+	header.Size = UDim2.new(1, 0, 0, 112)
 	header.BackgroundColor3 = Color3.fromRGB(18, 39, 63)
 	header.BorderSizePixel = 0
 	header.Parent = detailPanel
@@ -485,7 +487,7 @@ openDetailPanel = function(entry)
 	headerPadding.PaddingLeft, headerPadding.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
 	headerPadding.Parent = header
 	local iconPanel = Instance.new("Frame")
-	iconPanel.Size = UDim2.fromOffset(92, 92)
+	iconPanel.Size = UDim2.fromOffset(96, 96)
 	iconPanel.BackgroundColor3 = Color3.fromRGB(4, 12, 24)
 	iconPanel.BorderSizePixel = 0
 	iconPanel.Parent = header
@@ -496,7 +498,7 @@ openDetailPanel = function(entry)
 	iconStroke.Thickness = 1
 	iconStroke.Parent = iconPanel
 	local icon = Instance.new("ImageLabel")
-	icon.Size = UDim2.fromOffset(76, 76)
+	icon.Size = UDim2.fromOffset(82, 82)
 	icon.Position = UDim2.new(0.5, 0, 0.5, 0)
 	icon.AnchorPoint = Vector2.new(0.5, 0.5)
 	icon.BackgroundTransparency = 1
@@ -511,10 +513,12 @@ openDetailPanel = function(entry)
 	info.BackgroundTransparency = 1
 	info.Parent = header
 	local infoLayout = Instance.new("UIListLayout")
+	infoLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	infoLayout.Padding = UDim.new(0, 4)
 	infoLayout.Parent = info
+	makeRarityBadge(info, rarity)
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, 0, 0, 38)
+	nameLabel.Size = UDim2.new(1, 0, 0, 34)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Font = Enum.Font.GothamBold
 	nameLabel.TextSize = 24
@@ -523,7 +527,6 @@ openDetailPanel = function(entry)
 	nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
 	nameLabel.Text = discoveredEntry and tostring(bug.displayName) or "???"
 	nameLabel.Parent = info
-	makeRarityBadge(info, rarity)
 	if not discoveredEntry then
 		local undiscoveredText = Instance.new("TextLabel")
 		undiscoveredText.Size = UDim2.new(1, 0, 0, 32)
@@ -539,12 +542,12 @@ openDetailPanel = function(entry)
 	end
 	createSectionTitle(detailPanel, "COMBAT STATS", accent)
 	local statGrid = Instance.new("Frame")
-	statGrid.Size = UDim2.new(1, 0, 0, 114)
+	statGrid.Size = UDim2.new(1, 0, 0, 124)
 	statGrid.BackgroundTransparency = 1
 	statGrid.Parent = detailPanel
 	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.new(0.24, 0, 0, 56)
-	grid.CellPadding = UDim2.new(0.015, 0, 0, 6)
+	grid.CellSize = UDim2.new(0.245, 0, 0, 58)
+	grid.CellPadding = UDim2.new(0, 7, 0, 7)
 	grid.Parent = statGrid
 	local stats = bug.stats or {}
 	local statOrder = {{"HP","HP"},{"ATK","ATK"},{"DEF","DEF"},{"SPD","SPD"},{"CRATE","CritRate"},{"CDMG","CritDamage"},{"RES","RES"},{"ACC","ACC"}}
@@ -560,32 +563,33 @@ openDetailPanel = function(entry)
 		createSectionTitle(detailPanel, "ABILITY", accent)
 		local ability = bug.ability
 		local panel = Instance.new("Frame")
-		panel.Size = UDim2.new(1, 0, 0, 98)
+		panel.AutomaticSize = Enum.AutomaticSize.Y
+		panel.Size = UDim2.new(1, 0, 0, 0)
 		panel.BackgroundColor3 = Color3.fromRGB(18, 39, 63)
 		panel.BorderSizePixel = 0
 		panel.Parent = detailPanel
 		Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
 		local panelPadding = Instance.new("UIPadding")
-		panelPadding.PaddingTop = UDim.new(0, 8)
-		panelPadding.PaddingBottom = UDim.new(0, 8)
+		panelPadding.PaddingTop = UDim.new(0, 10)
+		panelPadding.PaddingBottom = UDim.new(0, 10)
 		panelPadding.PaddingLeft = UDim.new(0, 10)
 		panelPadding.PaddingRight = UDim.new(0, 10)
 		panelPadding.Parent = panel
 		local name = Instance.new("TextLabel")
-		name.Size = UDim2.new(1, 0, 0, 22)
+		name.Size = UDim2.new(1, 0, 0, 24)
 		name.BackgroundTransparency = 1
 		name.Font = Enum.Font.GothamBold
-		name.TextSize = 16
+		name.TextSize = 18
 		name.TextColor3 = Color3.fromRGB(245, 248, 255)
 		name.TextXAlignment = Enum.TextXAlignment.Left
 		name.Text = tostring(ability.name or "Unknown Ability")
 		name.Parent = panel
 		local badgeLine = Instance.new("TextLabel")
-		badgeLine.Size = UDim2.new(1, 0, 0, 18)
-		badgeLine.Position = UDim2.fromOffset(0, 20)
+		badgeLine.Size = UDim2.new(1, 0, 0, 20)
+		badgeLine.Position = UDim2.fromOffset(0, 25)
 		badgeLine.BackgroundTransparency = 1
 		badgeLine.Font = Enum.Font.GothamBold
-		badgeLine.TextSize = 12
+		badgeLine.TextSize = 13
 		badgeLine.TextXAlignment = Enum.TextXAlignment.Left
 		badgeLine.TextColor3 = Color3.fromRGB(90, 235, 245)
 		local abilityType = tostring(ability.abilityType or ability.type or "Unknown")
@@ -593,11 +597,12 @@ openDetailPanel = function(entry)
 		badgeLine.Text = cooldown and string.format("[ %s ] [ Cooldown: %d ]", abilityType, cooldown) or string.format("[ %s ]", abilityType)
 		badgeLine.Parent = panel
 		local desc = Instance.new("TextLabel")
-		desc.Size = UDim2.new(1, 0, 1, -38)
-		desc.Position = UDim2.fromOffset(0, 38)
+		desc.AutomaticSize = Enum.AutomaticSize.Y
+		desc.Size = UDim2.new(1, 0, 0, 0)
+		desc.Position = UDim2.fromOffset(0, 48)
 		desc.BackgroundTransparency = 1
 		desc.Font = Enum.Font.Gotham
-		desc.TextSize = 13
+		desc.TextSize = 14
 		desc.TextWrapped = true
 		desc.TextYAlignment = Enum.TextYAlignment.Top
 		desc.TextXAlignment = Enum.TextXAlignment.Left
@@ -832,7 +837,8 @@ function BugdexApp.Mount(target: Instance, context): ()
 	detailOverlay.Parent = root
 	detailOverlay.Activated:Connect(closeDetailPanel)
 	detailPanel = Instance.new("Frame")
-	detailPanel.Size = UDim2.fromOffset(470, 400)
+	detailPanel.AutomaticSize = Enum.AutomaticSize.Y
+	detailPanel.Size = UDim2.fromOffset(470, 0)
 	detailPanel.Position = UDim2.fromScale(0.5, 0.5)
 	detailPanel.AnchorPoint = Vector2.new(0.5, 0.5)
 	detailPanel.BackgroundColor3 = Color3.fromRGB(8, 20, 36)
@@ -843,11 +849,11 @@ function BugdexApp.Mount(target: Instance, context): ()
 	detailPanelCorner.CornerRadius = UDim.new(0, 10)
 	detailPanelCorner.Parent = detailPanel
 	local panelPadding = Instance.new("UIPadding")
-	panelPadding.PaddingTop = UDim.new(0, 10) panelPadding.PaddingBottom = UDim.new(0, 10)
-	panelPadding.PaddingLeft = UDim.new(0, 10) panelPadding.PaddingRight = UDim.new(0, 10)
+	panelPadding.PaddingTop = UDim.new(0, 16) panelPadding.PaddingBottom = UDim.new(0, 16)
+	panelPadding.PaddingLeft = UDim.new(0, 16) panelPadding.PaddingRight = UDim.new(0, 16)
 	panelPadding.Parent = detailPanel
 	local panelLayout = Instance.new("UIListLayout")
-	panelLayout.Padding = UDim.new(0, 8)
+	panelLayout.Padding = UDim.new(0, 12)
 	panelLayout.Parent = detailPanel
 	local detailStroke = Instance.new("UIStroke")
 	detailStroke.Color = Color3.fromRGB(88, 170, 255)
