@@ -20,6 +20,7 @@ local detailOverlay
 local detailPanel
 local stateChangedConn
 local selectedRarityFilter = "All"
+local closeButtonRef
 
 local rarityColors = {
 	Common = Color3.fromRGB(185, 185, 185),
@@ -119,7 +120,8 @@ end
 
 local function makeRarityBadge(parent: Instance, rarity: string)
 	local badge = Instance.new("Frame")
-	badge.Size = UDim2.fromOffset(102, 26)
+	badge.AutomaticSize = Enum.AutomaticSize.X
+	badge.Size = UDim2.fromOffset(0, 28)
 	badge.BackgroundColor3 = getRarityColor(rarity):Lerp(Color3.fromRGB(20, 26, 38), 0.72)
 	badge.BorderColor3 = getRarityColor(rarity)
 	badge.BorderSizePixel = 1
@@ -128,13 +130,90 @@ local function makeRarityBadge(parent: Instance, rarity: string)
 	corner.CornerRadius = UDim.new(0, 8)
 	corner.Parent = badge
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
+	label.AutomaticSize = Enum.AutomaticSize.X
+	label.Size = UDim2.fromScale(0, 1)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 13
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.Text = rarity
+	label.TextXAlignment = Enum.TextXAlignment.Center
 	label.Parent = badge
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, 12)
+	padding.PaddingRight = UDim.new(0, 12)
+	padding.Parent = badge
+end
+
+local function createSectionTitle(parent: Instance, text: string, accent: Color3)
+	local holder = Instance.new("Frame")
+	holder.Size = UDim2.new(1, 0, 0, 24)
+	holder.BackgroundTransparency = 1
+	holder.Parent = parent
+	local line = Instance.new("Frame")
+	line.Size = UDim2.new(0, 4, 1, 0)
+	line.BackgroundColor3 = accent
+	line.BorderSizePixel = 0
+	line.Parent = holder
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -10, 1, 0)
+	label.Position = UDim2.fromOffset(10, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 14
+	label.TextColor3 = Color3.fromRGB(150, 170, 195)
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Text = text
+	label.Parent = holder
+end
+
+local function createStatBox(parent: Instance, labelText: string, valueText: string)
+	local card = Instance.new("Frame")
+	card.BackgroundColor3 = Color3.fromRGB(4, 12, 24)
+	card.BorderSizePixel = 0
+	card.Parent = parent
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = card
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(52, 74, 98)
+	stroke.Thickness = 1
+	stroke.Parent = card
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 6)
+	padding.PaddingBottom = UDim.new(0, 6)
+	padding.PaddingLeft = UDim.new(0, 8)
+	padding.PaddingRight = UDim.new(0, 8)
+	padding.Parent = card
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 0, 14)
+	label.BackgroundTransparency = 1
+	label.Text = labelText
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 12
+	label.TextColor3 = Color3.fromRGB(150, 170, 195)
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Parent = card
+	local value = Instance.new("TextLabel")
+	value.Size = UDim2.new(1, 0, 0, 18)
+	value.Position = UDim2.fromOffset(0, 14)
+	value.BackgroundTransparency = 1
+	value.Font = Enum.Font.GothamBold
+	value.TextSize = 16
+	value.TextColor3 = Color3.fromRGB(245, 248, 255)
+	value.TextXAlignment = Enum.TextXAlignment.Left
+	value.Text = valueText
+	value.Parent = card
+end
+
+local function getSpeciesFlavor(species: string, role: string): string
+	local flavorBySpecies = {
+		Ant = "A balanced colony worker that supports the whole team.",
+		Beetle = "A heavy-shelled defender built to absorb pressure.",
+		["Pill Bug"] = "A fortress-like bug that excels at surviving long fights.",
+		Wasp = "A fragile but deadly attacker built for burst damage.",
+	}
+	return flavorBySpecies[species] or string.format("A %s specialist adapted for colony combat.", string.lower(role ~= "" and role or "field"))
 end
 
 local function closeDetailPanel()
@@ -145,93 +224,166 @@ local function openDetailPanel(entry)
 	if not detailOverlay or not detailPanel then return end
 	detailOverlay.Visible = true
 	for _, child in ipairs(detailPanel:GetChildren()) do
-		if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then child:Destroy() end
+		if child ~= closeButtonRef and not child:IsA("UIListLayout") and not child:IsA("UIPadding") then child:Destroy() end
 	end
 	local discoveredEntry = entry.discovered == true
 	local bug = entry.bug
-
+	local rarity = tostring(bug.rarity or "Common")
+	local accent = getRarityColor(rarity)
+	local stroke = detailPanel:FindFirstChildOfClass("UIStroke")
+	if stroke then stroke.Color = accent end
+	local header = Instance.new("Frame")
+	header.Size = UDim2.new(1, 0, 0, 132)
+	header.BackgroundColor3 = Color3.fromRGB(18, 39, 63)
+	header.BorderSizePixel = 0
+	header.Parent = detailPanel
+	Instance.new("UICorner", header).CornerRadius = UDim.new(0, 10)
+	local headerPadding = Instance.new("UIPadding")
+	headerPadding.PaddingTop, headerPadding.PaddingBottom = UDim.new(0, 10), UDim.new(0, 10)
+	headerPadding.PaddingLeft, headerPadding.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
+	headerPadding.Parent = header
+	local iconPanel = Instance.new("Frame")
+	iconPanel.Size = UDim2.fromOffset(112, 112)
+	iconPanel.BackgroundColor3 = Color3.fromRGB(4, 12, 24)
+	iconPanel.BorderSizePixel = 0
+	iconPanel.Parent = header
+	Instance.new("UICorner", iconPanel).CornerRadius = UDim.new(0, 10)
+	local iconStroke = Instance.new("UIStroke")
+	iconStroke.Color = accent
+	iconStroke.Transparency = discoveredEntry and 0.15 or 0.45
+	iconStroke.Thickness = 1
+	iconStroke.Parent = iconPanel
 	local icon = Instance.new("ImageLabel")
-	icon.Size = UDim2.fromOffset(100, 100)
+	icon.Size = UDim2.fromOffset(88, 88)
+	icon.Position = UDim2.new(0.5, 0, 0.5, 0)
+	icon.AnchorPoint = Vector2.new(0.5, 0.5)
 	icon.BackgroundTransparency = 1
+	icon.Image = bug.icon or bug.sprite or "rbxassetid://0"
 	icon.ScaleType = Enum.ScaleType.Fit
-	icon.Image = bug.icon or "rbxassetid://0"
-	icon.ImageColor3 = discoveredEntry and Color3.new(1,1,1) or Color3.fromRGB(0,0,0)
+	icon.ImageColor3 = discoveredEntry and Color3.new(1, 1, 1) or Color3.new(0, 0, 0)
 	icon.ImageTransparency = discoveredEntry and 0 or 0.2
-	icon.Parent = detailPanel
-
+	icon.Parent = iconPanel
+	local info = Instance.new("Frame")
+	info.Size = UDim2.new(1, -124, 1, 0)
+	info.Position = UDim2.fromOffset(124, 0)
+	info.BackgroundTransparency = 1
+	info.Parent = header
+	local infoLayout = Instance.new("UIListLayout")
+	infoLayout.Padding = UDim.new(0, 6)
+	infoLayout.Parent = info
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, 0, 0, 30)
+	nameLabel.Size = UDim2.new(1, 0, 0, 34)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextSize = 26
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-	nameLabel.TextSize = 22
-	nameLabel.TextColor3 = Color3.new(1,1,1)
+	nameLabel.TextColor3 = Color3.fromRGB(245, 248, 255)
+	nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
 	nameLabel.Text = discoveredEntry and tostring(bug.displayName) or "???"
-	nameLabel.Parent = detailPanel
-
-	if discoveredEntry then
-		makeRarityBadge(detailPanel, tostring(bug.rarity or "Common"))
-		local meta = Instance.new("TextLabel")
-		meta.Size = UDim2.new(1, 0, 0, 24)
-		meta.BackgroundTransparency = 1
-		meta.TextXAlignment = Enum.TextXAlignment.Left
-		meta.TextColor3 = Color3.fromRGB(200,210,220)
-		meta.TextSize = 15
-		meta.Text = string.format("Species: %s    Role: %s", tostring(bug.species or "Unknown"), tostring(bug.role or "Unknown"))
-		meta.Parent = detailPanel
-		local stats = bug.stats or {}
-		local statOrder = {"HP","ATK","DEF","SPD","CritRate","CritDamage","RES","ACC"}
-		local statNames = {CritRate = "CRATE", CritDamage = "CDMG"}
-		local statsLabel = Instance.new("TextLabel")
-		statsLabel.Size = UDim2.new(1, 0, 0, 72)
-		statsLabel.BackgroundTransparency = 1
-		statsLabel.TextXAlignment = Enum.TextXAlignment.Left
-		statsLabel.TextYAlignment = Enum.TextYAlignment.Top
-		statsLabel.TextWrapped = true
-		statsLabel.Font = Enum.Font.Code
-		statsLabel.TextSize = 14
-		statsLabel.TextColor3 = Color3.fromRGB(206, 221, 232)
-		local parts = {}
-		for _, key in ipairs(statOrder) do
-			local label = statNames[key] or key
-			table.insert(parts, string.format("%s: %s", label, tostring(stats[key] or 0)))
+	nameLabel.Parent = info
+	makeRarityBadge(info, rarity)
+	local meta = Instance.new("TextLabel")
+	meta.Size = UDim2.new(1, 0, 0, 40)
+	meta.BackgroundTransparency = 1
+	meta.TextWrapped = true
+	meta.TextXAlignment = Enum.TextXAlignment.Left
+	meta.TextYAlignment = Enum.TextYAlignment.Top
+	meta.Font = Enum.Font.Gotham
+	meta.TextSize = 14
+	meta.TextColor3 = Color3.fromRGB(150, 170, 195)
+	meta.Text = discoveredEntry and string.format("Species: %s\nRole: %s", tostring(bug.species or "Unknown"), tostring(bug.role or "Unknown")) or "Undiscovered Bug\nCatch this bug to reveal its details."
+	meta.Parent = info
+	createSectionTitle(detailPanel, "COMBAT STATS", accent)
+	local statGrid = Instance.new("Frame")
+	statGrid.Size = UDim2.new(1, 0, 0, 122)
+	statGrid.BackgroundTransparency = 1
+	statGrid.Parent = detailPanel
+	local grid = Instance.new("UIGridLayout")
+	grid.CellSize = UDim2.new(0.24, 0, 0, 56)
+	grid.CellPadding = UDim2.new(0.013, 0, 0, 8)
+	grid.Parent = statGrid
+	local stats = bug.stats or {}
+	local statOrder = {{"HP","HP"},{"ATK","ATK"},{"DEF","DEF"},{"SPD","SPD"},{"CRATE","CritRate"},{"CDMG","CritDamage"},{"RES","RES"},{"ACC","ACC"}}
+	for _, mapping in ipairs(statOrder) do
+		local value = "???"
+		if discoveredEntry then
+			local raw = tonumber(stats[mapping[2]]) or 0
+			value = (mapping[1] == "CRATE" or mapping[1] == "CDMG") and string.format("%d%%", raw) or tostring(raw)
 		end
-		statsLabel.Text = table.concat(parts, "    ")
-		statsLabel.Parent = detailPanel
-		if bug.ability then
-			local ability = bug.ability
-			local abilityLabel = Instance.new("TextLabel")
-			abilityLabel.Size = UDim2.new(1, 0, 0, 96)
-			abilityLabel.BackgroundTransparency = 1
-			abilityLabel.TextXAlignment = Enum.TextXAlignment.Left
-			abilityLabel.TextYAlignment = Enum.TextYAlignment.Top
-			abilityLabel.TextWrapped = true
-			abilityLabel.Font = Enum.Font.Gotham
-			abilityLabel.TextSize = 14
-			abilityLabel.TextColor3 = Color3.fromRGB(255, 217, 150)
-			abilityLabel.Text = string.format(
-				"Ability: %s\nType: %s    Cooldown: %s    Target: %s\n%s",
-				tostring(ability.name or "Unknown"),
-				tostring(ability.abilityType or ability.type or "Unknown"),
-				tostring(ability.cooldownTurns or ability.cooldown or "0"),
-				tostring(ability.target or "Unknown"),
-				tostring(ability.description or "")
-			)
-			abilityLabel.Parent = detailPanel
-		end
-	else
-		makeRarityBadge(detailPanel, tostring(bug.rarity or "Common"))
-		local mystery = Instance.new("TextLabel")
-		mystery.Size = UDim2.new(1, 0, 0, 52)
-		mystery.BackgroundTransparency = 1
-		mystery.TextXAlignment = Enum.TextXAlignment.Left
-		mystery.TextYAlignment = Enum.TextYAlignment.Top
-		mystery.TextWrapped = true
-		mystery.TextColor3 = Color3.fromRGB(182, 195, 206)
-		mystery.TextSize = 15
-		mystery.Text = "Undiscovered Bug\nCatch this bug to reveal its details."
-		mystery.Parent = detailPanel
+		createStatBox(statGrid, mapping[1], value)
 	end
+	if discoveredEntry and bug.ability then
+		createSectionTitle(detailPanel, "ABILITY", accent)
+		local ability = bug.ability
+		local panel = Instance.new("Frame")
+		panel.Size = UDim2.new(1, 0, 0, 118)
+		panel.BackgroundColor3 = Color3.fromRGB(18, 39, 63)
+		panel.BorderSizePixel = 0
+		panel.Parent = detailPanel
+		Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
+		local panelPadding = Instance.new("UIPadding")
+		panelPadding.PaddingTop = UDim.new(0, 8)
+		panelPadding.PaddingBottom = UDim.new(0, 8)
+		panelPadding.PaddingLeft = UDim.new(0, 10)
+		panelPadding.PaddingRight = UDim.new(0, 10)
+		panelPadding.Parent = panel
+		local name = Instance.new("TextLabel")
+		name.Size = UDim2.new(1, 0, 0, 22)
+		name.BackgroundTransparency = 1
+		name.Font = Enum.Font.GothamBold
+		name.TextSize = 16
+		name.TextColor3 = Color3.fromRGB(245, 248, 255)
+		name.TextXAlignment = Enum.TextXAlignment.Left
+		name.Text = tostring(ability.name or "Unknown Ability")
+		name.Parent = panel
+		local badgeLine = Instance.new("TextLabel")
+		badgeLine.Size = UDim2.new(1, 0, 0, 20)
+		badgeLine.Position = UDim2.fromOffset(0, 22)
+		badgeLine.BackgroundTransparency = 1
+		badgeLine.Font = Enum.Font.GothamBold
+		badgeLine.TextSize = 12
+		badgeLine.TextXAlignment = Enum.TextXAlignment.Left
+		badgeLine.TextColor3 = Color3.fromRGB(90, 235, 245)
+		local abilityType = tostring(ability.abilityType or ability.type or "Unknown")
+		local target = tostring(ability.target or "Unknown")
+		local cooldown = tonumber(ability.cooldownTurns or ability.cooldown)
+		badgeLine.Text = cooldown and string.format("[ %s ] [ Cooldown: %d ] [ Target: %s ]", abilityType, cooldown, target) or string.format("[ %s ] [ Target: %s ]", abilityType, target)
+		badgeLine.Parent = panel
+		local desc = Instance.new("TextLabel")
+		desc.Size = UDim2.new(1, 0, 1, -44)
+		desc.Position = UDim2.fromOffset(0, 44)
+		desc.BackgroundTransparency = 1
+		desc.Font = Enum.Font.Gotham
+		desc.TextSize = 13
+		desc.TextWrapped = true
+		desc.TextYAlignment = Enum.TextYAlignment.Top
+		desc.TextXAlignment = Enum.TextXAlignment.Left
+		desc.TextColor3 = Color3.fromRGB(150, 170, 195)
+		desc.Text = tostring(ability.description or "")
+		desc.Parent = panel
+	elseif not discoveredEntry and (rarity == "Legendary" or rarity == "Mythic") then
+		createSectionTitle(detailPanel, "ABILITY", accent)
+		local locked = Instance.new("TextLabel")
+		locked.Size = UDim2.new(1, 0, 0, 24)
+		locked.BackgroundTransparency = 1
+		locked.Font = Enum.Font.GothamBold
+		locked.TextSize = 14
+		locked.TextXAlignment = Enum.TextXAlignment.Left
+		locked.TextColor3 = Color3.fromRGB(150, 170, 195)
+		locked.Text = "Ability: ???"
+		locked.Parent = detailPanel
+	end
+	local flavor = Instance.new("TextLabel")
+	flavor.Size = UDim2.new(1, 0, 0, 48)
+	flavor.BackgroundTransparency = 1
+	flavor.TextWrapped = true
+	flavor.TextXAlignment = Enum.TextXAlignment.Left
+	flavor.TextYAlignment = Enum.TextYAlignment.Top
+	flavor.Font = Enum.Font.Gotham
+	flavor.TextSize = 14
+	flavor.TextColor3 = Color3.fromRGB(150, 170, 195)
+	flavor.Text = discoveredEntry and ("Status: Discovered\n" .. getSpeciesFlavor(tostring(bug.species or ""), tostring(bug.role or ""))) or "Status: Undiscovered\nCatch this bug to reveal its details."
+	flavor.Parent = detailPanel
 end
 
 local function refresh(context)
@@ -473,12 +625,11 @@ function BugdexApp.Mount(target: Instance, context): ()
 	detailOverlay.Parent = root
 	detailOverlay.Activated:Connect(closeDetailPanel)
 	detailPanel = Instance.new("Frame")
-	detailPanel.Size = UDim2.new(0, 470, 0, 340)
+	detailPanel.Size = UDim2.fromOffset(610, 500)
 	detailPanel.Position = UDim2.fromScale(0.5, 0.5)
 	detailPanel.AnchorPoint = Vector2.new(0.5, 0.5)
-	detailPanel.BackgroundColor3 = Color3.fromRGB(20, 31, 46)
-	detailPanel.BorderColor3 = Color3.fromRGB(72, 94, 118)
-	detailPanel.BorderSizePixel = 1
+	detailPanel.BackgroundColor3 = Color3.fromRGB(8, 20, 36)
+	detailPanel.BorderSizePixel = 0
 	detailPanel.ZIndex = 6
 	detailPanel.Parent = detailOverlay
 	local detailPanelCorner = Instance.new("UICorner")
@@ -489,21 +640,32 @@ function BugdexApp.Mount(target: Instance, context): ()
 	panelPadding.PaddingLeft = UDim.new(0, 12) panelPadding.PaddingRight = UDim.new(0, 12)
 	panelPadding.Parent = detailPanel
 	local panelLayout = Instance.new("UIListLayout")
-	panelLayout.Padding = UDim.new(0, 8)
+	panelLayout.Padding = UDim.new(0, 10)
 	panelLayout.Parent = detailPanel
+	local detailStroke = Instance.new("UIStroke")
+	detailStroke.Color = Color3.fromRGB(88, 170, 255)
+	detailStroke.Thickness = 1.5
+	detailStroke.Parent = detailPanel
 	local closeButton = Instance.new("TextButton")
-	closeButton.Size = UDim2.fromOffset(30, 30)
-	closeButton.Position = UDim2.new(1, -36, 0, 6)
-	closeButton.BackgroundColor3 = Color3.fromRGB(38, 55, 74)
+	closeButtonRef = closeButton
+	closeButton.Size = UDim2.fromOffset(28, 28)
+	closeButton.Position = UDim2.new(1, -34, 0, 8)
+	closeButton.BackgroundColor3 = Color3.fromRGB(18, 39, 63)
 	closeButton.TextColor3 = Color3.new(1, 1, 1)
 	closeButton.Font = Enum.Font.GothamBold
 	closeButton.TextSize = 17
-	closeButton.Text = "X"
+	closeButton.Text = "×"
 	closeButton.ZIndex = 7
 	closeButton.Parent = detailPanel
 	local closeCorner = Instance.new("UICorner")
 	closeCorner.CornerRadius = UDim.new(0, 6)
 	closeCorner.Parent = closeButton
+	local closeStroke = Instance.new("UIStroke")
+	closeStroke.Color = Color3.fromRGB(90, 235, 245)
+	closeStroke.Thickness = 1
+	closeStroke.Parent = closeButton
+	closeButton.MouseEnter:Connect(function() closeButton.BackgroundColor3 = Color3.fromRGB(33, 60, 89) end)
+	closeButton.MouseLeave:Connect(function() closeButton.BackgroundColor3 = Color3.fromRGB(18, 39, 63) end)
 	closeButton.Activated:Connect(closeDetailPanel)
 
 	if stateChangedConn then stateChangedConn:Disconnect() stateChangedConn = nil end
