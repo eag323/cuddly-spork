@@ -61,8 +61,8 @@ local requiredRemoteNames = {
 	BugFarmUnequipFarmer = RemoteNames.BugFarm_UnequipFarmer,
 	BugFarmEquipCombat = RemoteNames.BugFarm_EquipCombat,
 	BugFarmUnequipCombat = RemoteNames.BugFarm_UnequipCombat,
-	BugToggleLock = RemoteNames.Bug_ToggleLock,
-	BugRecycle = RemoteNames.Bug_Recycle,
+	BugToggleLock = RemoteNames.BugFarm_ToggleLock,
+	BugRecycle = RemoteNames.BugFarm_Recycle,
 	BugFarmBuyExtraFarmerSlot = RemoteNames.BugFarm_BuyExtraFarmerSlot,
 	AchievementClaim = RemoteNames.Achievement_Claim,
 }
