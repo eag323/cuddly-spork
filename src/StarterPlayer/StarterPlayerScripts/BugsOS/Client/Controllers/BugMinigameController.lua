@@ -20,12 +20,12 @@ local function updateHeader(displayName: string, rarity: string) if headerLabel 
 
 local function getRarityStyle(rarity: string)
 	local styles = {
-		Common = {Accent=Color3.fromRGB(170,188,210), Glow=0.78, Sparkles=0, Pulse=2},
-		Uncommon = {Accent=Color3.fromRGB(102,224,133), Glow=0.68, Sparkles=9, Pulse=2},
+		Common = {Accent=Color3.fromRGB(170,188,210), Glow=0.78, Sparkles=2, Pulse=2},
+		Uncommon = {Accent=Color3.fromRGB(102,224,133), Glow=0.68, Sparkles=8, Pulse=2},
 		Rare = {Accent=Color3.fromRGB(94,174,255), Glow=0.58, Sparkles=10, Pulse=2},
-		Epic = {Accent=Color3.fromRGB(196,112,255), Glow=0.48, Sparkles=12, Pulse=3},
-		Legendary = {Accent=Color3.fromRGB(255,188,74), Glow=0.38, Sparkles=16, Pulse=3},
-		Mythic = {Accent=Color3.fromRGB(255,104,162), Glow=0.28, Sparkles=20, Pulse=3},
+		Epic = {Accent=Color3.fromRGB(196,112,255), Glow=0.48, Sparkles=14, Pulse=3},
+		Legendary = {Accent=Color3.fromRGB(255,188,74), Glow=0.38, Sparkles=18, Pulse=3},
+		Mythic = {Accent=Color3.fromRGB(255,104,162), Glow=0.28, Sparkles=24, Pulse=3},
 	}
 	return styles[rarity] or styles.Common
 end
@@ -38,18 +38,33 @@ local function getBugConfigFromPayload(payload)
 	return BugConfig.Bugs[name]
 end
 
-local function createText(parent, text, size, font, color, pos, sx, sy)
-	local l=Instance.new("TextLabel"); l.BackgroundTransparency=1; l.TextStrokeTransparency=1; l.Text=text; l.TextSize=size; l.Font=font; l.TextColor3=color; l.Position=pos; l.Size=UDim2.new(1,-20,sy or 0,sx or 24); l.Parent=parent; return l
-end
-local function createBadge(parent,text,color,pos,width,height)
-	local b=Instance.new("TextLabel"); b.BackgroundColor3=color; b.BackgroundTransparency=0.12; b.TextStrokeTransparency=1; b.Text=text; b.TextColor3=Color3.fromRGB(8,18,32); b.Font=Enum.Font.GothamBold; b.TextSize=13; b.Position=pos; b.Size=UDim2.fromOffset(width,height); b.Parent=parent; Instance.new("UICorner",b).CornerRadius=UDim.new(1,0); return b
+local function createRewardButton(parent, text, color, outlineColor)
+	local b = Instance.new("TextButton")
+	b.Size = UDim2.new(0.5, -8, 1, 0)
+	b.BackgroundColor3 = color
+	b.AutoButtonColor = false
+	b.Text = text
+	b.TextColor3 = Color3.fromRGB(240, 250, 255)
+	b.TextStrokeTransparency = 1
+	b.TextSize = 18
+	b.Font = Enum.Font.GothamBold
+	b.Parent = parent
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 12)
+	local stroke = Instance.new("UIStroke", b)
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Color = outlineColor
+	stroke.Thickness = 2
+	local normal = color
+	b.MouseEnter:Connect(function() b.BackgroundColor3 = normal:Lerp(Color3.new(1, 1, 1), 0.08) end)
+	b.MouseLeave:Connect(function() b.BackgroundColor3 = normal end)
+	return b
 end
 
 local function playCatchSuccessBurst()
 	if not bugButton or not bugRoot then return end
 	local button = bugButton
 	TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.fromOffset(98, 98), BackgroundTransparency = 0.2}):Play()
-	for i = 1, 8 do
+	for _ = 1, 8 do
 		local p = Instance.new("Frame")
 		p.Size = UDim2.fromOffset(4, 4)
 		p.Position = UDim2.new(button.Position.X.Scale, button.Position.X.Offset + 42, button.Position.Y.Scale, button.Position.Y.Offset + 42)
@@ -72,63 +87,97 @@ local function showRewardScreen(payload)
 	local rarity = tostring(payload.Rarity or bug.Rarity or cfg.rarity or "Common")
 	local style = getRarityStyle(rarity)
 	local bonuses = type(payload.BonusStats)=="table" and payload.BonusStats or (type(bug.BonusStats)=="table" and bug.BonusStats or {})
-	local overlay = Instance.new("Frame"); overlay.Size = UDim2.fromScale(1,1); overlay.BackgroundColor3=Color3.new(0,0,0); overlay.BackgroundTransparency=1; overlay.Parent=context.UI.WorldLayer; activeRewardGui=overlay
-	local card = Instance.new("Frame"); card.AnchorPoint=Vector2.new(0.5,0.5); card.Size=UDim2.fromOffset(550,670); card.Position=UDim2.fromScale(0.5,0.5); card.BackgroundColor3=Color3.fromRGB(10,24,42); card.Parent=overlay; Instance.new("UICorner",card).CornerRadius=UDim.new(0,16)
-	local glow = Instance.new("Frame"); glow.Size=UDim2.fromOffset(210,210); glow.Position=UDim2.new(0.5,-105,0,60); glow.BackgroundColor3=style.Accent; glow.BackgroundTransparency=style.Glow; glow.Parent=card; Instance.new("UICorner",glow).CornerRadius=UDim.new(1,0)
-	local title = createText(card,"BUG CAUGHT!",30,Enum.Font.GothamBlack,Color3.fromRGB(240,247,255),UDim2.fromOffset(10,14),36,0); title.TextXAlignment=Enum.TextXAlignment.Center
-	local points = createText(card,string.format("Bug Points +%d", tonumber(payload.BugPointsAwarded) or 0),26,Enum.Font.GothamBlack,Color3.fromRGB(255,190,76),UDim2.fromOffset(24,564),32,0); points.TextXAlignment=Enum.TextXAlignment.Left
-	local bonusLine = createText(card,"",15,Enum.Font.GothamSemibold,Color3.fromRGB(145,224,255),UDim2.fromOffset(24,596),20,0); bonusLine.TextXAlignment=Enum.TextXAlignment.Left; bonusLine.Visible=false
-	local breakdown = type(payload.BugPointBreakdown)=="table" and payload.BugPointBreakdown or {}
-	local hasGreatOrPerfect = false
-	for _, entry in ipairs(breakdown) do local q=tostring(entry.RollQuality or ""); if q=="Great" or q=="Perfect" then hasGreatOrPerfect=true end end
-	local rollBonus = tonumber(payload.BugPointRollBonus) or 0
-	if rollBonus > 0 then bonusLine.Text = string.format("Includes +%d from stat rolls", rollBonus); bonusLine.Visible = true end
-	if hasGreatOrPerfect and bonusLine.Visible then bonusLine.Text = bonusLine.Text .. "  High-roll bonus!" end
+	local overlay = Instance.new("Frame"); overlay.Size = UDim2.fromScale(1,1); overlay.BackgroundColor3=Color3.new(0,0,0); overlay.BackgroundTransparency=0.35; overlay.Parent=context.UI.WorldLayer; activeRewardGui=overlay
 
-	local bonusHeader = createText(card, "BONUS STATS", 15, Enum.Font.GothamBold, Color3.fromRGB(91,233,244), UDim2.fromOffset(24, 388), 20, 0)
-	bonusHeader.TextXAlignment = Enum.TextXAlignment.Left
-	local bonusContainer = Instance.new("Frame"); bonusContainer.BackgroundTransparency=1; bonusContainer.Position=UDim2.fromOffset(24,416); bonusContainer.Size=UDim2.new(1,-48,0,0); bonusContainer.AutomaticSize=Enum.AutomaticSize.Y; bonusContainer.Parent=card
-	local list = Instance.new("UIListLayout"); list.FillDirection=Enum.FillDirection.Vertical; list.Padding=UDim.new(0,6); list.Parent=bonusContainer
-	for _, b in ipairs(bonuses) do
-		local row=Instance.new("Frame"); row.Size=UDim2.new(1,0,0,40); row.BackgroundColor3=Color3.fromRGB(24,44,44); row.BackgroundTransparency=0.1; row.BorderSizePixel=0; row.ClipsDescendants=true; row.Parent=bonusContainer; Instance.new("UICorner",row).CornerRadius=UDim.new(0,8)
-		local txt=Instance.new("TextLabel"); txt.BackgroundTransparency=1; txt.TextStrokeTransparency=1; txt.Size=UDim2.new(1,-96,1,0); txt.Position=UDim2.fromOffset(12,0); txt.TextXAlignment=Enum.TextXAlignment.Left; txt.TextYAlignment=Enum.TextYAlignment.Center; txt.TextWrapped=false; txt.TextColor3=Color3.fromRGB(232,245,252); txt.Font=Enum.Font.GothamSemibold; txt.TextSize=14; txt.Text=BugBonusConfig.FormatBonus(b); txt.Parent=row
-		local q=tostring(b.RollQuality or "Normal")
-		if q=="Good" or q=="Great" or q=="Perfect" then
-			local qc=(q=="Good" and Color3.fromRGB(100,228,240)) or (q=="Great" and Color3.fromRGB(161,138,255)) or Color3.fromRGB(255,194,112)
-			createBadge(row, q == "Great" and "GREAT ROLL" or q, qc, UDim2.new(1,-84,0.5,-11),72,22)
+	local card = Instance.new("Frame"); card.AnchorPoint=Vector2.new(0.5,0.5); card.Size=UDim2.fromOffset(560,660); card.Position=UDim2.fromScale(0.5,0.5); card.BackgroundColor3=Color3.fromRGB(10,24,42); card.Parent=overlay; card.ClipsDescendants=false
+	Instance.new("UICorner",card).CornerRadius=UDim.new(0,16)
+	local cStroke = Instance.new("UIStroke", card); cStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; cStroke.Thickness = 2; cStroke.Color = style.Accent
+	local pad = Instance.new("UIPadding", card); pad.PaddingTop=UDim.new(0,18); pad.PaddingBottom=UDim.new(0,16); pad.PaddingLeft=UDim.new(0,20); pad.PaddingRight=UDim.new(0,20)
+	local rootLayout = Instance.new("UIListLayout", card); rootLayout.FillDirection=Enum.FillDirection.Vertical; rootLayout.Padding=UDim.new(0,10); rootLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
+
+	local title = Instance.new("TextLabel"); title.Size=UDim2.new(1,0,0,36); title.BackgroundTransparency=1; title.Text="BUG CAUGHT!"; title.Font=Enum.Font.GothamBlack; title.TextSize=32; title.TextColor3=Color3.fromRGB(240,247,255); title.Parent=card
+
+	local iconSection = Instance.new("Frame"); iconSection.Size=UDim2.new(1,0,0,220); iconSection.BackgroundTransparency=1; iconSection.Parent=card
+	local glow = Instance.new("Frame"); glow.Size=UDim2.fromOffset(210,210); glow.AnchorPoint=Vector2.new(0.5,0.5); glow.Position=UDim2.fromScale(0.5,0.5); glow.BackgroundColor3=style.Accent; glow.BackgroundTransparency=style.Glow; glow.Parent=iconSection; Instance.new("UICorner",glow).CornerRadius=UDim.new(1,0)
+	local icon = bug.icon or bug.Icon or cfg.icon or cfg.Icon or cfg.sprite or cfg.Sprite or "rbxasset://textures/ui/GuiImagePlaceholder.png"
+	local bugImage = Instance.new("ImageLabel"); bugImage.Size=UDim2.fromOffset(170,170); bugImage.AnchorPoint=Vector2.new(0.5,0.5); bugImage.Position=UDim2.fromScale(0.5,0.5); bugImage.BackgroundTransparency=1; bugImage.ScaleType=Enum.ScaleType.Fit; bugImage.Image=tostring(icon); bugImage.ZIndex=3; bugImage.Parent=iconSection
+
+	local identity = Instance.new("Frame"); identity.Size=UDim2.new(1,0,0,130); identity.BackgroundTransparency=1; identity.Parent=card
+	local idLayout = Instance.new("UIListLayout", identity); idLayout.FillDirection=Enum.FillDirection.Vertical; idLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center; idLayout.Padding=UDim.new(0,6)
+	local bugName = Instance.new("TextLabel"); bugName.Size=UDim2.new(1,0,0,34); bugName.BackgroundTransparency=1; bugName.Font=Enum.Font.GothamBlack; bugName.TextSize=30; bugName.TextColor3=Color3.fromRGB(240,247,255); bugName.Text=tostring(payload.DisplayName or bug.DisplayName or cfg.displayName or cfg.species or "Unknown Bug"); bugName.Parent=identity
+	local rarityBadge = Instance.new("TextLabel"); rarityBadge.Size=UDim2.fromOffset(150,28); rarityBadge.BackgroundColor3=style.Accent; rarityBadge.BackgroundTransparency=0.05; rarityBadge.Text=tostring(rarity):upper(); rarityBadge.TextColor3=Color3.fromRGB(10,24,42); rarityBadge.TextSize=14; rarityBadge.Font=Enum.Font.GothamBold; rarityBadge.Parent=identity; Instance.new("UICorner",rarityBadge).CornerRadius=UDim.new(1,0)
+	local roleSpecies = Instance.new("TextLabel"); roleSpecies.Size=UDim2.new(1,0,0,24); roleSpecies.BackgroundTransparency=1; roleSpecies.TextColor3=Color3.fromRGB(176,208,231); roleSpecies.TextSize=16; roleSpecies.Font=Enum.Font.GothamMedium; roleSpecies.Text=(cfg.role or bug.Role or "") .. ((cfg.role or bug.Role) and (cfg.species or bug.Species) and " • " or "") .. (cfg.species or bug.Species or ""); roleSpecies.Visible=roleSpecies.Text ~= ""; roleSpecies.Parent=identity
+	if payload.WasNewDiscovery == true then
+		local discovery = Instance.new("TextLabel"); discovery.Size=UDim2.fromOffset(280,26); discovery.BackgroundColor3=Color3.fromRGB(76,240,214); discovery.BackgroundTransparency=0.1; discovery.Text="NEW DISCOVERY! Added to Bugdex"; discovery.TextColor3=Color3.fromRGB(7,27,35); discovery.TextSize=13; discovery.Font=Enum.Font.GothamBold; discovery.Parent=identity; Instance.new("UICorner",discovery).CornerRadius=UDim.new(1,0)
+		task.spawn(function() while activeRewardGui == overlay and discovery.Parent do TweenService:Create(discovery, TweenInfo.new(0.45), {BackgroundTransparency=0.0}):Play(); task.wait(0.45); TweenService:Create(discovery, TweenInfo.new(0.45), {BackgroundTransparency=0.18}):Play(); task.wait(0.45) end end)
+	end
+
+	local bonusSection = Instance.new("Frame"); bonusSection.Size=UDim2.new(1,0,0,170); bonusSection.BackgroundTransparency=1; bonusSection.Parent=card
+	local bLay=Instance.new("UIListLayout", bonusSection); bLay.FillDirection=Enum.FillDirection.Vertical; bLay.Padding=UDim.new(0,6)
+	local bonusHeader = Instance.new("TextLabel"); bonusHeader.Size=UDim2.new(1,0,0,22); bonusHeader.BackgroundTransparency=1; bonusHeader.Text="BONUS STATS"; bonusHeader.Font=Enum.Font.GothamBold; bonusHeader.TextSize=15; bonusHeader.TextColor3=Color3.fromRGB(91,233,244); bonusHeader.TextXAlignment=Enum.TextXAlignment.Left; bonusHeader.Parent=bonusSection
+	local bonusRows = Instance.new("Frame"); bonusRows.Size=UDim2.new(1,0,1,-28); bonusRows.BackgroundTransparency=1; bonusRows.Parent=bonusSection
+	local rowList=Instance.new("UIListLayout", bonusRows); rowList.FillDirection=Enum.FillDirection.Vertical; rowList.Padding=UDim.new(0,6)
+	if #bonuses == 0 then
+		local row=Instance.new("Frame"); row.Size=UDim2.new(1,0,0,40); row.BackgroundColor3=Color3.fromRGB(20,34,53); row.Parent=bonusRows; Instance.new("UICorner",row).CornerRadius=UDim.new(0,10)
+		local txt=Instance.new("TextLabel"); txt.Size=UDim2.new(1,0,1,0); txt.BackgroundTransparency=1; txt.Text="No bonus stats"; txt.TextColor3=Color3.fromRGB(162,187,204); txt.Font=Enum.Font.GothamMedium; txt.TextSize=14; txt.Parent=row
+	else
+		for _, b in ipairs(bonuses) do
+			local row=Instance.new("Frame"); row.Size=UDim2.new(1,0,0,40); row.BackgroundColor3=Color3.fromRGB(24,44,44); row.BorderSizePixel=0; row.Parent=bonusRows; Instance.new("UICorner",row).CornerRadius=UDim.new(0,10)
+			local border = Instance.new("UIStroke", row); border.ApplyStrokeMode=Enum.ApplyStrokeMode.Border; border.Thickness=1.5; border.Color=(tostring(b.Category or BugBonusConfig.GetCategory(tostring(b.Id or "")))=="Combat") and Color3.fromRGB(241,150,150) or Color3.fromRGB(126,218,190)
+			local txt=Instance.new("TextLabel"); txt.BackgroundTransparency=1; txt.Size=UDim2.new(1,-110,1,0); txt.Position=UDim2.fromOffset(12,0); txt.TextXAlignment=Enum.TextXAlignment.Left; txt.TextColor3=Color3.fromRGB(232,245,252); txt.Font=Enum.Font.GothamSemibold; txt.TextSize=14; txt.Text=BugBonusConfig.FormatBonus and BugBonusConfig.FormatBonus(b) or string.format("+%d%% %s", math.floor(((tonumber(b.Value) or 0)*100)+0.5), tostring(b.DisplayName or "Bonus")); txt.Parent=row
+			local q=tostring(b.RollQuality or "Normal")
+			if q=="Good" or q=="Great" or q=="Perfect" then
+				local badge = Instance.new("TextLabel"); badge.Size=UDim2.fromOffset(80,22); badge.AnchorPoint=Vector2.new(1,0.5); badge.Position=UDim2.new(1,-10,0.5,0); badge.BackgroundColor3=(q=="Good" and Color3.fromRGB(100,228,240)) or (q=="Great" and Color3.fromRGB(161,138,255)) or Color3.fromRGB(255,194,112); badge.Text=q; badge.TextColor3=Color3.fromRGB(8,18,32); badge.Font=Enum.Font.GothamBold; badge.TextSize=12; badge.Parent=row; Instance.new("UICorner",badge).CornerRadius=UDim.new(1,0)
+			end
 		end
 	end
 
-	local function closeReward() if activeRewardGui == overlay then clearRewardScreen() end end
-	local viewButton = Instance.new("TextButton"); viewButton.Size=UDim2.fromOffset(220,42); viewButton.Position=UDim2.new(0.5,-236,1,-58); viewButton.Text="View Bug"; viewButton.Parent=card
-	local continueButton = Instance.new("TextButton"); continueButton.Size=UDim2.fromOffset(220,42); continueButton.Position=UDim2.new(0.5,16,1,-58); continueButton.Text="Continue"; continueButton.Parent=card
-	for _, b in ipairs({viewButton, continueButton}) do b.TextStrokeTransparency=1; b.Visible=false; b.Active=false; b.AutoButtonColor=false end
-	continueButton.Activated:Connect(closeReward)
-	viewButton.Activated:Connect(function() closeReward(); if context.Controllers and context.Controllers.Window and context.Controllers.Window.Open then context.Controllers.Window.Open("Bugs") end end)
+	local pointsSection = Instance.new("Frame"); pointsSection.Size=UDim2.new(1,0,0,70); pointsSection.BackgroundTransparency=1; pointsSection.Parent=card
+	local pLay=Instance.new("UIListLayout", pointsSection); pLay.FillDirection=Enum.FillDirection.Vertical; pLay.HorizontalAlignment=Enum.HorizontalAlignment.Center
+	local points = Instance.new("TextLabel"); points.Size=UDim2.new(1,0,0,34); points.BackgroundTransparency=1; points.Text=string.format("Bug Points +%d", tonumber(payload.BugPointsAwarded) or 0); points.Font=Enum.Font.GothamBlack; points.TextSize=28; points.TextColor3=Color3.fromRGB(255,190,76); points.Parent=pointsSection
+	local rollBonus = tonumber(payload.BugPointRollBonus) or 0
+	local breakdown = type(payload.BugPointBreakdown)=="table" and payload.BugPointBreakdown or {}
+	local hasHigh = false for _, e in ipairs(breakdown) do local q=tostring(e.RollQuality or ""); if q=="Great" or q=="Perfect" then hasHigh=true end end
+	local rollLabel = Instance.new("TextLabel"); rollLabel.Size=UDim2.new(1,0,0,22); rollLabel.BackgroundTransparency=1; rollLabel.TextColor3=Color3.fromRGB(145,224,255); rollLabel.Font=Enum.Font.GothamSemibold; rollLabel.TextSize=15; rollLabel.Visible=rollBonus>0; rollLabel.Text=(rollBonus>0) and string.format("Includes +%d from stat rolls%s", rollBonus, hasHigh and " • High-roll bonus!" or "") or ""; rollLabel.Parent=pointsSection
 
-	TweenService:Create(points, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextSize = 30}):Play()
-	task.delay(0.2, function() if activeRewardGui == overlay then TweenService:Create(points, TweenInfo.new(0.16), {TextSize = 26}):Play() end end)
-	local sparkleCount = style.Sparkles
-	for i=1,sparkleCount do
-		task.delay(i*0.04, function()
+	local buttonRow = Instance.new("Frame"); buttonRow.Size=UDim2.new(1,0,0,48); buttonRow.BackgroundTransparency=1; buttonRow.Parent=card
+	local btnLayout=Instance.new("UIListLayout", buttonRow); btnLayout.FillDirection=Enum.FillDirection.Horizontal; btnLayout.Padding=UDim.new(0,16)
+	local viewButton = createRewardButton(buttonRow, "View Bug", Color3.fromRGB(24,64,98), Color3.fromRGB(88,198,255))
+	local continueButton = createRewardButton(buttonRow, "Continue", Color3.fromRGB(86,221,255), Color3.fromRGB(128,233,255)); continueButton.TextColor3=Color3.fromRGB(8,24,35)
+	viewButton.Visible=false; continueButton.Visible=false; viewButton.Active=false; continueButton.Active=false
+
+	local function closeReward() if activeRewardGui == overlay then clearRewardScreen() end end
+	continueButton.Activated:Connect(closeReward)
+	viewButton.Activated:Connect(function()
+		closeReward()
+		local controllers = context and context.Controllers
+		local wc = controllers and (controllers.WindowController or controllers.Window)
+		if wc and wc.Open then wc.Open("Bugs") return end
+		if wc and wc.OpenApp then wc.OpenApp("Bugs") return end
+	end)
+
+	for i=1,style.Sparkles do
+		task.delay(i*0.045, function()
 			if activeRewardGui ~= overlay then return end
-			local s=Instance.new("Frame"); s.Size=UDim2.fromOffset(math.random(5,9), math.random(5,9)); s.BackgroundColor3=style.Accent; s.BackgroundTransparency=0.2; s.BorderSizePixel=0; s.Position=UDim2.new(0.5, math.random(-24,24), 0, 165+math.random(-24,24)); s.Parent=card; Instance.new("UICorner",s).CornerRadius=UDim.new(1,0)
-			local dur=math.random(14,22)/10
-			TweenService:Create(s, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position=UDim2.new(0.5, math.random(-170,170), 0, 175+math.random(-120,170)), BackgroundTransparency=1}):Play()
+			local big = (rarity=="Epic" or rarity=="Legendary" or rarity=="Mythic") and (math.random()<0.25)
+			local size = big and math.random(11,16) or math.random(6,10)
+			local s=Instance.new("Frame"); s.Size=UDim2.fromOffset(size, size); s.BackgroundColor3=style.Accent; s.BackgroundTransparency=0.15; s.BorderSizePixel=0; s.AnchorPoint=Vector2.new(0.5,0.5); s.Position=UDim2.new(0.5, math.random(-22,22), 0.5, math.random(-22,22)); s.Parent=iconSection; s.ZIndex=4; Instance.new("UICorner",s).CornerRadius=UDim.new(1,0)
+			local dur=math.random(16,24)/10
+			TweenService:Create(s, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position=UDim2.new(0.5, math.random(-150,150), 0.5, math.random(-120,120)), BackgroundTransparency=1}):Play()
 			task.delay(dur + 0.05, function() if s then s:Destroy() end end)
 		end)
 	end
 	task.spawn(function()
 		for _=1,style.Pulse do
 			if activeRewardGui ~= overlay then return end
-			TweenService:Create(glow, TweenInfo.new(0.3), {Size=UDim2.fromOffset(230,230), Position=UDim2.new(0.5,-115,0,50), BackgroundTransparency=math.max(0.12, style.Glow-0.12)}):Play()
-			task.wait(0.3)
+			TweenService:Create(glow, TweenInfo.new(0.32), {Size=UDim2.fromOffset(232,232), BackgroundTransparency=math.max(0.08, style.Glow-0.16)}):Play()
+			task.wait(0.34)
 			if activeRewardGui ~= overlay then return end
-			TweenService:Create(glow, TweenInfo.new(0.3), {Size=UDim2.fromOffset(210,210), Position=UDim2.new(0.5,-105,0,60), BackgroundTransparency=style.Glow}):Play()
-			task.wait(0.3)
+			TweenService:Create(glow, TweenInfo.new(0.32), {Size=UDim2.fromOffset(210,210), BackgroundTransparency=style.Glow}):Play()
+			task.wait(0.34)
 		end
 	end)
-	task.delay(1.75, function() if activeRewardGui == overlay then viewButton.Visible=true; continueButton.Visible=true; viewButton.Active=true; continueButton.Active=true end end)
+	task.delay(1.65, function() if activeRewardGui == overlay then viewButton.Visible=true; continueButton.Visible=true; viewButton.Active=true; continueButton.Active=true end end)
 end
 
 local function hitFeedback(button) local up=TweenService:Create(button,TweenInfo.new(0.08),{Size=UDim2.fromOffset(92,92)}); local down=TweenService:Create(button,TweenInfo.new(0.1),{Size=UDim2.fromOffset(84,84)}); up.Completed:Once(function() down:Play() end); up:Play() end
