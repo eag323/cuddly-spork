@@ -146,7 +146,9 @@ Players.PlayerRemoving:Connect(function(p) activeByUser[p.UserId]=nil; sinceSpaw
 		local wasNewDiscovery = false
 		local ok, err = pcall(function()
 			createdBug, createReason = BugInventoryService.CreateBug(player, st.SpeciesId, st.Rarity)
-			BugdexService.RecordCatch(player, st.SpeciesId)
+			if createdBug then
+				BugdexService.RecordCatch(player, st.SpeciesId)
+			end
 		end)
 		if not ok then warn(string.format("[BugSpawnService] Failed to create captured bug for %s: %s", player.Name, tostring(err))) end
 		if createdBug == nil and createReason == "InventoryFull" then
