@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
 local BugConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugConfig"))
+local BugBonusConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugBonusConfig"))
 local Window = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("Window"))
 local BugdexView = require(script.Parent:WaitForChild("Views"):WaitForChild("BugdexView"))
 
@@ -75,6 +76,24 @@ local function getBugConfig(ownedBug)
 	local bugId = getOwnedBugBugId(ownedBug)
 	if type(bugId) ~= "string" then return nil end
 	return BugConfig.GetBug(bugId) or BugConfig.Bugs[bugId]
+end
+
+
+local function getLegacyBonusStats(bug)
+	local out = {}
+	if type(bug) ~= "table" then return out end
+	if type(bug.BonusStats) == "table" and #bug.BonusStats > 0 then return bug.BonusStats end
+	if type(bug.Primary) == "table" then table.insert(out, { Id = bug.Primary.Stat or bug.Primary.Attribute, Value = bug.Primary.Value }) end
+	if type(bug.Secondaries) == "table" then for _, b in ipairs(bug.Secondaries) do if type(b) == "table" then table.insert(out, { Id = b.Stat or b.Attribute, Value = b.Value }) end end end
+	return out
+end
+
+local function formatBonusLine(bonus)
+	if type(bonus) ~= "table" then return "No bonus" end
+	local line = BugBonusConfig.FormatBonus(bonus)
+	local q = tostring(bonus.RollQuality or "")
+	if q == "Good" or q == "Great" or q == "Perfect" then line = line .. " [" .. q .. "]" end
+	return line
 end
 
 local function isBugLocked(ownedBug)
@@ -409,14 +428,19 @@ local function makeDetailPopup(context, uid, bug)
 	local buffsPad = Instance.new("UIPadding", buffsCard); buffsPad.PaddingLeft=UDim.new(0,10); buffsPad.PaddingRight=UDim.new(0,10); buffsPad.PaddingTop=UDim.new(0,8); buffsPad.PaddingBottom=UDim.new(0,8)
 	local buffsList = Instance.new("UIListLayout", buffsCard); buffsList.FillDirection=Enum.FillDirection.Vertical; buffsList.Padding=UDim.new(0,6); buffsList.SortOrder=Enum.SortOrder.LayoutOrder
 	local buffsTitle = Instance.new("TextLabel"); buffsTitle.BackgroundTransparency=1; buffsTitle.Size=UDim2.new(1,0,0,18); buffsTitle.TextXAlignment=Enum.TextXAlignment.Left; buffsTitle.Text="FARMING BUFFS"; buffsTitle.TextSize=13; styleLabel(buffsTitle,true); buffsTitle.TextColor3=COLORS.accent; buffsTitle.Parent=buffsCard
-	local buffsText = Instance.new("TextLabel"); buffsText.BackgroundTransparency=1; buffsText.Size=UDim2.new(1,0,1,-24); buffsText.TextXAlignment=Enum.TextXAlignment.Left; buffsText.TextYAlignment=Enum.TextYAlignment.Top; buffsText.TextWrapped=true; buffsText.TextSize=12; styleLabel(buffsText,false); buffsText.TextColor3=COLORS.good; buffsText.Text=(#(cfg.idleBonuses or {})>0) and table.concat(cfg.idleBonuses, "\n") or "No farming buffs";  buffsText.Parent=buffsCard
+	local buffsText = Instance.new("TextLabel"); buffsText.BackgroundTransparency=1; buffsText.Size=UDim2.new(1,0,1,-24); buffsText.TextXAlignment=Enum.TextXAlignment.Left; buffsText.TextYAlignment=Enum.TextYAlignment.Top; buffsText.TextWrapped=true; buffsText.TextSize=12; styleLabel(buffsText,false); buffsText.TextColor3=COLORS.good; local allBonuses = getLegacyBonusStats(bug)
+	local farmLines = {}
+	local combatLines = {}
+	for _, bonus in ipairs(allBonuses) do
+		if BugBonusConfig.GetCategory(tostring(bonus.Id)) == "Combat" then table.insert(combatLines, formatBonusLine(bonus)) else table.insert(farmLines, formatBonusLine(bonus)) end
+	end
+	buffsText.Text=(#farmLines>0) and table.concat(farmLines, "\n") or "No bonus stats";  buffsText.Parent=buffsCard
 	local abilityCard = makeCard(infoRow, UDim2.new(0.5, -5, 1, 0)); abilityCard.BackgroundColor3 = COLORS.cardDark
 	local abilityPad = Instance.new("UIPadding", abilityCard); abilityPad.PaddingLeft=UDim.new(0,10); abilityPad.PaddingRight=UDim.new(0,10); abilityPad.PaddingTop=UDim.new(0,8); abilityPad.PaddingBottom=UDim.new(0,8)
 	local abilityList = Instance.new("UIListLayout", abilityCard); abilityList.FillDirection=Enum.FillDirection.Vertical; abilityList.Padding=UDim.new(0,6); abilityList.SortOrder=Enum.SortOrder.LayoutOrder
-	local abilityTitle = Instance.new("TextLabel"); abilityTitle.BackgroundTransparency=1; abilityTitle.Size=UDim2.new(1,0,0,18); abilityTitle.TextXAlignment=Enum.TextXAlignment.Left; abilityTitle.Text="ABILITY"; abilityTitle.TextSize=13; styleLabel(abilityTitle,true); abilityTitle.TextColor3=COLORS.accent; abilityTitle.Parent=abilityCard
+	local abilityTitle = Instance.new("TextLabel"); abilityTitle.BackgroundTransparency=1; abilityTitle.Size=UDim2.new(1,0,0,18); abilityTitle.TextXAlignment=Enum.TextXAlignment.Left; abilityTitle.Text="COMBAT BONUSES"; abilityTitle.TextSize=13; styleLabel(abilityTitle,true); abilityTitle.TextColor3=COLORS.accent; abilityTitle.Parent=abilityCard
 	local ability = cfg.ability
-	local abName = Instance.new("TextLabel"); abName.BackgroundTransparency=1; abName.Size=UDim2.new(1,0,0,18); abName.TextXAlignment=Enum.TextXAlignment.Left; abName.Text=(ability and tostring(ability.name or "Ability")) or "No ability"; abName.TextSize=13; styleLabel(abName,true); abName.Parent=abilityCard
-	local abDesc = Instance.new("TextLabel"); abDesc.BackgroundTransparency=1; abDesc.Size=UDim2.new(1,0,1,-24); abDesc.TextXAlignment=Enum.TextXAlignment.Left; abDesc.TextYAlignment=Enum.TextYAlignment.Top; abDesc.TextWrapped=true; abDesc.Text=((ability and string.format("%s • CD %ss\n%s", tostring(ability.type or "Passive"), tostring(ability.cooldown or "-"), tostring(ability.description or ""))) or ""); abDesc.TextSize=11; styleLabel(abDesc,false); abDesc.Parent=abilityCard
+	local abName = Instance.new("TextLabel"); abName.BackgroundTransparency=1; abName.Size=UDim2.new(1,0,1,-24); abName.TextXAlignment=Enum.TextXAlignment.Left; abName.TextYAlignment=Enum.TextYAlignment.Top; abName.TextWrapped=true; abName.Text=(#combatLines>0) and table.concat(combatLines, "\n") or "No bonus stats"; abName.TextSize=12; styleLabel(abName,false); abName.Parent=abilityCard
 
 	local equipSection = makeCard(bodyContent, UDim2.new(1,0,0,140)); equipSection.BackgroundColor3=COLORS.cardDark
 	local eqPad = Instance.new("UIPadding", equipSection); eqPad.PaddingLeft=UDim.new(0,10); eqPad.PaddingRight=UDim.new(0,10); eqPad.PaddingTop=UDim.new(0,8); eqPad.PaddingBottom=UDim.new(0,10)
@@ -714,7 +738,8 @@ end
 				local badgeColor, badgeText = getAssignmentBadgeStyle(assign)
 				local asn = makeBadge(card, assign, badgeColor); asn.Size = UDim2.fromOffset(104, 20); asn.Position = UDim2.new(0.5, -52, 0, 170); setBadgeTextColor(asn, badgeText)
 				local rarityBadge = makeBadge(card, rarity, getRarityColor(rarity)); rarityBadge.Size = UDim2.fromOffset(78, 18); rarityBadge.Position = UDim2.fromOffset(8, 8)
-				local p = Instance.new("TextLabel"); p.BackgroundTransparency = 1; p.Size = UDim2.new(1, -16, 0, 14); p.Position = UDim2.fromOffset(8, 194); p.Text = "Power "..formatNum(getBugPower(cfg)); p.TextSize = 12; styleLabel(p, true); p.TextColor3 = COLORS.good; p.Parent = card
+				local previewBonus = getLegacyBonusStats(bug)[1]
+				local p = Instance.new("TextLabel"); p.BackgroundTransparency = 1; p.Size = UDim2.new(1, -16, 0, 14); p.Position = UDim2.fromOffset(8, 194); p.Text = previewBonus and formatBonusLine(previewBonus) or "No bonus"; p.TextSize = 12; styleLabel(p, true); p.TextColor3 = COLORS.good; p.Parent = card
 				if isBugLocked(bug) then local l=makeBadge(card, "LOCKED", COLORS.warn); l.Size=UDim2.fromOffset(62,18); l.Position=UDim2.new(1,-70,0,8); setBadgeTextColor(l, Color3.fromRGB(32, 22, 8)) end
 				local asc = getBugAscension(bug); if asc > 0 then local a=makeBadge(card, "A"..tostring(asc), Color3.fromRGB(106, 229, 186)); a.Size=UDim2.fromOffset(38,18); a.Position=UDim2.fromOffset(88,8); setBadgeTextColor(a, Color3.fromRGB(10, 26, 20)) end
 				local hoverHint = Instance.new("TextLabel"); hoverHint.BackgroundTransparency = 0.28; hoverHint.BackgroundColor3 = Color3.fromRGB(8, 20, 34); hoverHint.Size = UDim2.fromOffset(90, 18); hoverHint.Position = UDim2.new(1, -96, 1, -24); hoverHint.Text = "View Details"; hoverHint.TextSize = 10; hoverHint.Visible = false; styleLabel(hoverHint, true); hoverHint.Parent = card; Instance.new("UICorner", hoverHint).CornerRadius = UDim.new(0, 6)

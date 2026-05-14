@@ -8,6 +8,7 @@ local RemoteNames = require(Remotes:WaitForChild("RemoteNames"))
 local BugConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugConfig"))
 local MarketplaceConfig = require(Shared:WaitForChild("Config"):WaitForChild("MarketplaceConfig"))
 local ProfileService = require(script.Parent:WaitForChild("ProfileService"))
+local BuffService = require(script.Parent:WaitForChild("BuffService"))
 
 local BugFarmService = {}
 local remotes = {}
@@ -129,7 +130,11 @@ function BugFarmService.Start()
 				gain += recycleValue(bug); d.Bugs.Inventory[uid] = nil
 			end
 		end
-		if gain > 0 then d.Currencies.BugEssence += gain end
+		if gain > 0 then
+			local bonus = BuffService.GetPlayerBuffs(player).BugEssenceGain or 0
+			local finalGain = math.floor(gain * (1 + bonus) + 0.5)
+			d.Currencies.BugEssence += finalGain
+		end
 		ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
 		ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
 	end)
