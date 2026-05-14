@@ -314,13 +314,15 @@ local function makeDetailPopup(context, uid, bug)
 	popupScroll.Parent = panel
 	local bodyContent = Instance.new("Frame")
 	bodyContent.Name = "BodyContentFrame"
-	bodyContent.Size = UDim2.new(1, -12, 0, 0)
+	bodyContent.Position = UDim2.fromOffset(0, 0)
+	bodyContent.Size = UDim2.new(1, -24, 0, 0)
 	bodyContent.BackgroundTransparency = 1
 	bodyContent.AutomaticSize = Enum.AutomaticSize.Y
 	bodyContent.Parent = popupScroll
 	local bodyPad = Instance.new("UIPadding")
-	bodyPad.PaddingRight = UDim.new(0, 10)
-	bodyPad.PaddingBottom = UDim.new(0, 12)
+	bodyPad.PaddingLeft = UDim.new(0, 2)
+	bodyPad.PaddingRight = UDim.new(0, 14)
+	bodyPad.PaddingBottom = UDim.new(0, 20)
 	bodyPad.Parent = bodyContent
 	local list = Instance.new("UIListLayout", bodyContent)
 	list.Padding = UDim.new(0, 12)
@@ -370,46 +372,76 @@ local function makeDetailPopup(context, uid, bug)
 		meta.Parent = right
 	end
 
-	local statsSection = makeCard(bodyContent, UDim2.new(1, -2, 0, 122)); statsSection.BackgroundColor3 = COLORS.cardDark
-	makeSectionTitle(statsSection, "COMBAT STATS", 8)
-	local chipWrap = Instance.new("Frame"); chipWrap.BackgroundTransparency=1; chipWrap.Size=UDim2.new(1,-20,0,76); chipWrap.Position=UDim2.fromOffset(10,36); chipWrap.Parent=statsSection
-	local grid = Instance.new("UIGridLayout", chipWrap); grid.CellPadding = UDim2.fromOffset(8, 8); grid.CellSize = UDim2.new(0.25, -8, 0, 34)
+	local statsSection = makeCard(bodyContent, UDim2.new(1, 0, 0, 98)); statsSection.BackgroundColor3 = COLORS.cardDark
+	local statsPad = Instance.new("UIPadding", statsSection)
+	statsPad.PaddingLeft = UDim.new(0, 10)
+	statsPad.PaddingRight = UDim.new(0, 10)
+	statsPad.PaddingTop = UDim.new(0, 8)
+	statsPad.PaddingBottom = UDim.new(0, 10)
+	local statsList = Instance.new("UIListLayout", statsSection)
+	statsList.FillDirection = Enum.FillDirection.Vertical
+	statsList.Padding = UDim.new(0, 6)
+	statsList.SortOrder = Enum.SortOrder.LayoutOrder
+	local statsTitle = Instance.new("TextLabel")
+	statsTitle.BackgroundTransparency = 1
+	statsTitle.Size = UDim2.new(1, 0, 0, 18)
+	statsTitle.Text = "COMBAT STATS"
+	statsTitle.TextXAlignment = Enum.TextXAlignment.Left
+	statsTitle.TextSize = 13
+	styleLabel(statsTitle, true)
+	statsTitle.TextColor3 = COLORS.accent
+	statsTitle.Parent = statsSection
+	local chipWrap = Instance.new("Frame")
+	chipWrap.BackgroundTransparency = 1
+	chipWrap.Size = UDim2.new(1, 0, 0, 58)
+	chipWrap.Parent = statsSection
+	local grid = Instance.new("UIGridLayout", chipWrap); grid.CellPadding = UDim2.fromOffset(6, 6); grid.CellSize = UDim2.new(0.25, -5, 0, 26)
 	local stats = cfg.stats or {}
 	local icons = {HP="❤️",ATK="⚔️",DEF="🛡️",SPD="💨",CR="🎯",CD="💥",RES="🔒",ACC="👁️"}
 	for _, entry in ipairs({{"HP","HP"},{"ATK","ATK"},{"DEF","DEF"},{"SPD","SPD"},{"CR","CritRate"},{"CD","CritDamage"},{"RES","RES"},{"ACC","ACC"}}) do
-		local chip = makeCard(chipWrap, UDim2.new(0, 80, 0, 34)); chip.BackgroundColor3 = COLORS.card
+		local chip = makeCard(chipWrap, UDim2.new(0, 80, 0, 26)); chip.BackgroundColor3 = COLORS.card
 		local t = Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.fromScale(1,1); t.Text=("%s %s %s"):format(icons[entry[1]], entry[1], tostring(stats[entry[2]] or 0)); t.TextSize=12; t.TextXAlignment=Enum.TextXAlignment.Center; t.TextYAlignment=Enum.TextYAlignment.Center; styleLabel(t,true); t.Parent=chip
 	end
 
-	local infoRow = Instance.new("Frame"); infoRow.Size = UDim2.new(1,-2,0,130); infoRow.BackgroundTransparency = 1; infoRow.Parent = bodyContent
-	local buffsCard = makeCard(infoRow, UDim2.new(0.5, -6, 1, 0)); buffsCard.BackgroundColor3=COLORS.cardDark
-	makeSectionTitle(buffsCard, "FARMING BUFFS", 8)
-	local buffsText = Instance.new("TextLabel"); buffsText.BackgroundTransparency=1; buffsText.Size=UDim2.new(1,-16,1,-38); buffsText.Position=UDim2.fromOffset(8,32); buffsText.TextXAlignment=Enum.TextXAlignment.Left; buffsText.TextYAlignment=Enum.TextYAlignment.Top; buffsText.TextWrapped=true; buffsText.TextSize=12; styleLabel(buffsText,false); buffsText.TextColor3=COLORS.good; buffsText.Text=(#(cfg.idleBonuses or {})>0) and table.concat(cfg.idleBonuses, "\n") or "No farming buffs";  buffsText.Parent=buffsCard
-	local abilityCard = makeCard(infoRow, UDim2.new(0.5, -6, 1, 0)); abilityCard.Position = UDim2.new(0.5, 6, 0, 0); abilityCard.BackgroundColor3 = COLORS.cardDark
-	makeSectionTitle(abilityCard, "ABILITY", 8)
+	local infoRow = Instance.new("Frame"); infoRow.Size = UDim2.new(1,0,0,128); infoRow.BackgroundTransparency = 1; infoRow.Parent = bodyContent
+	local infoLayout = Instance.new("UIListLayout", infoRow); infoLayout.FillDirection = Enum.FillDirection.Horizontal; infoLayout.Padding = UDim.new(0, 10); infoLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	local buffsCard = makeCard(infoRow, UDim2.new(0.5, -5, 1, 0)); buffsCard.BackgroundColor3=COLORS.cardDark
+	local buffsPad = Instance.new("UIPadding", buffsCard); buffsPad.PaddingLeft=UDim.new(0,10); buffsPad.PaddingRight=UDim.new(0,10); buffsPad.PaddingTop=UDim.new(0,8); buffsPad.PaddingBottom=UDim.new(0,8)
+	local buffsList = Instance.new("UIListLayout", buffsCard); buffsList.FillDirection=Enum.FillDirection.Vertical; buffsList.Padding=UDim.new(0,6); buffsList.SortOrder=Enum.SortOrder.LayoutOrder
+	local buffsTitle = Instance.new("TextLabel"); buffsTitle.BackgroundTransparency=1; buffsTitle.Size=UDim2.new(1,0,0,18); buffsTitle.TextXAlignment=Enum.TextXAlignment.Left; buffsTitle.Text="FARMING BUFFS"; buffsTitle.TextSize=13; styleLabel(buffsTitle,true); buffsTitle.TextColor3=COLORS.accent; buffsTitle.Parent=buffsCard
+	local buffsText = Instance.new("TextLabel"); buffsText.BackgroundTransparency=1; buffsText.Size=UDim2.new(1,0,1,-24); buffsText.TextXAlignment=Enum.TextXAlignment.Left; buffsText.TextYAlignment=Enum.TextYAlignment.Top; buffsText.TextWrapped=true; buffsText.TextSize=12; styleLabel(buffsText,false); buffsText.TextColor3=COLORS.good; buffsText.Text=(#(cfg.idleBonuses or {})>0) and table.concat(cfg.idleBonuses, "\n") or "No farming buffs";  buffsText.Parent=buffsCard
+	local abilityCard = makeCard(infoRow, UDim2.new(0.5, -5, 1, 0)); abilityCard.BackgroundColor3 = COLORS.cardDark
+	local abilityPad = Instance.new("UIPadding", abilityCard); abilityPad.PaddingLeft=UDim.new(0,10); abilityPad.PaddingRight=UDim.new(0,10); abilityPad.PaddingTop=UDim.new(0,8); abilityPad.PaddingBottom=UDim.new(0,8)
+	local abilityList = Instance.new("UIListLayout", abilityCard); abilityList.FillDirection=Enum.FillDirection.Vertical; abilityList.Padding=UDim.new(0,6); abilityList.SortOrder=Enum.SortOrder.LayoutOrder
+	local abilityTitle = Instance.new("TextLabel"); abilityTitle.BackgroundTransparency=1; abilityTitle.Size=UDim2.new(1,0,0,18); abilityTitle.TextXAlignment=Enum.TextXAlignment.Left; abilityTitle.Text="ABILITY"; abilityTitle.TextSize=13; styleLabel(abilityTitle,true); abilityTitle.TextColor3=COLORS.accent; abilityTitle.Parent=abilityCard
 	local ability = cfg.ability
-	local abName = Instance.new("TextLabel"); abName.BackgroundTransparency=1; abName.Size=UDim2.new(1,-16,0,18); abName.Position=UDim2.fromOffset(8,32); abName.TextXAlignment=Enum.TextXAlignment.Left; abName.Text=(ability and tostring(ability.name or "Ability")) or "No ability"; abName.TextSize=13; styleLabel(abName,true); abName.Parent=abilityCard
-	local abDesc = Instance.new("TextLabel"); abDesc.BackgroundTransparency=1; abDesc.Size=UDim2.new(1,-16,0,66); abDesc.Position=UDim2.fromOffset(8,50); abDesc.TextXAlignment=Enum.TextXAlignment.Left; abDesc.TextYAlignment=Enum.TextYAlignment.Top; abDesc.TextWrapped=true; abDesc.Text=((ability and string.format("%s • CD %ss\n%s", tostring(ability.type or "Passive"), tostring(ability.cooldown or "-"), tostring(ability.description or ""))) or ""); abDesc.TextSize=11; styleLabel(abDesc,false); abDesc.Parent=abilityCard
+	local abName = Instance.new("TextLabel"); abName.BackgroundTransparency=1; abName.Size=UDim2.new(1,0,0,18); abName.TextXAlignment=Enum.TextXAlignment.Left; abName.Text=(ability and tostring(ability.name or "Ability")) or "No ability"; abName.TextSize=13; styleLabel(abName,true); abName.Parent=abilityCard
+	local abDesc = Instance.new("TextLabel"); abDesc.BackgroundTransparency=1; abDesc.Size=UDim2.new(1,0,1,-24); abDesc.TextXAlignment=Enum.TextXAlignment.Left; abDesc.TextYAlignment=Enum.TextYAlignment.Top; abDesc.TextWrapped=true; abDesc.Text=((ability and string.format("%s • CD %ss\n%s", tostring(ability.type or "Passive"), tostring(ability.cooldown or "-"), tostring(ability.description or ""))) or ""); abDesc.TextSize=11; styleLabel(abDesc,false); abDesc.Parent=abilityCard
 
-	local equipSection = makeCard(bodyContent, UDim2.new(1,-2,0,148)); equipSection.BackgroundColor3=COLORS.cardDark
-	makeSectionTitle(equipSection, "EQUIPMENT", 8)
-	local eqInfo = Instance.new("TextLabel"); eqInfo.BackgroundTransparency=1; eqInfo.Size=UDim2.new(1,-20,0,16); eqInfo.Position=UDim2.fromOffset(10,28); eqInfo.TextXAlignment=Enum.TextXAlignment.Left; eqInfo.Text="Equipment Coming Soon"; eqInfo.TextSize=11; styleLabel(eqInfo,false); eqInfo.TextColor3=COLORS.muted; eqInfo.Parent=equipSection
-	local eqWrap = Instance.new("Frame"); eqWrap.BackgroundTransparency=1; eqWrap.Size=UDim2.new(1,-20,0,70); eqWrap.Position=UDim2.fromOffset(10,56); eqWrap.Parent=equipSection
-	local eqLayout = Instance.new("UIListLayout", eqWrap); eqLayout.FillDirection=Enum.FillDirection.Horizontal; eqLayout.Padding=UDim.new(0,8)
+	local equipSection = makeCard(bodyContent, UDim2.new(1,0,0,140)); equipSection.BackgroundColor3=COLORS.cardDark
+	local eqPad = Instance.new("UIPadding", equipSection); eqPad.PaddingLeft=UDim.new(0,10); eqPad.PaddingRight=UDim.new(0,10); eqPad.PaddingTop=UDim.new(0,8); eqPad.PaddingBottom=UDim.new(0,10)
+	local eqList = Instance.new("UIListLayout", equipSection); eqList.FillDirection=Enum.FillDirection.Vertical; eqList.Padding=UDim.new(0,6); eqList.SortOrder=Enum.SortOrder.LayoutOrder
+	local eqTitle = Instance.new("TextLabel"); eqTitle.BackgroundTransparency=1; eqTitle.Size=UDim2.new(1,0,0,18); eqTitle.TextXAlignment=Enum.TextXAlignment.Left; eqTitle.Text="EQUIPMENT"; eqTitle.TextSize=13; styleLabel(eqTitle,true); eqTitle.TextColor3=COLORS.accent; eqTitle.Parent=equipSection
+	local eqInfo = Instance.new("TextLabel"); eqInfo.BackgroundTransparency=1; eqInfo.Size=UDim2.new(1,0,0,16); eqInfo.TextXAlignment=Enum.TextXAlignment.Left; eqInfo.Text="Equipment Coming Soon"; eqInfo.TextSize=11; styleLabel(eqInfo,false); eqInfo.TextColor3=COLORS.muted; eqInfo.Parent=equipSection
+	local eqWrap = Instance.new("Frame"); eqWrap.BackgroundTransparency=1; eqWrap.Size=UDim2.new(1,0,0,68); eqWrap.Parent=equipSection
+	local eqLayout = Instance.new("UIGridLayout", eqWrap); eqLayout.FillDirection=Enum.FillDirection.Horizontal; eqLayout.CellPadding=UDim2.fromOffset(8,0); eqLayout.CellSize=UDim2.new(0.2,-7,0,62)
 	for _, slotName in ipairs({"Weapon","Helmet","Chestplate","Boots","Charm"}) do
-		local slot = makeCard(eqWrap, UDim2.fromOffset(122, 64)); slot.BackgroundColor3=COLORS.card
-		local s = Instance.new("TextLabel"); s.BackgroundTransparency=1; s.Size=UDim2.new(1,0,0,18); s.Position=UDim2.fromOffset(0,7); s.Text=slotName; s.TextSize=11; styleLabel(s,true); s.Parent=slot
-		local c = Instance.new("TextLabel"); c.BackgroundTransparency=1; c.Size=UDim2.new(1,0,0,16); c.Position=UDim2.fromOffset(0,31); c.Text="Coming Soon"; c.TextSize=10; styleLabel(c,false); c.TextColor3=COLORS.muted; c.Parent=slot
+		local slot = makeCard(eqWrap, UDim2.new(0, 0, 0, 62)); slot.BackgroundColor3=COLORS.card
+		local slotPad = Instance.new("UIPadding", slot); slotPad.PaddingLeft=UDim.new(0,4); slotPad.PaddingRight=UDim.new(0,4); slotPad.PaddingTop=UDim.new(0,7); slotPad.PaddingBottom=UDim.new(0,7)
+		local slotList = Instance.new("UIListLayout", slot); slotList.FillDirection=Enum.FillDirection.Vertical; slotList.HorizontalAlignment=Enum.HorizontalAlignment.Center; slotList.Padding=UDim.new(0,4)
+		local s = Instance.new("TextLabel"); s.BackgroundTransparency=1; s.Size=UDim2.new(1,0,0,16); s.Text=slotName; s.TextSize=11; styleLabel(s,true); s.Parent=slot
+		local c = Instance.new("TextLabel"); c.BackgroundTransparency=1; c.Size=UDim2.new(1,0,0,14); c.Text="Coming Soon"; c.TextSize=10; styleLabel(c,false); c.TextColor3=COLORS.muted; c.Parent=slot
 	end
 
 	local rank = getBugAscension(bug)
 	local costTable = ((cfg.ascension or {}).essenceRequiredByRank) or FALLBACK_ASCENSION_COSTS[rarity] or FALLBACK_ASCENSION_COSTS.Common
 	local cost = tonumber(costTable[rank + 1]) or tonumber(costTable[rank + 2]) or 0
 	local essence = tonumber((((context.State.PlayerData or {}).Currencies or {}).BugEssence)) or 0
-	local ascSec = makeCard(bodyContent, UDim2.new(1,-2,0,82)); ascSec.BackgroundColor3=COLORS.cardDark
-	makeSectionTitle(ascSec, "ASCENSION", 8)
-	local ascInfo = Instance.new("TextLabel"); ascInfo.BackgroundTransparency=1; ascInfo.Size=UDim2.new(0.62,0,0,40); ascInfo.Position=UDim2.fromOffset(10,30); ascInfo.TextXAlignment=Enum.TextXAlignment.Left; ascInfo.TextYAlignment=Enum.TextYAlignment.Top; ascInfo.Text=("Rank %d / 5   •   Cost: %d Essence   •   Current: %d"):format(rank,cost,essence); ascInfo.TextSize=12; styleLabel(ascInfo,false); ascInfo.Parent=ascSec
-	local ascBtn = makeButton(ascSec, rank >= 5 and "Max Ascension" or "Ascend", COLORS.accent, UDim2.fromOffset(146, 32)); ascBtn.Position=UDim2.new(1,-156,0,34); ascBtn.TextColor3=Color3.fromRGB(8,20,34)
+	local ascSec = makeCard(bodyContent, UDim2.new(1,0,0,74)); ascSec.BackgroundColor3=COLORS.cardDark
+	local ascPad = Instance.new("UIPadding", ascSec); ascPad.PaddingLeft=UDim.new(0,10); ascPad.PaddingRight=UDim.new(0,10); ascPad.PaddingTop=UDim.new(0,8); ascPad.PaddingBottom=UDim.new(0,8)
+	local ascTitle = Instance.new("TextLabel"); ascTitle.BackgroundTransparency=1; ascTitle.Size=UDim2.new(1,-170,0,16); ascTitle.Position=UDim2.fromOffset(0,0); ascTitle.Text="ASCENSION"; ascTitle.TextXAlignment=Enum.TextXAlignment.Left; ascTitle.TextSize=13; styleLabel(ascTitle,true); ascTitle.TextColor3=COLORS.accent; ascTitle.Parent=ascSec
+	local ascInfo = Instance.new("TextLabel"); ascInfo.BackgroundTransparency=1; ascInfo.Size=UDim2.new(1,-170,0,32); ascInfo.Position=UDim2.fromOffset(0,24); ascInfo.TextXAlignment=Enum.TextXAlignment.Left; ascInfo.TextYAlignment=Enum.TextYAlignment.Top; ascInfo.TextWrapped=true; ascInfo.Text=("Rank %d / 5 • Cost: %d • Essence: %d"):format(rank,cost,essence); ascInfo.TextSize=12; styleLabel(ascInfo,false); ascInfo.Parent=ascSec
+	local ascBtn = makeButton(ascSec, rank >= 5 and "Max Ascension" or "Ascend", COLORS.accent, UDim2.fromOffset(146, 32)); ascBtn.Position=UDim2.new(1,-146,0.5,-16); ascBtn.TextColor3=Color3.fromRGB(8,20,34)
 	if rank >= 5 or essence < cost then setButtonEnabled(ascBtn, false, COLORS.accent) if essence < cost and rank < 5 then ascBtn.Text = "Not Enough Essence" end else ascBtn.Activated:Connect(function() context.Controllers.BugFarm.Ascend(uid) if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end) end
 
 	applyNoTextStrokeRecursive(panel)
@@ -622,13 +654,16 @@ end
 			if r == rarityFilter then local u = Instance.new("Frame"); u.Size=UDim2.new(1,-18,0,2); u.Position=UDim2.new(0,9,1,-4); u.BackgroundColor3=color; u.BorderSizePixel=0; u.Parent=b end
 			b.Activated:Connect(function() rarityFilter = r render(context) end)
 		end
-		local gridWrap = makeCard(scroll, UDim2.new(1, -20, 0, 0))
+		local gridWrap = makeCard(scroll, UDim2.new(1, -20, 0, 260))
 		gridWrap.BackgroundColor3 = Color3.fromRGB(10, 23, 41)
-		gridWrap.AutomaticSize = Enum.AutomaticSize.Y
+		local gridPad = Instance.new("UIPadding", gridWrap)
+		gridPad.PaddingLeft = UDim.new(0, 12)
+		gridPad.PaddingRight = UDim.new(0, 12)
+		gridPad.PaddingTop = UDim.new(0, 12)
+		gridPad.PaddingBottom = UDim.new(0, 12)
 		local gridContent = Instance.new("Frame")
 		gridContent.BackgroundTransparency = 1
-		gridContent.AutomaticSize = Enum.AutomaticSize.Y
-		gridContent.Size = UDim2.new(1, -24, 0, 0)
+		gridContent.Size = UDim2.new(1, -24, 0, 216)
 		gridContent.Position = UDim2.fromOffset(12, 12)
 		gridContent.Parent = gridWrap
 		local grid = Instance.new("UIGridLayout")
@@ -665,24 +700,34 @@ end
 				shown += 1
 				local card = makeCard(gridContent, UDim2.fromOffset(170, 216))
 				card.BackgroundColor3 = COLORS.card
+				card.ClipsDescendants = false
+				local cardPad = Instance.new("UIPadding", card)
+				cardPad.PaddingLeft = UDim.new(0, 8)
+				cardPad.PaddingRight = UDim.new(0, 8)
+				cardPad.PaddingTop = UDim.new(0, 8)
+				cardPad.PaddingBottom = UDim.new(0, 8)
 				local stroke = card:FindFirstChildOfClass("UIStroke")
 				if stroke then stroke.Color = getRarityColor(rarity) stroke.Thickness = (BugConfig.RarityOrder[rarity] or 1) >= 4 and 2 or 1.5 end
-				local icon = Instance.new("ImageLabel"); icon.BackgroundTransparency = 1; icon.Size = UDim2.fromOffset(82, 82); icon.Position = UDim2.new(0.5, -41, 0, 24); icon.Image = tostring(cfg.icon or ""); icon.Parent = card
-				local name = Instance.new("TextLabel"); name.BackgroundTransparency = 1; name.Size = UDim2.new(1, -12, 0, 34); name.Position = UDim2.fromOffset(6, 106); name.Text = tostring(cfg.displayName or "Unknown Bug"); name.TextWrapped = true; name.TextSize = 14; styleLabel(name, true); name.Parent = card
-				local sub = Instance.new("TextLabel"); sub.BackgroundTransparency = 1; sub.Size = UDim2.new(1, -12, 0, 16); sub.Position = UDim2.fromOffset(6, 138); sub.Text = tostring(cfg.role or cfg.species or "Unknown"); sub.TextSize = 12; sub.TextColor3 = COLORS.muted; styleLabel(sub, false); sub.Parent = card
+				local icon = Instance.new("ImageLabel"); icon.BackgroundTransparency = 1; icon.Size = UDim2.fromOffset(82, 82); icon.Position = UDim2.new(0.5, -41, 0, 38); icon.Image = tostring(cfg.icon or ""); icon.Parent = card
+				local name = Instance.new("TextLabel"); name.BackgroundTransparency = 1; name.Size = UDim2.new(1, -16, 0, 34); name.Position = UDim2.fromOffset(8, 126); name.Text = tostring(cfg.displayName or "Unknown Bug"); name.TextWrapped = true; name.TextSize = 14; styleLabel(name, true); name.Parent = card
+				local sub = Instance.new("TextLabel"); sub.BackgroundTransparency = 1; sub.Size = UDim2.new(1, -16, 0, 16); sub.Position = UDim2.fromOffset(8, 150); sub.Text = tostring(cfg.role or cfg.species or "Unknown"); sub.TextSize = 12; sub.TextColor3 = COLORS.muted; styleLabel(sub, false); sub.Parent = card
 				local badgeColor, badgeText = getAssignmentBadgeStyle(assign)
-				local asn = makeBadge(card, assign, badgeColor); asn.Size = UDim2.fromOffset(104, 20); asn.Position = UDim2.new(0.5, -52, 0, 160); setBadgeTextColor(asn, badgeText)
-				local rarityBadge = makeBadge(card, rarity, getRarityColor(rarity)); rarityBadge.Size = UDim2.fromOffset(78, 18); rarityBadge.Position = UDim2.fromOffset(6, 6)
-				local p = Instance.new("TextLabel"); p.BackgroundTransparency = 1; p.Size = UDim2.new(1, -10, 0, 14); p.Position = UDim2.fromOffset(5, 186); p.Text = "Power "..formatNum(getBugPower(cfg)); p.TextSize = 12; styleLabel(p, true); p.TextColor3 = COLORS.good; p.Parent = card
-				if isBugLocked(bug) then local l=makeBadge(card, "LOCKED", COLORS.warn); l.Size=UDim2.fromOffset(62,18); l.Position=UDim2.new(1,-68,0,6); setBadgeTextColor(l, Color3.fromRGB(32, 22, 8)) end
-				local asc = getBugAscension(bug); if asc > 0 then local a=makeBadge(card, "A"..tostring(asc), Color3.fromRGB(106, 229, 186)); a.Size=UDim2.fromOffset(38,18); a.Position=UDim2.fromOffset(88,6); setBadgeTextColor(a, Color3.fromRGB(10, 26, 20)) end
+				local asn = makeBadge(card, assign, badgeColor); asn.Size = UDim2.fromOffset(104, 20); asn.Position = UDim2.new(0.5, -52, 0, 170); setBadgeTextColor(asn, badgeText)
+				local rarityBadge = makeBadge(card, rarity, getRarityColor(rarity)); rarityBadge.Size = UDim2.fromOffset(78, 18); rarityBadge.Position = UDim2.fromOffset(8, 8)
+				local p = Instance.new("TextLabel"); p.BackgroundTransparency = 1; p.Size = UDim2.new(1, -16, 0, 14); p.Position = UDim2.fromOffset(8, 194); p.Text = "Power "..formatNum(getBugPower(cfg)); p.TextSize = 12; styleLabel(p, true); p.TextColor3 = COLORS.good; p.Parent = card
+				if isBugLocked(bug) then local l=makeBadge(card, "LOCKED", COLORS.warn); l.Size=UDim2.fromOffset(62,18); l.Position=UDim2.new(1,-70,0,8); setBadgeTextColor(l, Color3.fromRGB(32, 22, 8)) end
+				local asc = getBugAscension(bug); if asc > 0 then local a=makeBadge(card, "A"..tostring(asc), Color3.fromRGB(106, 229, 186)); a.Size=UDim2.fromOffset(38,18); a.Position=UDim2.fromOffset(88,8); setBadgeTextColor(a, Color3.fromRGB(10, 26, 20)) end
 				local hoverHint = Instance.new("TextLabel"); hoverHint.BackgroundTransparency = 0.28; hoverHint.BackgroundColor3 = Color3.fromRGB(8, 20, 34); hoverHint.Size = UDim2.fromOffset(90, 18); hoverHint.Position = UDim2.new(1, -96, 1, -24); hoverHint.Text = "View Details"; hoverHint.TextSize = 10; hoverHint.Visible = false; styleLabel(hoverHint, true); hoverHint.Parent = card; Instance.new("UICorner", hoverHint).CornerRadius = UDim.new(0, 6)
 				card.MouseEnter:Connect(function() card.BackgroundColor3 = COLORS.card:Lerp(Color3.new(1,1,1), 0.1); if stroke then stroke.Transparency = 0; stroke.Color = getRarityColor(rarity):Lerp(Color3.new(1,1,1), 0.1) end hoverHint.Visible = true end)
 				card.MouseLeave:Connect(function() card.BackgroundColor3 = COLORS.card; if stroke then stroke.Transparency = 0.15; stroke.Color = getRarityColor(rarity) end hoverHint.Visible = false end)
 				card.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then makeDetailPopup(context, uid, bug) end end)
 			end
 		end
-		gridWrap.Size = UDim2.new(1, -20, 0, math.max(260, grid.AbsoluteContentSize.Y + 58))
+		local cardsPerRow = math.max(1, math.floor(math.max(gridContent.AbsoluteSize.X, 1) / (170 + 12)))
+		local rows = math.max(1, math.ceil(shown / cardsPerRow))
+		local gridHeight = rows * 216 + math.max(0, rows - 1) * 12
+		gridContent.Size = UDim2.new(1, -24, 0, gridHeight)
+		gridWrap.Size = UDim2.new(1, -20, 0, gridHeight + 24)
 		if shown == 0 then
 			local empty = Instance.new("TextLabel")
 			empty.Size = UDim2.new(1, -20, 0, 80); empty.Position = UDim2.fromOffset(10, 180); empty.BackgroundTransparency = 1; empty.TextSize = 18
