@@ -49,6 +49,10 @@ function BugFarmController.ToggleLock(bugUid: string): ()
 	fire({"BugFarm_ToggleLock", "Bug_ToggleLock", "BugToggleLock"}, { Uid = bugUid })
 end
 
+function BugFarmController.RenameBug(bugUid: string, newName: string): ()
+	fire({"BugFarm_RenameBug"}, { Uid = bugUid, Name = newName })
+end
+
 function BugFarmController.Recycle(uids: {string}, confirmHighRarity: boolean?): ()
 	fire({"BugFarm_Recycle", "Bug_Recycle", "BugRecycle"}, { Uids = uids, ConfirmHighRarity = confirmHighRarity == true })
 end

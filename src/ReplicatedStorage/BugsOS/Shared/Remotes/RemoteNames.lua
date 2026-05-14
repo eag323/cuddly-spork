@@ -37,6 +37,7 @@ local RemoteNames: RemoteNameMap = {
 	Bug_Recycle = "Bug_Recycle",
 	Bug_ToggleLock = "Bug_ToggleLock",
 	BugFarm_BuyExtraFarmerSlot = "BugFarm_BuyExtraFarmerSlot",
+	BugFarm_RenameBug = "BugFarm_RenameBug",
 	Bug_ApplyModifier = "Bug_ApplyModifier",
 	Bug_RerollSecondaries = "Bug_RerollSecondaries",
 	Treasure_Equip = "Treasure_Equip",
