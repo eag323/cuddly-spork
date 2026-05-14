@@ -1,6 +1,8 @@
 --!strict
 
 local BugBonusConfig = {}
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local EconomyConfig = require(ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("EconomyConfig"))
 
 type BonusDef = {
 	Id: string,
@@ -80,6 +82,16 @@ function BugBonusConfig.FormatBonus(bonus: any): string
 end
 
 local function pickQuality(rng: Random)
+	if EconomyConfig.DEV_MODE == true then
+		local forced = tostring(EconomyConfig.DEV_FORCE_BONUS_QUALITY or "")
+		if forced ~= "" then
+			for _, band in ipairs(QUALITY_BANDS) do
+				if band.Name == forced then
+					return band
+				end
+			end
+		end
+	end
 	local roll = rng:NextNumber()
 	local cursor = 0
 	for _, band in ipairs(QUALITY_BANDS) do
