@@ -302,20 +302,8 @@ local function makeDetailPopup(context, uid, bug)
 	header.BackgroundTransparency = 1
 	header.Parent = panel
 
-	local footer = Instance.new("Frame")
-	footer.Size = UDim2.new(1, -32, 0, 58)
-	footer.Position = UDim2.new(0, 16, 1, -72)
-	footer.BackgroundColor3 = Color3.fromRGB(8, 18, 32)
-	footer.BorderSizePixel = 0
-	footer.Parent = panel
-	Instance.new("UICorner", footer).CornerRadius = UDim.new(0, 10)
-	local footerStroke = Instance.new("UIStroke")
-	footerStroke.Color = Color3.fromRGB(72, 96, 124)
-	footerStroke.Transparency = 0.4
-	footerStroke.Parent = footer
-
 	local popupScroll = Instance.new("ScrollingFrame")
-	popupScroll.Size = UDim2.new(1, -32, 1, -228)
+	popupScroll.Size = UDim2.new(1, -32, 1, -158)
 	popupScroll.Position = UDim2.fromOffset(16, 141)
 	popupScroll.BackgroundTransparency = 1
 	popupScroll.BorderSizePixel = 0
@@ -324,7 +312,17 @@ local function makeDetailPopup(context, uid, bug)
 	popupScroll.ScrollBarThickness = 6
 	popupScroll.ScrollBarImageColor3 = Color3.fromRGB(62, 82, 106)
 	popupScroll.Parent = panel
-	local list = Instance.new("UIListLayout", popupScroll)
+	local bodyContent = Instance.new("Frame")
+	bodyContent.Name = "BodyContentFrame"
+	bodyContent.Size = UDim2.new(1, -12, 0, 0)
+	bodyContent.BackgroundTransparency = 1
+	bodyContent.AutomaticSize = Enum.AutomaticSize.Y
+	bodyContent.Parent = popupScroll
+	local bodyPad = Instance.new("UIPadding")
+	bodyPad.PaddingRight = UDim.new(0, 10)
+	bodyPad.PaddingBottom = UDim.new(0, 12)
+	bodyPad.Parent = bodyContent
+	local list = Instance.new("UIListLayout", bodyContent)
 	list.Padding = UDim.new(0, 12)
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Left
 	list.SortOrder = Enum.SortOrder.LayoutOrder
@@ -357,15 +355,25 @@ local function makeDetailPopup(context, uid, bug)
 		styleLabel(meta, false)
 		meta.TextColor3 = Color3.fromRGB(133, 156, 182)
 		local idSuffix = string.upper(string.sub(instanceId, math.max(1, #instanceId - 3)))
-		local caughtText = caughtAt and ("Caught: %s"):format(tostring(caughtAt)) or nil
-		meta.Text = table.concat({caughtText or "", "ID: #" .. idSuffix}, caughtAt and "  •  " or "")
+		local caughtText = nil
+		local timestamp = tonumber(caughtAt)
+		if timestamp and timestamp > 0 then
+			if timestamp > 100000000000 then
+				timestamp = math.floor(timestamp / 1000)
+			end
+			local dt = os.date("*t", timestamp)
+			if dt then
+				caughtText = string.format("Caught: %02d/%02d/%04d", dt.month, dt.day, dt.year)
+			end
+		end
+		meta.Text = caughtText and (caughtText .. "  •  ID: #" .. idSuffix) or ("ID: #" .. idSuffix)
 		meta.Parent = right
 	end
 
-	local statsSection = makeCard(popupScroll, UDim2.new(1, -2, 0, 84)); statsSection.BackgroundColor3 = COLORS.cardDark
+	local statsSection = makeCard(bodyContent, UDim2.new(1, -2, 0, 122)); statsSection.BackgroundColor3 = COLORS.cardDark
 	makeSectionTitle(statsSection, "COMBAT STATS", 8)
-	local chipWrap = Instance.new("Frame"); chipWrap.BackgroundTransparency=1; chipWrap.Size=UDim2.new(1,-20,0,36); chipWrap.Position=UDim2.fromOffset(10,38); chipWrap.Parent=statsSection
-	local grid = Instance.new("UIGridLayout", chipWrap); grid.CellPadding = UDim2.fromOffset(6,0); grid.CellSize = UDim2.new(0.125, -6, 1, 0)
+	local chipWrap = Instance.new("Frame"); chipWrap.BackgroundTransparency=1; chipWrap.Size=UDim2.new(1,-20,0,76); chipWrap.Position=UDim2.fromOffset(10,36); chipWrap.Parent=statsSection
+	local grid = Instance.new("UIGridLayout", chipWrap); grid.CellPadding = UDim2.fromOffset(8, 8); grid.CellSize = UDim2.new(0.25, -8, 0, 34)
 	local stats = cfg.stats or {}
 	local icons = {HP="❤️",ATK="⚔️",DEF="🛡️",SPD="💨",CR="🎯",CD="💥",RES="🔒",ACC="👁️"}
 	for _, entry in ipairs({{"HP","HP"},{"ATK","ATK"},{"DEF","DEF"},{"SPD","SPD"},{"CR","CritRate"},{"CD","CritDamage"},{"RES","RES"},{"ACC","ACC"}}) do
@@ -373,7 +381,7 @@ local function makeDetailPopup(context, uid, bug)
 		local t = Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.fromScale(1,1); t.Text=("%s %s %s"):format(icons[entry[1]], entry[1], tostring(stats[entry[2]] or 0)); t.TextSize=12; t.TextXAlignment=Enum.TextXAlignment.Center; t.TextYAlignment=Enum.TextYAlignment.Center; styleLabel(t,true); t.Parent=chip
 	end
 
-	local infoRow = Instance.new("Frame"); infoRow.Size = UDim2.new(1,-2,0,132); infoRow.BackgroundTransparency = 1; infoRow.Parent = popupScroll
+	local infoRow = Instance.new("Frame"); infoRow.Size = UDim2.new(1,-2,0,130); infoRow.BackgroundTransparency = 1; infoRow.Parent = bodyContent
 	local buffsCard = makeCard(infoRow, UDim2.new(0.5, -6, 1, 0)); buffsCard.BackgroundColor3=COLORS.cardDark
 	makeSectionTitle(buffsCard, "FARMING BUFFS", 8)
 	local buffsText = Instance.new("TextLabel"); buffsText.BackgroundTransparency=1; buffsText.Size=UDim2.new(1,-16,1,-38); buffsText.Position=UDim2.fromOffset(8,32); buffsText.TextXAlignment=Enum.TextXAlignment.Left; buffsText.TextYAlignment=Enum.TextYAlignment.Top; buffsText.TextWrapped=true; buffsText.TextSize=12; styleLabel(buffsText,false); buffsText.TextColor3=COLORS.good; buffsText.Text=(#(cfg.idleBonuses or {})>0) and table.concat(cfg.idleBonuses, "\n") or "No farming buffs";  buffsText.Parent=buffsCard
@@ -383,13 +391,13 @@ local function makeDetailPopup(context, uid, bug)
 	local abName = Instance.new("TextLabel"); abName.BackgroundTransparency=1; abName.Size=UDim2.new(1,-16,0,18); abName.Position=UDim2.fromOffset(8,32); abName.TextXAlignment=Enum.TextXAlignment.Left; abName.Text=(ability and tostring(ability.name or "Ability")) or "No ability"; abName.TextSize=13; styleLabel(abName,true); abName.Parent=abilityCard
 	local abDesc = Instance.new("TextLabel"); abDesc.BackgroundTransparency=1; abDesc.Size=UDim2.new(1,-16,0,66); abDesc.Position=UDim2.fromOffset(8,50); abDesc.TextXAlignment=Enum.TextXAlignment.Left; abDesc.TextYAlignment=Enum.TextYAlignment.Top; abDesc.TextWrapped=true; abDesc.Text=((ability and string.format("%s • CD %ss\n%s", tostring(ability.type or "Passive"), tostring(ability.cooldown or "-"), tostring(ability.description or ""))) or ""); abDesc.TextSize=11; styleLabel(abDesc,false); abDesc.Parent=abilityCard
 
-	local equipSection = makeCard(popupScroll, UDim2.new(1,-2,0,136)); equipSection.BackgroundColor3=COLORS.cardDark
+	local equipSection = makeCard(bodyContent, UDim2.new(1,-2,0,148)); equipSection.BackgroundColor3=COLORS.cardDark
 	makeSectionTitle(equipSection, "EQUIPMENT", 8)
 	local eqInfo = Instance.new("TextLabel"); eqInfo.BackgroundTransparency=1; eqInfo.Size=UDim2.new(1,-20,0,16); eqInfo.Position=UDim2.fromOffset(10,28); eqInfo.TextXAlignment=Enum.TextXAlignment.Left; eqInfo.Text="Equipment Coming Soon"; eqInfo.TextSize=11; styleLabel(eqInfo,false); eqInfo.TextColor3=COLORS.muted; eqInfo.Parent=equipSection
-	local eqWrap = Instance.new("Frame"); eqWrap.BackgroundTransparency=1; eqWrap.Size=UDim2.new(1,-20,0,74); eqWrap.Position=UDim2.fromOffset(10,50); eqWrap.Parent=equipSection
+	local eqWrap = Instance.new("Frame"); eqWrap.BackgroundTransparency=1; eqWrap.Size=UDim2.new(1,-20,0,70); eqWrap.Position=UDim2.fromOffset(10,56); eqWrap.Parent=equipSection
 	local eqLayout = Instance.new("UIListLayout", eqWrap); eqLayout.FillDirection=Enum.FillDirection.Horizontal; eqLayout.Padding=UDim.new(0,8)
 	for _, slotName in ipairs({"Weapon","Helmet","Chestplate","Boots","Charm"}) do
-		local slot = makeCard(eqWrap, UDim2.fromOffset(120, 72)); slot.BackgroundColor3=COLORS.card
+		local slot = makeCard(eqWrap, UDim2.fromOffset(122, 64)); slot.BackgroundColor3=COLORS.card
 		local s = Instance.new("TextLabel"); s.BackgroundTransparency=1; s.Size=UDim2.new(1,0,0,18); s.Position=UDim2.fromOffset(0,7); s.Text=slotName; s.TextSize=11; styleLabel(s,true); s.Parent=slot
 		local c = Instance.new("TextLabel"); c.BackgroundTransparency=1; c.Size=UDim2.new(1,0,0,16); c.Position=UDim2.fromOffset(0,31); c.Text="Coming Soon"; c.TextSize=10; styleLabel(c,false); c.TextColor3=COLORS.muted; c.Parent=slot
 	end
@@ -398,21 +406,12 @@ local function makeDetailPopup(context, uid, bug)
 	local costTable = ((cfg.ascension or {}).essenceRequiredByRank) or FALLBACK_ASCENSION_COSTS[rarity] or FALLBACK_ASCENSION_COSTS.Common
 	local cost = tonumber(costTable[rank + 1]) or tonumber(costTable[rank + 2]) or 0
 	local essence = tonumber((((context.State.PlayerData or {}).Currencies or {}).BugEssence)) or 0
-	local ascSec = makeCard(popupScroll, UDim2.new(1,-2,0,82)); ascSec.BackgroundColor3=COLORS.cardDark
+	local ascSec = makeCard(bodyContent, UDim2.new(1,-2,0,82)); ascSec.BackgroundColor3=COLORS.cardDark
 	makeSectionTitle(ascSec, "ASCENSION", 8)
 	local ascInfo = Instance.new("TextLabel"); ascInfo.BackgroundTransparency=1; ascInfo.Size=UDim2.new(0.62,0,0,40); ascInfo.Position=UDim2.fromOffset(10,30); ascInfo.TextXAlignment=Enum.TextXAlignment.Left; ascInfo.TextYAlignment=Enum.TextYAlignment.Top; ascInfo.Text=("Rank %d / 5   •   Cost: %d Essence   •   Current: %d"):format(rank,cost,essence); ascInfo.TextSize=12; styleLabel(ascInfo,false); ascInfo.Parent=ascSec
 	local ascBtn = makeButton(ascSec, rank >= 5 and "Max Ascension" or "Ascend", COLORS.accent, UDim2.fromOffset(146, 32)); ascBtn.Position=UDim2.new(1,-156,0,34); ascBtn.TextColor3=Color3.fromRGB(8,20,34)
 	if rank >= 5 or essence < cost then setButtonEnabled(ascBtn, false, COLORS.accent) if essence < cost and rank < 5 then ascBtn.Text = "Not Enough Essence" end else ascBtn.Activated:Connect(function() context.Controllers.BugFarm.Ascend(uid) if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end) end
 
-	local actionRow = Instance.new("Frame"); actionRow.Size=UDim2.new(1,-2,1,-12); actionRow.Position = UDim2.fromOffset(1, 6); actionRow.BackgroundTransparency=1; actionRow.Parent=footer
-	local actionLayout = Instance.new("UIListLayout", actionRow); actionLayout.FillDirection = Enum.FillDirection.Horizontal; actionLayout.Padding = UDim.new(0, 8)
-	local farmerBtn = makeButton(actionRow, assignedFarmer and "Assigned Farmer" or "Equip Farmer", Color3.fromRGB(34, 110, 98), UDim2.new(0.25, -6, 1, 0)); setButtonEnabled(farmerBtn, not assignedFarmer, Color3.fromRGB(34,110,98)); local fs=farmerBtn:FindFirstChildOfClass("UIStroke"); if fs then fs.Color = Color3.fromRGB(90, 220, 192); fs.Transparency = 0.25 end; farmerBtn.Activated:Connect(function() context.Controllers.BugFarm.EquipFarmer(uid, nil); if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end)
-	local combatBtn = makeButton(actionRow, assignedCombat and "On Combat Team" or "Add Combat", Color3.fromRGB(40, 82, 152), UDim2.new(0.25, -6, 1, 0)); setButtonEnabled(combatBtn, not assignedCombat, Color3.fromRGB(40,82,152)); local cs=combatBtn:FindFirstChildOfClass("UIStroke"); if cs then cs.Color = Color3.fromRGB(102, 162, 238); cs.Transparency = 0.22 end; combatBtn.Activated:Connect(function() context.Controllers.BugFarm.EquipCombat(uid, nil); if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end)
-	local lockBtn = makeButton(actionRow, isBugLocked(bug) and "Unlock" or "Lock", isBugLocked(bug) and Color3.fromRGB(86, 78, 44) or Color3.fromRGB(70, 72, 80), UDim2.new(0.25, -6, 1, 0)); lockBtn.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid); if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end)
-	local recycleBtn = makeButton(actionRow, "Recycle", Color3.fromRGB(98, 45, 36), UDim2.new(0.25, -6, 1, 0)); setButtonEnabled(recycleBtn, not (isBugLocked(bug) or assignedFarmer or assignedCombat), Color3.fromRGB(98,45,36)); local rs=recycleBtn:FindFirstChildOfClass("UIStroke"); if rs then rs.Color = Color3.fromRGB(228, 116, 88); rs.Transparency = 0.2 end; recycleBtn.Activated:Connect(function() context.Controllers.BugFarm.RecycleSelected({uid}); if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end)
-	local scrollPad = Instance.new("UIPadding")
-	scrollPad.PaddingBottom = UDim.new(0, 86)
-	scrollPad.Parent = popupScroll
 	applyNoTextStrokeRecursive(panel)
 
 	detailOverlay.Activated:Connect(function() if detailOverlay then detailOverlay:Destroy() detailOverlay = nil end end)
@@ -454,7 +453,7 @@ local function render(context)
 	layout.Parent = scroll
 	Instance.new("UIPadding", scroll).PaddingLeft = UDim.new(0, 10)
 
-	local summary = makeCard(scroll, UDim2.new(1, -20, 0, 116))
+	local summary = makeCard(scroll, UDim2.new(1, -20, 0, 98))
 	summary.BackgroundColor3 = Color3.fromRGB(10, 24, 42)
 	local summaryStroke = summary:FindFirstChildOfClass("UIStroke")
 	if summaryStroke then summaryStroke.Color = Color3.fromRGB(86, 214, 228) summaryStroke.Transparency = 0.4 end
@@ -497,7 +496,7 @@ local function render(context)
 	if selectedTab == "My Bugs" then
 		local subtitle = Instance.new("TextLabel")
 		subtitle.BackgroundTransparency = 1
-		subtitle.Size = UDim2.new(0.58, -8, 0, 30)
+		subtitle.Size = UDim2.new(0.58, -8, 0, 36)
 		subtitle.Position = UDim2.fromOffset(10, 34)
 		subtitle.Text = "Manage your owned bugs, assignments, equipment, and ascension."
 		subtitle.TextSize = 12
@@ -512,9 +511,9 @@ local function render(context)
 			{"Total Power", formatNum(totalPower), COLORS.good},
 		}
 		for i, st in ipairs(stats) do
-			local tile = makeCard(summary, UDim2.fromOffset(170, 68))
+			local tile = makeCard(summary, UDim2.fromOffset(168, 56))
 			tile.BackgroundColor3 = COLORS.cardDark
-			tile.Position = UDim2.new(1, -358 + (i - 1) * 178, 0, 24)
+			tile.Position = UDim2.new(1, -354 + (i - 1) * 176, 0, 20)
 			local lbl = Instance.new("TextLabel")
 			lbl.BackgroundTransparency = 1
 			lbl.Size = UDim2.new(1, -10, 0, 16)
@@ -528,7 +527,7 @@ local function render(context)
 			local val = Instance.new("TextLabel")
 			val.BackgroundTransparency = 1
 			val.Size = UDim2.new(1, -10, 0, 24)
-			val.Position = UDim2.fromOffset(6, 26)
+			val.Position = UDim2.fromOffset(6, 22)
 			val.TextXAlignment = Enum.TextXAlignment.Left
 			val.Text = tostring(st[2])
 			val.TextSize = 18
@@ -548,7 +547,7 @@ local function render(context)
 		summaryText.Parent = summary
 	end
 
-	local controls = makeCard(scroll, UDim2.new(1, -20, 0, 52))
+	local controls = makeCard(scroll, UDim2.new(1, -20, 0, 50))
 	local search = Instance.new("TextBox")
 	search.PlaceholderText = "Search bugs..."
 	search.Text = searchQuery
@@ -611,13 +610,13 @@ local function render(context)
 end
 
 	if selectedTab == "My Bugs" then
-		local filterBar = makeCard(scroll, UDim2.new(1, -20, 0, 56))
-		local wrap = Instance.new("Frame"); wrap.BackgroundTransparency=1; wrap.Size=UDim2.new(1,-8,1,-12); wrap.Position=UDim2.fromOffset(4,6); wrap.Parent=filterBar
-		local tabLayout = Instance.new("UIGridLayout"); tabLayout.CellSize = UDim2.fromOffset(94, 34); tabLayout.CellPadding = UDim2.fromOffset(6, 6); tabLayout.FillDirectionMaxCells=7; tabLayout.Parent=wrap
+		local filterBar = makeCard(scroll, UDim2.new(1, -20, 0, 48))
+		local wrap = Instance.new("Frame"); wrap.BackgroundTransparency=1; wrap.Size=UDim2.new(1,-8,1,-8); wrap.Position=UDim2.fromOffset(4,4); wrap.Parent=filterBar
+		local tabLayout = Instance.new("UIListLayout"); tabLayout.FillDirection = Enum.FillDirection.Horizontal; tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center; tabLayout.VerticalAlignment = Enum.VerticalAlignment.Center; tabLayout.Padding = UDim.new(0, 7); tabLayout.Parent=wrap
 		for _, r in ipairs(rarityTabs) do
 			local color = getRarityColor(r)
 			local tinted = r == "All" and Color3.fromRGB(70, 94, 124) or color:Lerp(Color3.fromRGB(10, 22, 40), 0.62)
-			local b = makeButton(wrap, r, r == rarityFilter and color or tinted, UDim2.fromOffset(95, 32))
+			local b = makeButton(wrap, r, r == rarityFilter and color or tinted, UDim2.fromOffset(92, 32))
 			b.TextColor3 = r == rarityFilter and Color3.fromRGB(245, 252, 255) or Color3.fromRGB(208, 221, 240)
 			local s = b:FindFirstChildOfClass("UIStroke"); if s then s.Color = color s.Transparency = r == rarityFilter and 0.12 or 0.52 s.Thickness = r == rarityFilter and 1.5 or 1 end
 			if r == rarityFilter then local u = Instance.new("Frame"); u.Size=UDim2.new(1,-18,0,2); u.Position=UDim2.new(0,9,1,-4); u.BackgroundColor3=color; u.BorderSizePixel=0; u.Parent=b end
@@ -654,30 +653,6 @@ end
 			local br = BugConfig.RarityOrder[tostring((bCfg and bCfg.rarity) or b.Bug.Rarity or "Common")] or 1
 			return ar > br
 		end)
-		local sectionHeader = Instance.new("Frame")
-		sectionHeader.BackgroundTransparency = 1
-		sectionHeader.Size = UDim2.new(1, -4, 0, 22)
-		sectionHeader.Parent = gridContent
-		local sectionTitle = Instance.new("TextLabel")
-		sectionTitle.BackgroundTransparency = 1
-		sectionTitle.Size = UDim2.new(0.7, 0, 1, 0)
-		sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-		sectionTitle.Text = "OWNED BUGS"
-		sectionTitle.TextSize = 13
-		styleLabel(sectionTitle, true)
-		sectionTitle.TextColor3 = COLORS.accent
-		sectionTitle.Parent = sectionHeader
-
-		local sectionCount = Instance.new("TextLabel")
-		sectionCount.BackgroundTransparency = 1
-		sectionCount.AnchorPoint = Vector2.new(1, 0)
-		sectionCount.Position = UDim2.new(1, 0, 0, 0)
-		sectionCount.Size = UDim2.new(0.3, 0, 1, 0)
-		sectionCount.TextXAlignment = Enum.TextXAlignment.Right
-		sectionCount.TextSize = 12
-		styleLabel(sectionCount, false)
-		sectionCount.TextColor3 = COLORS.muted
-		sectionCount.Parent = sectionHeader
 
 		local shown = 0
 		for _, entry in ipairs(display) do
@@ -707,7 +682,6 @@ end
 				card.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then makeDetailPopup(context, uid, bug) end end)
 			end
 		end
-		sectionCount.Text = string.format("%d bugs", shown)
 		gridWrap.Size = UDim2.new(1, -20, 0, math.max(260, grid.AbsoluteContentSize.Y + 58))
 		if shown == 0 then
 			local empty = Instance.new("TextLabel")
@@ -811,6 +785,15 @@ end
 		clearBtn.Position = UDim2.fromOffset(186, 9)
 		clearBtn.Activated:Connect(function() selectedRecycle = {} render(context) end)
 	end
+	for _, d in ipairs(root:GetDescendants()) do
+		if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
+			d.TextStrokeTransparency = 1
+		end
+		if d:IsA("UIStroke") and (d.Parent:IsA("TextLabel") or d.Parent:IsA("TextButton") or d.Parent:IsA("TextBox")) then
+			d.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		end
+	end
+
 end
 
 function BugFarmApp.Mount(target, context)
@@ -851,7 +834,7 @@ function BugFarmApp.Mount(target, context)
 
 	contentHost = Instance.new("Frame")
 	contentHost.Size = UDim2.new(1, -16, 1, -58)
-	contentHost.Position = UDim2.fromOffset(8, 52)
+	contentHost.Position = UDim2.fromOffset(8, 56)
 	contentHost.BackgroundTransparency = 1
 	contentHost.Parent = root
 
