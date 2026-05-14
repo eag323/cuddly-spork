@@ -152,21 +152,25 @@ local function showRewardScreen(payload)
 	local bonuses = type(payload.BonusStats)=="table" and payload.BonusStats or (type(bug.BonusStats)=="table" and bug.BonusStats or {})
 	local overlay = Instance.new("Frame"); overlay.Size = UDim2.fromScale(1,1); overlay.BackgroundColor3=Color3.new(0,0,0); overlay.BackgroundTransparency=0.35; overlay.Parent=context.UI.WorldLayer; activeRewardGui=overlay
 
-	local card = Instance.new("Frame"); card.AnchorPoint=Vector2.new(0.5,0.5); card.Size=UDim2.fromOffset(560,690); card.Position=UDim2.fromScale(0.5,0.5); card.BackgroundColor3=Color3.fromRGB(9,22,45); card.Parent=overlay; card.ClipsDescendants=false
+	local card = Instance.new("Frame"); card.AnchorPoint=Vector2.new(0.5,0.5); card.Size=UDim2.fromOffset(560,690); card.Position=UDim2.fromScale(0.5,0.5); card.BackgroundColor3=Color3.fromRGB(9,22,45); card.Parent=overlay; card.ClipsDescendants=true
 	Instance.new("UICorner",card).CornerRadius=UDim.new(0,16)
 	local cStroke = Instance.new("UIStroke", card); cStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; cStroke.Thickness = (rarity=="Epic" or rarity=="Legendary" or rarity=="Mythic") and 2.8 or 2.2; cStroke.Color = style.Accent
-	local pad = Instance.new("UIPadding", card); pad.PaddingTop=UDim.new(0,16); pad.PaddingBottom=UDim.new(0,16); pad.PaddingLeft=UDim.new(0,20); pad.PaddingRight=UDim.new(0,20)
+	local pad = Instance.new("UIPadding", card); pad.PaddingTop=UDim.new(0,20); pad.PaddingBottom=UDim.new(0,16); pad.PaddingLeft=UDim.new(0,20); pad.PaddingRight=UDim.new(0,20)
 	local rootLayout = Instance.new("UIListLayout", card); rootLayout.FillDirection=Enum.FillDirection.Vertical; rootLayout.Padding=UDim.new(0,8); rootLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
 
 	local title = Instance.new("TextLabel"); title.Size=UDim2.new(1,0,0,36); title.BackgroundTransparency=1; title.Text="BUG CAUGHT!"; title.Font=Enum.Font.GothamBlack; title.TextSize=32; title.TextColor3=Color3.fromRGB(240,247,255); title.Parent=card
 
-	local iconSection = Instance.new("Frame"); iconSection.Size=UDim2.new(1,0,0,208); iconSection.BackgroundTransparency=1; iconSection.Parent=card
-	local glow = Instance.new("Frame"); glow.Size=UDim2.fromOffset(210,210); glow.AnchorPoint=Vector2.new(0.5,0.5); glow.Position=UDim2.fromScale(0.5,0.5); glow.BackgroundColor3=style.Accent; glow.BackgroundTransparency=style.Glow; glow.Parent=iconSection; Instance.new("UICorner",glow).CornerRadius=UDim.new(1,0)
-	local ring = Instance.new("Frame"); ring.Size=UDim2.fromOffset(248,248); ring.AnchorPoint=Vector2.new(0.5,0.5); ring.Position=UDim2.fromScale(0.5,0.5); ring.BackgroundTransparency=1; ring.Parent=iconSection
+	local revealSection = Instance.new("Frame"); revealSection.Size=UDim2.new(1,0,0,238); revealSection.BackgroundTransparency=1; revealSection.Parent=card
+	local revealPadding = Instance.new("UIPadding", revealSection); revealPadding.PaddingTop=UDim.new(0,16)
+	local revealLayout = Instance.new("UIListLayout", revealSection); revealLayout.FillDirection=Enum.FillDirection.Vertical; revealLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center; revealLayout.VerticalAlignment=Enum.VerticalAlignment.Top
+
+	local iconSection = Instance.new("Frame"); iconSection.Size=UDim2.new(0,260,0,206); iconSection.BackgroundTransparency=1; iconSection.ClipsDescendants=true; iconSection.Parent=revealSection
+	local glow = Instance.new("Frame"); glow.Size=UDim2.fromOffset(194,194); glow.AnchorPoint=Vector2.new(0.5,0.5); glow.Position=UDim2.fromScale(0.5,0.5); glow.BackgroundColor3=style.Accent; glow.BackgroundTransparency=style.Glow; glow.Parent=iconSection; Instance.new("UICorner",glow).CornerRadius=UDim.new(1,0)
+	local ring = Instance.new("Frame"); ring.Size=UDim2.fromOffset(226,226); ring.AnchorPoint=Vector2.new(0.5,0.5); ring.Position=UDim2.fromScale(0.5,0.5); ring.BackgroundTransparency=1; ring.Parent=iconSection
 	local ringStroke = Instance.new("UIStroke", ring); ringStroke.Color=style.Accent; ringStroke.Thickness=2; ringStroke.Transparency=0.45
 	Instance.new("UICorner",ring).CornerRadius=UDim.new(1,0)
 	local icon = bug.icon or bug.Icon or cfg.icon or cfg.Icon or cfg.sprite or cfg.Sprite or "rbxasset://textures/ui/GuiImagePlaceholder.png"
-	local bugImage = Instance.new("ImageLabel"); bugImage.Size=UDim2.fromOffset(140,140); bugImage.AnchorPoint=Vector2.new(0.5,0.5); bugImage.Position=UDim2.fromScale(0.5,0.5); bugImage.BackgroundTransparency=1; bugImage.ScaleType=Enum.ScaleType.Fit; bugImage.Image=tostring(icon); bugImage.ZIndex=3; bugImage.Parent=iconSection
+	local bugImage = Instance.new("ImageLabel"); bugImage.Size=UDim2.fromOffset(136,136); bugImage.AnchorPoint=Vector2.new(0.5,0.5); bugImage.Position=UDim2.fromScale(0.5,0.5); bugImage.BackgroundTransparency=1; bugImage.ScaleType=Enum.ScaleType.Fit; bugImage.Image=tostring(icon); bugImage.ZIndex=3; bugImage.Parent=iconSection
 
 	local identity = Instance.new("Frame"); identity.Size=UDim2.new(1,0,0,142); identity.BackgroundTransparency=1; identity.Parent=card
 	local idLayout = Instance.new("UIListLayout", identity); idLayout.FillDirection=Enum.FillDirection.Vertical; idLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center; idLayout.Padding=UDim.new(0,5)
@@ -234,11 +238,11 @@ local function showRewardScreen(payload)
 		TweenService:Create(rarityBadge, TweenInfo.new(0.22), {TextTransparency=0, BackgroundTransparency=0.05}):Play()
 		for _=1,style.Pulse do
 			if activeRewardGui ~= overlay then return end
-			TweenService:Create(glow, TweenInfo.new(0.32), {Size=UDim2.fromOffset(232,232), BackgroundTransparency=math.max(0.08, style.Glow-0.16)}):Play()
+			TweenService:Create(glow, TweenInfo.new(0.32), {Size=UDim2.fromOffset(208,208), BackgroundTransparency=math.max(0.08, style.Glow-0.16)}):Play()
 			TweenService:Create(ringStroke, TweenInfo.new(0.32), {Transparency=0.2}):Play()
 			task.wait(0.34)
 			if activeRewardGui ~= overlay then return end
-			TweenService:Create(glow, TweenInfo.new(0.32), {Size=UDim2.fromOffset(210,210), BackgroundTransparency=style.Glow}):Play()
+			TweenService:Create(glow, TweenInfo.new(0.32), {Size=UDim2.fromOffset(194,194), BackgroundTransparency=style.Glow}):Play()
 			TweenService:Create(ringStroke, TweenInfo.new(0.32), {Transparency=0.45}):Play()
 			task.wait(0.34)
 		end
