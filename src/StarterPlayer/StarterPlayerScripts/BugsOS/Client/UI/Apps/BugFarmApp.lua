@@ -247,14 +247,28 @@ local function makeDetailPopup(context, uid, bug)
 	local assignText = getAssignmentStatus(uid, farmerSlots, combatSlots)
 	local assignColor = assignText == "Farmer" and Color3.fromRGB(72, 202, 164) or (assignText == "Combat" and Color3.fromRGB(94, 162, 255) or Color3.fromRGB(104, 124, 152))
 
-	local panel = makeCard(detailOverlay, UDim2.fromOffset(760, 560))
-	panel.Position = UDim2.fromScale(0.5, 0.5) - UDim2.fromOffset(380, 280)
+	local panel = makeCard(detailOverlay, UDim2.fromOffset(760, 520))
+	panel.Position = UDim2.fromScale(0.5, 0.5) - UDim2.fromOffset(380, 260)
 	panel.BackgroundColor3 = Color3.fromRGB(10, 24, 42)
 	local stroke = panel:FindFirstChildOfClass("UIStroke")
 	if stroke then stroke.Color = getRarityColor(rarity) stroke.Thickness = 2 stroke.Transparency = 0.15 end
-	local pad = Instance.new("UIPadding", panel)
-	pad.PaddingLeft = UDim.new(0, 16); pad.PaddingRight = UDim.new(0, 16); pad.PaddingTop = UDim.new(0, 16); pad.PaddingBottom = UDim.new(0, 16)
-	local list = Instance.new("UIListLayout", panel)
+	local header = Instance.new("Frame")
+	header.Size = UDim2.new(1, -32, 0, 122)
+	header.Position = UDim2.fromOffset(16, 14)
+	header.BackgroundTransparency = 1
+	header.Parent = panel
+
+	local popupScroll = Instance.new("ScrollingFrame")
+	popupScroll.Size = UDim2.new(1, -32, 1, -154)
+	popupScroll.Position = UDim2.fromOffset(16, 144)
+	popupScroll.BackgroundTransparency = 1
+	popupScroll.BorderSizePixel = 0
+	popupScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	popupScroll.CanvasSize = UDim2.fromOffset(0, 0)
+	popupScroll.ScrollBarThickness = 6
+	popupScroll.ScrollBarImageColor3 = Color3.fromRGB(95, 130, 170)
+	popupScroll.Parent = panel
+	local list = Instance.new("UIListLayout", popupScroll)
 	list.Padding = UDim.new(0, 10)
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Left
 	list.SortOrder = Enum.SortOrder.LayoutOrder
@@ -262,16 +276,12 @@ local function makeDetailPopup(context, uid, bug)
 	local closeBtn = makeButton(panel, "X", COLORS.cardDark, UDim2.fromOffset(28, 28))
 	closeBtn.LayoutOrder = 0
 	closeBtn.AnchorPoint = Vector2.new(1, 0)
-	closeBtn.Position = UDim2.new(1, -16, 0, 16)
+	closeBtn.Position = UDim2.new(1, -14, 0, 14)
 	closeBtn.ZIndex = 3
 	closeBtn.TextStrokeTransparency = 1
 	closeBtn.Activated:Connect(function() if detailOverlay then detailOverlay:Destroy() detailOverlay = nil end end)
 
-	local header = Instance.new("Frame")
-	header.LayoutOrder = 1
-	header.Size = UDim2.new(1, 0, 0, 125)
-	header.BackgroundTransparency = 1
-	header.Parent = panel
+	
 	local iconPanel = makeCard(header, UDim2.fromOffset(110, 110)); iconPanel.Position = UDim2.fromOffset(0, 8); iconPanel.BackgroundColor3 = COLORS.cardDark
 	local icon = Instance.new("ImageLabel"); icon.BackgroundTransparency = 1; icon.Size = UDim2.fromOffset(96, 96); icon.Position = UDim2.fromOffset(7, 7); icon.Image = tostring(cfg.icon or ""); icon.Parent = iconPanel
 	local right = Instance.new("Frame"); right.BackgroundTransparency = 1; right.Size = UDim2.new(1, -132, 1, 0); right.Position = UDim2.fromOffset(132, 0); right.Parent = header
@@ -280,7 +290,7 @@ local function makeDetailPopup(context, uid, bug)
 	local assignBadge = makeBadge(right, assignText, assignColor); assignBadge.Position = UDim2.fromOffset(128, 52); assignBadge.Size = UDim2.fromOffset(140, 24)
 	local species = Instance.new("TextLabel"); species.BackgroundTransparency=1; species.Size=UDim2.new(1,-10,0,20); species.Position=UDim2.fromOffset(0,84); species.TextXAlignment=Enum.TextXAlignment.Left; species.Text=tostring(cfg.role or "Unknown").." • "..tostring(cfg.species or "Unknown"); species.TextSize=13; styleLabel(species,false); species.TextColor3=COLORS.muted; species.Parent=right
 
-	local statsSection = makeCard(panel, UDim2.new(1, 0, 0, 104)); statsSection.LayoutOrder = 2; statsSection.BackgroundColor3 = COLORS.cardDark; statsSection.Parent = panel
+	local statsSection = makeCard(popupScroll, UDim2.new(1, -2, 0, 100)); statsSection.BackgroundColor3 = COLORS.cardDark
 	local sTitle = makeSectionTitle(statsSection, "COMBAT STATS", 10)
 	local chipWrap = Instance.new("Frame"); chipWrap.BackgroundTransparency=1; chipWrap.Size=UDim2.new(1,-20,0,56); chipWrap.Position=UDim2.fromOffset(10,34); chipWrap.Parent=statsSection
 	local grid = Instance.new("UIGridLayout", chipWrap); grid.CellPadding = UDim2.fromOffset(8,6); grid.CellSize = UDim2.new(0.125, -7, 0, 46)
@@ -291,7 +301,7 @@ local function makeDetailPopup(context, uid, bug)
 		local v = Instance.new("TextLabel"); v.BackgroundTransparency=1; v.Size=UDim2.new(1,0,0,16); v.Position=UDim2.fromOffset(0,22); v.Text=tostring(stats[entry[2]] or 0); v.TextSize=13; styleLabel(v,true); v.Parent=chip
 	end
 
-	local infoRow = Instance.new("Frame"); infoRow.LayoutOrder = 3; infoRow.Size = UDim2.new(1,0,0,118); infoRow.BackgroundTransparency = 1; infoRow.Parent = panel
+	local infoRow = Instance.new("Frame"); infoRow.Size = UDim2.new(1,-2,0,116); infoRow.BackgroundTransparency = 1; infoRow.Parent = popupScroll
 	local buffsCard = makeCard(infoRow, UDim2.new(0.5, -6, 1, 0)); buffsCard.BackgroundColor3=COLORS.cardDark
 	makeSectionTitle(buffsCard, "FARMING BUFFS", 8)
 	local buffsText = Instance.new("TextLabel"); buffsText.BackgroundTransparency=1; buffsText.Size=UDim2.new(1,-16,1,-38); buffsText.Position=UDim2.fromOffset(8,32); buffsText.TextXAlignment=Enum.TextXAlignment.Left; buffsText.TextYAlignment=Enum.TextYAlignment.Top; buffsText.TextWrapped=true; buffsText.TextSize=12; styleLabel(buffsText,false); buffsText.TextColor3=COLORS.good; buffsText.Text=(#(cfg.idleBonuses or {})>0) and table.concat(cfg.idleBonuses, "\n") or "No farming buffs"; if #(cfg.idleBonuses or {})==0 then buffsText.TextColor3=COLORS.muted end; buffsText.Parent=buffsCard
@@ -301,7 +311,7 @@ local function makeDetailPopup(context, uid, bug)
 	local abName = Instance.new("TextLabel"); abName.BackgroundTransparency=1; abName.Size=UDim2.new(1,-16,0,18); abName.Position=UDim2.fromOffset(8,32); abName.TextXAlignment=Enum.TextXAlignment.Left; abName.Text=(ability and tostring(ability.name or "Ability")) or "No ability"; abName.TextSize=13; styleLabel(abName,true); abName.Parent=abilityCard
 	local abDesc = Instance.new("TextLabel"); abDesc.BackgroundTransparency=1; abDesc.Size=UDim2.new(1,-16,0,58); abDesc.Position=UDim2.fromOffset(8,52); abDesc.TextXAlignment=Enum.TextXAlignment.Left; abDesc.TextYAlignment=Enum.TextYAlignment.Top; abDesc.TextWrapped=true; abDesc.Text=(ability and tostring(ability.description or "")) or ""; abDesc.TextSize=11; styleLabel(abDesc,false); abDesc.TextColor3=COLORS.muted; abDesc.Parent=abilityCard
 
-	local equipSection = makeCard(panel, UDim2.new(1,0,0,100)); equipSection.LayoutOrder=4; equipSection.BackgroundColor3=COLORS.cardDark; equipSection.Parent=panel
+	local equipSection = makeCard(popupScroll, UDim2.new(1,-2,0,98)); equipSection.BackgroundColor3=COLORS.cardDark
 	makeSectionTitle(equipSection, "EQUIPMENT", 8)
 	local eqWrap = Instance.new("Frame"); eqWrap.BackgroundTransparency=1; eqWrap.Size=UDim2.new(1,-20,0,62); eqWrap.Position=UDim2.fromOffset(10,30); eqWrap.Parent=equipSection
 	local eqLayout = Instance.new("UIListLayout", eqWrap); eqLayout.FillDirection=Enum.FillDirection.Horizontal; eqLayout.Padding=UDim.new(0,8)
@@ -315,13 +325,13 @@ local function makeDetailPopup(context, uid, bug)
 	local costTable = ((cfg.ascension or {}).essenceRequiredByRank) or FALLBACK_ASCENSION_COSTS[rarity] or FALLBACK_ASCENSION_COSTS.Common
 	local cost = tonumber(costTable[rank + 1]) or tonumber(costTable[rank + 2]) or 0
 	local essence = tonumber((((context.State.PlayerData or {}).Currencies or {}).BugEssence)) or 0
-	local ascSec = makeCard(panel, UDim2.new(1,0,0,70)); ascSec.LayoutOrder=5; ascSec.BackgroundColor3=COLORS.cardDark; ascSec.Parent=panel
+	local ascSec = makeCard(popupScroll, UDim2.new(1,-2,0,70)); ascSec.BackgroundColor3=COLORS.cardDark
 	makeSectionTitle(ascSec, "ASCENSION", 8)
 	local ascInfo = Instance.new("TextLabel"); ascInfo.BackgroundTransparency=1; ascInfo.Size=UDim2.new(0.72,0,0,22); ascInfo.Position=UDim2.fromOffset(10,34); ascInfo.TextXAlignment=Enum.TextXAlignment.Left; ascInfo.Text=("Rank: %d / 5   Cost: %d Bug Essence   Essence: %d"):format(rank,cost,essence); ascInfo.TextSize=12; styleLabel(ascInfo,false); ascInfo.Parent=ascSec
 	local ascBtn = makeButton(ascSec, rank >= 5 and "Max Rank" or "Ascend", COLORS.accent, UDim2.fromOffset(132, 32)); ascBtn.Position=UDim2.new(1,-142,0,26); ascBtn.TextColor3=Color3.fromRGB(8,20,34)
 	if rank >= 5 or essence < cost then setButtonEnabled(ascBtn, false, COLORS.accent) else ascBtn.Activated:Connect(function() context.Controllers.BugFarm.Ascend(uid) if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end) end
 
-	local actionRow = Instance.new("Frame"); actionRow.LayoutOrder=6; actionRow.Size=UDim2.new(1,0,0,38); actionRow.BackgroundTransparency=1; actionRow.Parent=panel
+	local actionRow = Instance.new("Frame"); actionRow.Size=UDim2.new(1,-2,0,38); actionRow.BackgroundTransparency=1; actionRow.Parent=popupScroll
 	local actionLayout = Instance.new("UIListLayout", actionRow); actionLayout.FillDirection = Enum.FillDirection.Horizontal; actionLayout.Padding = UDim.new(0, 8)
 	local farmerBtn = makeButton(actionRow, assignedFarmer and "Assigned Farmer" or "Equip Farmer", Color3.fromRGB(68, 170, 150), UDim2.new(0.25, -6, 1, 0)); setButtonEnabled(farmerBtn, not assignedFarmer, Color3.fromRGB(68,170,150)); farmerBtn.Activated:Connect(function() context.Controllers.BugFarm.EquipFarmer(uid, nil) end)
 	local combatBtn = makeButton(actionRow, assignedCombat and "On Combat Team" or "Add Combat", Color3.fromRGB(82, 136, 220), UDim2.new(0.25, -6, 1, 0)); setButtonEnabled(combatBtn, not assignedCombat, Color3.fromRGB(82,136,220)); combatBtn.Activated:Connect(function() context.Controllers.BugFarm.EquipCombat(uid, nil) end)
@@ -342,7 +352,7 @@ local function render(context)
 	local farmerSlots = bugs.FarmerSlots or {}
 	local combatSlots = bugs.CombatSlots or {}
 	for name, button in pairs(tabButtons) do
-		button.BackgroundColor3 = (name == selectedTab) and COLORS.accent or COLORS.cardDark
+		button.BackgroundColor3 = (name == selectedTab) and COLORS.accent or Color3.fromRGB(24, 42, 67)
 		button.TextColor3 = (name == selectedTab) and Color3.fromRGB(7, 20, 33) or COLORS.text
 	end
 
@@ -358,7 +368,7 @@ local function render(context)
 	layout.Parent = scroll
 	Instance.new("UIPadding", scroll).PaddingLeft = UDim.new(0, 10)
 
-	local summary = makeCard(scroll, UDim2.new(1, -20, 0, 186))
+	local summary = makeCard(scroll, UDim2.new(1, -20, 0, 156))
 	summary.BackgroundColor3 = Color3.fromRGB(10, 24, 42)
 	local summaryStroke = summary:FindFirstChildOfClass("UIStroke")
 	if summaryStroke then summaryStroke.Color = Color3.fromRGB(86, 214, 228) summaryStroke.Transparency = 0.4 end
@@ -413,7 +423,7 @@ local function render(context)
 			local row = math.floor((i - 1) / 4)
 			local tile = makeCard(summary, UDim2.new(0.24, -6, 0, 58))
 			tile.BackgroundColor3 = COLORS.cardDark
-			tile.Position = UDim2.new(0.02 + col * 0.245, 0, 0, 36 + row * 64)
+			tile.Position = UDim2.new(0.02 + col * 0.245, 0, 0, 32 + row * 60)
 			local lbl = Instance.new("TextLabel")
 			lbl.BackgroundTransparency = 1
 			lbl.Size = UDim2.new(1, -10, 0, 16)
@@ -517,10 +527,11 @@ end
 			local tinted = r == "All" and Color3.fromRGB(70, 94, 124) or color:Lerp(Color3.fromRGB(10, 22, 40), 0.62)
 			local b = makeButton(wrap, r, r == rarityFilter and color or tinted, UDim2.fromOffset(95, 30))
 			b.TextColor3 = r == rarityFilter and Color3.fromRGB(12, 20, 30) or Color3.fromRGB(232, 240, 251)
-			local s = b:FindFirstChildOfClass("UIStroke"); if s then s.Color = color s.Transparency = r == rarityFilter and 0.1 or 0.55 end
+			local s = b:FindFirstChildOfClass("UIStroke"); if s then s.Color = color s.Transparency = r == rarityFilter and 0.12 or 0.52 s.Thickness = r == rarityFilter and 1.5 or 1 end
+			if r == rarityFilter then local u = Instance.new("Frame"); u.Size=UDim2.new(1,-18,0,2); u.Position=UDim2.new(0,9,1,-4); u.BackgroundColor3=color; u.BorderSizePixel=0; u.Parent=b end
 			b.Activated:Connect(function() rarityFilter = r render(context) end)
 		end
-		local gridWrap = makeCard(scroll, UDim2.new(1, -20, 0, 500))
+		local gridWrap = makeCard(scroll, UDim2.new(1, -20, 0, 492))
 		gridWrap.BackgroundColor3 = Color3.fromRGB(10, 23, 41)
 		local gridScroll = Instance.new("ScrollingFrame")
 		gridScroll.Size = UDim2.new(1, -12, 1, -12)
@@ -531,7 +542,7 @@ end
 		gridScroll.ScrollBarThickness = 7
 		gridScroll.Parent = gridWrap
 		local grid = Instance.new("UIGridLayout")
-		grid.CellSize = UDim2.fromOffset(160, 225)
+		grid.CellSize = UDim2.fromOffset(160, 220)
 		grid.CellPadding = UDim2.fromOffset(12, 12)
 		grid.HorizontalAlignment = Enum.HorizontalAlignment.Left
 		grid.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -561,16 +572,16 @@ end
 			local hay = string.lower(table.concat({tostring(cfg.displayName or "Unknown Bug"), tostring(cfg.species or ""), tostring(cfg.role or ""), rarity, assign}, " "))
 			if (rarityFilter == "All" or rarity == rarityFilter) and (searchQuery == "" or string.find(hay, string.lower(searchQuery), 1, true)) then
 				shown += 1
-				local card = makeCard(gridScroll, UDim2.fromOffset(160, 225))
+				local card = makeCard(gridScroll, UDim2.fromOffset(160, 220))
 				card.BackgroundColor3 = COLORS.card
 				local stroke = card:FindFirstChildOfClass("UIStroke")
 				if stroke then stroke.Color = getRarityColor(rarity) stroke.Thickness = (BugConfig.RarityOrder[rarity] or 1) >= 4 and 2 or 1.5 end
-				local icon = Instance.new("ImageLabel"); icon.BackgroundTransparency = 1; icon.Size = UDim2.fromOffset(82, 82); icon.Position = UDim2.new(0.5, -41, 0, 28); icon.Image = tostring(cfg.icon or ""); icon.Parent = card
-				local name = Instance.new("TextLabel"); name.BackgroundTransparency = 1; name.Size = UDim2.new(1, -12, 0, 34); name.Position = UDim2.fromOffset(6, 114); name.Text = tostring(cfg.displayName or "Unknown Bug"); name.TextWrapped = true; name.TextSize = 14; styleLabel(name, true); name.Parent = card
-				local sub = Instance.new("TextLabel"); sub.BackgroundTransparency = 1; sub.Size = UDim2.new(1, -12, 0, 16); sub.Position = UDim2.fromOffset(6, 148); sub.Text = tostring(cfg.role or cfg.species or "Unknown"); sub.TextSize = 12; sub.TextColor3 = COLORS.muted; styleLabel(sub, false); sub.Parent = card
-				local asn = makeBadge(card, assign, assign == "Farmer" and Color3.fromRGB(72, 202, 164) or (assign == "Combat" and Color3.fromRGB(94, 162, 255) or Color3.fromRGB(92, 114, 148))); asn.Size = UDim2.fromOffset(100, 20); asn.Position = UDim2.new(0.5, -50, 0, 168)
+				local icon = Instance.new("ImageLabel"); icon.BackgroundTransparency = 1; icon.Size = UDim2.fromOffset(82, 82); icon.Position = UDim2.new(0.5, -41, 0, 32); icon.Image = tostring(cfg.icon or ""); icon.Parent = card
+				local name = Instance.new("TextLabel"); name.BackgroundTransparency = 1; name.Size = UDim2.new(1, -12, 0, 34); name.Position = UDim2.fromOffset(6, 116); name.Text = tostring(cfg.displayName or "Unknown Bug"); name.TextWrapped = true; name.TextSize = 14; styleLabel(name, true); name.Parent = card
+				local sub = Instance.new("TextLabel"); sub.BackgroundTransparency = 1; sub.Size = UDim2.new(1, -12, 0, 16); sub.Position = UDim2.fromOffset(6, 150); sub.Text = tostring(cfg.role or cfg.species or "Unknown"); sub.TextSize = 12; sub.TextColor3 = COLORS.muted; styleLabel(sub, false); sub.Parent = card
+				local asn = makeBadge(card, assign, assign == "Farmer" and Color3.fromRGB(72, 202, 164) or (assign == "Combat" and Color3.fromRGB(94, 162, 255) or Color3.fromRGB(92, 114, 148))); asn.Size = UDim2.fromOffset(104, 20); asn.Position = UDim2.new(0.5, -52, 0, 170)
 				local rarityBadge = makeBadge(card, rarity, getRarityColor(rarity)); rarityBadge.Size = UDim2.fromOffset(78, 18); rarityBadge.Position = UDim2.fromOffset(6, 6)
-				local p = Instance.new("TextLabel"); p.BackgroundTransparency = 1; p.Size = UDim2.new(1, -10, 0, 14); p.Position = UDim2.fromOffset(5, 190); p.Text = "Power: "..formatNum(getBugPower(cfg)); p.TextSize = 12; styleLabel(p, false); p.Parent = card
+				local p = Instance.new("TextLabel"); p.BackgroundTransparency = 1; p.Size = UDim2.new(1, -10, 0, 14); p.Position = UDim2.fromOffset(5, 194); p.Text = "Power: "..formatNum(getBugPower(cfg)); p.TextSize = 12; styleLabel(p, false); p.Parent = card
 				if isBugLocked(bug) then local l=makeBadge(card, "Locked"); l.Size=UDim2.fromOffset(64,18); l.Position=UDim2.new(1,-70,0,6); l.BackgroundColor3 = COLORS.gold end
 				local asc = getBugAscension(bug); if asc > 0 then local a=makeBadge(card, "A"..tostring(asc), Color3.fromRGB(106, 229, 186)); a.Size=UDim2.fromOffset(42,18); a.Position=UDim2.fromOffset(88,6) end
 				card.MouseEnter:Connect(function() card.BackgroundColor3 = COLORS.card:Lerp(Color3.new(1,1,1), 0.06); if stroke then stroke.Transparency = 0 end end)
@@ -703,7 +714,7 @@ function BugFarmApp.Mount(target, context)
 	tabs.BackgroundTransparency = 1
 	tabs.Parent = root
 	for i, name in ipairs({"My Bugs", "Farmers", "Combat Team", "Recycling", "Bugdex"}) do
-		local tab = makeButton(tabs, name, COLORS.cardDark, UDim2.fromOffset(170, 32))
+		local tab = makeButton(tabs, name, Color3.fromRGB(24, 42, 67), UDim2.fromOffset(170, 32))
 		tab.Position = UDim2.fromOffset((i - 1) * 178, 4)
 		tab.Activated:Connect(function() selectedTab = name render(context) end)
 		tabButtons[name] = tab
