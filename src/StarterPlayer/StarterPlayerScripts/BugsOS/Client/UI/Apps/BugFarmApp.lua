@@ -166,6 +166,7 @@ local function makeBadge(parent, text, tint)
 	badge.Text = tostring(text)
 	styleLabel(badge, true)
 	badge.TextSize = 12
+	badge.TextStrokeTransparency = 1
 	badge.TextColor3 = Color3.fromRGB(8, 18, 30)
 	badge.Parent = parent
 	Instance.new("UICorner", badge).CornerRadius = UDim.new(1, 0)
@@ -247,20 +248,32 @@ local function makeDetailPopup(context, uid, bug)
 	local assignText = getAssignmentStatus(uid, farmerSlots, combatSlots)
 	local assignColor = assignText == "Farmer" and Color3.fromRGB(72, 202, 164) or (assignText == "Combat" and Color3.fromRGB(94, 162, 255) or Color3.fromRGB(104, 124, 152))
 
-	local panel = makeCard(detailOverlay, UDim2.fromOffset(760, 520))
-	panel.Position = UDim2.fromScale(0.5, 0.5) - UDim2.fromOffset(380, 260)
+	local panel = makeCard(detailOverlay, UDim2.fromOffset(760, 570))
+	panel.Position = UDim2.fromScale(0.5, 0.5) - UDim2.fromOffset(380, 285)
 	panel.BackgroundColor3 = Color3.fromRGB(10, 24, 42)
 	local stroke = panel:FindFirstChildOfClass("UIStroke")
 	if stroke then stroke.Color = getRarityColor(rarity) stroke.Thickness = 2 stroke.Transparency = 0.15 end
 	local header = Instance.new("Frame")
-	header.Size = UDim2.new(1, -32, 0, 122)
+	header.Size = UDim2.new(1, -32, 0, 130)
 	header.Position = UDim2.fromOffset(16, 14)
 	header.BackgroundTransparency = 1
 	header.Parent = panel
 
+	local footer = Instance.new("Frame")
+	footer.Size = UDim2.new(1, -32, 0, 58)
+	footer.Position = UDim2.new(0, 16, 1, -72)
+	footer.BackgroundColor3 = Color3.fromRGB(8, 18, 32)
+	footer.BorderSizePixel = 0
+	footer.Parent = panel
+	Instance.new("UICorner", footer).CornerRadius = UDim.new(0, 10)
+	local footerStroke = Instance.new("UIStroke")
+	footerStroke.Color = Color3.fromRGB(72, 96, 124)
+	footerStroke.Transparency = 0.4
+	footerStroke.Parent = footer
+
 	local popupScroll = Instance.new("ScrollingFrame")
-	popupScroll.Size = UDim2.new(1, -32, 1, -154)
-	popupScroll.Position = UDim2.fromOffset(16, 144)
+	popupScroll.Size = UDim2.new(1, -32, 1, -220)
+	popupScroll.Position = UDim2.fromOffset(16, 148)
 	popupScroll.BackgroundTransparency = 1
 	popupScroll.BorderSizePixel = 0
 	popupScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -309,7 +322,7 @@ local function makeDetailPopup(context, uid, bug)
 	makeSectionTitle(abilityCard, "ABILITY", 8)
 	local ability = cfg.ability
 	local abName = Instance.new("TextLabel"); abName.BackgroundTransparency=1; abName.Size=UDim2.new(1,-16,0,18); abName.Position=UDim2.fromOffset(8,32); abName.TextXAlignment=Enum.TextXAlignment.Left; abName.Text=(ability and tostring(ability.name or "Ability")) or "No ability"; abName.TextSize=13; styleLabel(abName,true); abName.Parent=abilityCard
-	local abDesc = Instance.new("TextLabel"); abDesc.BackgroundTransparency=1; abDesc.Size=UDim2.new(1,-16,0,58); abDesc.Position=UDim2.fromOffset(8,52); abDesc.TextXAlignment=Enum.TextXAlignment.Left; abDesc.TextYAlignment=Enum.TextYAlignment.Top; abDesc.TextWrapped=true; abDesc.Text=(ability and tostring(ability.description or "")) or ""; abDesc.TextSize=11; styleLabel(abDesc,false); abDesc.TextColor3=COLORS.muted; abDesc.Parent=abilityCard
+	local abDesc = Instance.new("TextLabel"); abDesc.BackgroundTransparency=1; abDesc.Size=UDim2.new(1,-16,0,58); abDesc.Position=UDim2.fromOffset(8,52); abDesc.TextXAlignment=Enum.TextXAlignment.Left; abDesc.TextYAlignment=Enum.TextYAlignment.Top; abDesc.TextWrapped=true; abDesc.Text=((ability and string.format("%s • CD %ss\n%s", tostring(ability.type or "Passive"), tostring(ability.cooldown or "-"), tostring(ability.description or ""))) or ""); abDesc.TextSize=11; styleLabel(abDesc,false); abDesc.TextColor3=COLORS.muted; abDesc.Parent=abilityCard
 
 	local equipSection = makeCard(popupScroll, UDim2.new(1,-2,0,98)); equipSection.BackgroundColor3=COLORS.cardDark
 	makeSectionTitle(equipSection, "EQUIPMENT", 8)
@@ -325,18 +338,21 @@ local function makeDetailPopup(context, uid, bug)
 	local costTable = ((cfg.ascension or {}).essenceRequiredByRank) or FALLBACK_ASCENSION_COSTS[rarity] or FALLBACK_ASCENSION_COSTS.Common
 	local cost = tonumber(costTable[rank + 1]) or tonumber(costTable[rank + 2]) or 0
 	local essence = tonumber((((context.State.PlayerData or {}).Currencies or {}).BugEssence)) or 0
-	local ascSec = makeCard(popupScroll, UDim2.new(1,-2,0,70)); ascSec.BackgroundColor3=COLORS.cardDark
+	local ascSec = makeCard(popupScroll, UDim2.new(1,-2,0,90)); ascSec.BackgroundColor3=COLORS.cardDark
 	makeSectionTitle(ascSec, "ASCENSION", 8)
-	local ascInfo = Instance.new("TextLabel"); ascInfo.BackgroundTransparency=1; ascInfo.Size=UDim2.new(0.72,0,0,22); ascInfo.Position=UDim2.fromOffset(10,34); ascInfo.TextXAlignment=Enum.TextXAlignment.Left; ascInfo.Text=("Rank: %d / 5   Cost: %d Bug Essence   Essence: %d"):format(rank,cost,essence); ascInfo.TextSize=12; styleLabel(ascInfo,false); ascInfo.Parent=ascSec
-	local ascBtn = makeButton(ascSec, rank >= 5 and "Max Rank" or "Ascend", COLORS.accent, UDim2.fromOffset(132, 32)); ascBtn.Position=UDim2.new(1,-142,0,26); ascBtn.TextColor3=Color3.fromRGB(8,20,34)
+	local ascInfo = Instance.new("TextLabel"); ascInfo.BackgroundTransparency=1; ascInfo.Size=UDim2.new(0.72,0,0,44); ascInfo.Position=UDim2.fromOffset(10,34); ascInfo.TextXAlignment=Enum.TextXAlignment.Left; ascInfo.TextYAlignment=Enum.TextYAlignment.Top; ascInfo.Text=("Rank: %d / 5\nCost: %d Bug Essence\nEssence: %d"):format(rank,cost,essence); ascInfo.TextSize=12; styleLabel(ascInfo,false); ascInfo.Parent=ascSec
+	local ascBtn = makeButton(ascSec, rank >= 5 and "Max Rank" or "Ascend", COLORS.accent, UDim2.fromOffset(132, 32)); ascBtn.Position=UDim2.new(1,-142,0,44); ascBtn.TextColor3=Color3.fromRGB(8,20,34)
 	if rank >= 5 or essence < cost then setButtonEnabled(ascBtn, false, COLORS.accent) else ascBtn.Activated:Connect(function() context.Controllers.BugFarm.Ascend(uid) if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end) end
 
-	local actionRow = Instance.new("Frame"); actionRow.Size=UDim2.new(1,-2,0,38); actionRow.BackgroundTransparency=1; actionRow.Parent=popupScroll
+	local actionRow = Instance.new("Frame"); actionRow.Size=UDim2.new(1,-2,1,-12); actionRow.Position = UDim2.fromOffset(1, 6); actionRow.BackgroundTransparency=1; actionRow.Parent=footer
 	local actionLayout = Instance.new("UIListLayout", actionRow); actionLayout.FillDirection = Enum.FillDirection.Horizontal; actionLayout.Padding = UDim.new(0, 8)
 	local farmerBtn = makeButton(actionRow, assignedFarmer and "Assigned Farmer" or "Equip Farmer", Color3.fromRGB(68, 170, 150), UDim2.new(0.25, -6, 1, 0)); setButtonEnabled(farmerBtn, not assignedFarmer, Color3.fromRGB(68,170,150)); farmerBtn.Activated:Connect(function() context.Controllers.BugFarm.EquipFarmer(uid, nil) end)
 	local combatBtn = makeButton(actionRow, assignedCombat and "On Combat Team" or "Add Combat", Color3.fromRGB(82, 136, 220), UDim2.new(0.25, -6, 1, 0)); setButtonEnabled(combatBtn, not assignedCombat, Color3.fromRGB(82,136,220)); combatBtn.Activated:Connect(function() context.Controllers.BugFarm.EquipCombat(uid, nil) end)
 	local lockBtn = makeButton(actionRow, isBugLocked(bug) and "Unlock" or "Lock", isBugLocked(bug) and COLORS.gold or Color3.fromRGB(120, 124, 132), UDim2.new(0.25, -6, 1, 0)); lockBtn.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid); if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end)
 	local recycleBtn = makeButton(actionRow, "Recycle", Color3.fromRGB(210, 108, 74), UDim2.new(0.25, -6, 1, 0)); setButtonEnabled(recycleBtn, not (isBugLocked(bug) or assignedFarmer or assignedCombat), Color3.fromRGB(210,108,74)); recycleBtn.Activated:Connect(function() context.Controllers.BugFarm.RecycleSelected({uid}) end)
+	local scrollPad = Instance.new("UIPadding")
+	scrollPad.PaddingBottom = UDim.new(0, 12)
+	scrollPad.Parent = popupScroll
 
 	detailOverlay.Activated:Connect(function() if detailOverlay then detailOverlay:Destroy() detailOverlay = nil end end)
 	panel.InputBegan:Connect(function() end)
