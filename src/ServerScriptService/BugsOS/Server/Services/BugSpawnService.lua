@@ -97,7 +97,7 @@ local function spawnFor(player, spawnedRemote: RemoteEvent)
 	activeByUser[player.UserId] = { ActiveBugId = id, SpeciesId = species.id, DisplayName = species.displayName, Rarity = rarity, HitsRequired = species.hitsRequired, HitsLanded = 0, ExpiresAt = now + duration, SpawnedAt = now, Behavior = behavior }
 	sinceSpawn[player.UserId] = 0
 	spawnedRemote:FireClient(player, { SpeciesId = species.id, DisplayName = species.displayName, Rarity = rarity, HitsRequired = species.hitsRequired, Duration = duration, Behavior = behavior, ActiveBugId = id })
-	print(string.format("[BugSpawnService] Spawn buffs for %s chance/time/luck: %.3f %.3f %.3f", player.Name, buffs.MinigameSpawnChance, buffs.MinigameTime, buffs.BugLuck))
+	print(string.format("[BugSpawnService] Spawn buffs for %s chance/time/luck: %.3f %.3f %.3f", player.Name, buffs.BugSpawnRate or buffs.MinigameSpawnChance or 0, buffs.MinigameTime, buffs.BugLuck))
 end
 
 local function ensureRemoteEvent(remoteName: string): RemoteEvent
@@ -157,7 +157,8 @@ function BugSpawnService.Start()
 						sinceSpawn[p.UserId] = (sinceSpawn[p.UserId] or 0) + 1
 						local buffs = BuffService.GetPlayerBuffs(p)
 					local baseChance = 0.02 + ((sinceSpawn[p.UserId]) * 0.0015)
-					local chance = baseChance * (1 + buffs.MinigameSpawnChance)
+					local spawnRateBonus = buffs.BugSpawnRate or buffs.MinigameSpawnChance or 0
+					local chance = baseChance * (1 + spawnRateBonus)
 						if Random.new():NextNumber() <= chance then
 							spawnFor(p, spawnedRemote)
 						end
@@ -188,6 +189,7 @@ function BugSpawnService.Start()
 			end
 			clear(player)
 			local createdBug = nil
+			local wasNewDiscovery = false
 			local ok, err = pcall(function()
 				createdBug = BugInventoryService.CreateBug(player, st.SpeciesId, st.Rarity)
 				BugdexService.RecordCatch(player, st.SpeciesId)
@@ -199,7 +201,6 @@ function BugSpawnService.Start()
 				warn(string.format("[BugSpawnService] Failed to create captured bug for %s: %s", player.Name, tostring(err)))
 			elseif createdBug then
 				local playerData = ProfileService.GetPlayerData(player)
-				local wasNewDiscovery = false
 				if playerData and type(playerData.Bugdex) == "table" and type(playerData.Bugdex.TotalCaughtBySpecies) == "table" then
 					wasNewDiscovery = tonumber(playerData.Bugdex.TotalCaughtBySpecies[st.SpeciesId]) == 1
 				end
@@ -210,7 +211,7 @@ function BugSpawnService.Start()
 					pushNotification(player, string.format("%s catch: %s", st.Rarity, st.DisplayName), "Success")
 				end
 			end
-			capturedRemote:FireClient(player, { SpeciesId = st.SpeciesId, DisplayName = st.DisplayName, Rarity = st.Rarity, BugPointsAwarded = finalPoints, Bug = createdBug })
+			capturedRemote:FireClient(player, { SpeciesId = st.SpeciesId, DisplayName = st.DisplayName, Rarity = st.Rarity, BugPointsAwarded = finalPoints, Bug = createdBug, BonusStats = createdBug and createdBug.BonusStats or {}, WasNewDiscovery = wasNewDiscovery })
 		else
 			hitUpdateRemote:FireClient(player, {
 				ActiveBugId = st.ActiveBugId,

@@ -4,17 +4,9 @@ local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
 local BugConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugConfig"))
 local UidUtil = require(Shared:WaitForChild("Util"):WaitForChild("UidUtil"))
 local ProfileService = require(script.Parent:WaitForChild("ProfileService"))
+local BugBonusConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugBonusConfig"))
 
 local BugInventoryService = {}
-
-local RARITY_RANGES = {
-	Common = { 0.01, 0.05 },
-	Uncommon = { 0.03, 0.08 },
-	Rare = { 0.06, 0.14 },
-	Epic = { 0.1, 0.22 },
-	Legendary = { 0.16, 0.32 },
-	Mythic = { 0.24, 0.45 },
-}
 
 local function createUid(): string
 	if type((UidUtil :: any).New) == "function" then
@@ -47,14 +39,7 @@ function BugInventoryService.CreateBug(player: Player, speciesId: string, rarity
 	end
 	if not species then return nil end
 
-	local statPool = BugConfig.StatTypes or {"AllFood"}
-	local statId = species.primaryStatType or "AllFood"
-	if type(statId) ~= "string" or statId == "" then
-		statId = statPool[1]
-	end
-	local range = RARITY_RANGES[rarity] or RARITY_RANGES.Common
-	local baseValue = tonumber(species.primaryStatValue) or Random.new():NextNumber(range[1], range[2])
-	local value = math.clamp(baseValue * Random.new():NextNumber(0.95, 1.05), range[1], range[2])
+	local bonusStats = BugBonusConfig.RollBonusStats(species, rarity)
 	local uid = createUid()
 	while playerData.Bugs.Inventory[uid] ~= nil do
 		uid = createUid()
@@ -69,17 +54,22 @@ function BugInventoryService.CreateBug(player: Player, speciesId: string, rarity
 		Ascension = 0,
 		Equipment = {},
 		CaughtAt = os.time(),
-		Primary = {
-			Stat = statId,
-			Attribute = statId,
-			Value = value,
-		},
+		BonusStats = bonusStats,
+		Primary = bonusStats[1] and {
+			Stat = bonusStats[1].Id,
+			Attribute = bonusStats[1].Id,
+			Value = bonusStats[1].Value,
+		} or nil,
 		Secondaries = {},
 		Modifier = nil,
 		Locked = false,
 		Favorited = false,
 		CreatedAt = os.time(),
 	}
+	for i = 2, #bonusStats do
+		local bonus = bonusStats[i]
+		table.insert(bug.Secondaries, { Stat = bonus.Id, Attribute = bonus.Id, Value = bonus.Value })
+	end
 	playerData.Bugs.Inventory[uid] = bug
 	ProfileService.PatchPlayerState(player, { "Bugs" }, playerData.Bugs)
 	return bug
