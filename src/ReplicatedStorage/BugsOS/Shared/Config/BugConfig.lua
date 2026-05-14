@@ -9,6 +9,8 @@
 
 local BugConfig = {}
 
+BugConfig.MaxOwnedBugs = 1000
+
 BugConfig.RarityOrder = {
     Common = 1,
     Uncommon = 2,

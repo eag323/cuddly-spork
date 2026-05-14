@@ -19,9 +19,27 @@ local selectedTab = "My Bugs"
 local selectedRecycle: {[string]: boolean} = {}
 local searchQuery = ""
 local sortMode = "Rarity"
+local farmerStatFilter = "All"
+local farmerSortMode = "Rarity"
+local renameTargetUid = nil
 local rarityFilter = "All"
 local sortModes = {"Rarity","Name","Species","Newest","Locked First","Farmer Equipped","Combat Equipped","Power"}
 local rarityTabs = {"All","Common","Uncommon","Rare","Epic","Legendary","Mythic"}
+local FARMER_HABITAT_BACKGROUND_IMAGE = ""
+local FARMER_STAT_FILTERS = {
+	{Id="All", Label="All"},
+	{Id="AllFood", Label="All Earnings"},
+	{Id="FoodPerSec", Label="Food/sec"},
+	{Id="ClickPower", Label="Click Power"},
+	{Id="SellBonus", Label="Sell Bonus"},
+	{Id="BugLuck", Label="Bug Luck"},
+	{Id="NectarChance", Label="Nectar Chance"},
+	{Id="BugSpawnRate", Label="Bug Spawn Rate"},
+	{Id="MinigameTime", Label="Minigame Time"},
+	{Id="ExpeditionSpeed", Label="Expedition Speed"},
+	{Id="EquipmentDropRate", Label="Equipment Drop Rate"},
+	{Id="BugEssenceGain", Label="Bug Essence Gain"},
+}
 local detailOverlay
 local bugdexInlineHost
 
@@ -78,6 +96,63 @@ local function getBugConfig(ownedBug)
 	return BugConfig.GetBug(bugId) or BugConfig.Bugs[bugId]
 end
 
+
+
+local function getDisplayName(bug, cfg)
+	return tostring((bug and bug.Nickname) or (cfg and cfg.displayName) or (bug and bug.BugId) or "Unknown Bug")
+end
+
+local function getBugIcon(bug, cfg)
+	return tostring((cfg and (cfg.icon or cfg.sprite)) or "")
+end
+
+local function getBonusStats(bug)
+	if type(bug) ~= "table" then return {} end
+	if type(bug.BonusStats) == "table" then return bug.BonusStats end
+	return getLegacyBonusStats(bug)
+end
+
+local function getFarmerBonuses(bug)
+	local out = {}
+	for _, bonus in ipairs(getBonusStats(bug)) do
+		if BugBonusConfig.GetCategory(tostring(bonus.Id)) == "Farmer" then table.insert(out, bonus) end
+	end
+	return out
+end
+
+local function formatPercent(value) return string.format("+%d%%", math.floor((tonumber(value) or 0) * 100 + 0.5)) end
+local function formatBonus(bonus)
+	if type(BugBonusConfig.FormatBonus) == "function" then return BugBonusConfig.FormatBonus(bonus) end
+	local d = BugBonusConfig.GetDefinition(tostring(bonus.Id or ""))
+	return string.format("%s %s", formatPercent(tonumber(bonus.Value) or 0), tostring((d and d.DisplayName) or bonus.Id or "Bonus"))
+end
+local function getBonusValueForStat(bug, statId)
+	for _, bonus in ipairs(getFarmerBonuses(bug)) do if tostring(bonus.Id)==tostring(statId) then return tonumber(bonus.Value) or 0 end end
+	return 0
+end
+local function hasBonusStat(bug, statId) return getBonusValueForStat(bug, statId) > 0 end
+local function getBestFarmerBonusValue(bug)
+	local best = 0
+	for _, bonus in ipairs(getFarmerBonuses(bug)) do best = math.max(best, tonumber(bonus.Value) or 0) end
+	return best
+end
+local function getActiveFarmerTotals(farmerSlots, inventory)
+	local totals = {}
+	for _, uid in ipairs(farmerSlots or {}) do
+		local bug = inventory and inventory[uid]
+		if bug then
+			for _, b in ipairs(getFarmerBonuses(bug)) do
+				local id = tostring(b.Id)
+				totals[id] = (totals[id] or 0) + (tonumber(b.Value) or 0)
+			end
+		end
+	end
+	return totals
+end
+local function getStatMaxForSlots(statId, slotCount)
+	local def = BugBonusConfig.GetDefinition(statId)
+	return (def and tonumber(def.Max) or 0) * math.max(0, tonumber(slotCount) or 0)
+end
 
 local function getLegacyBonusStats(bug)
 	local out = {}
@@ -475,6 +550,44 @@ local function makeDetailPopup(context, uid, bug)
 end
 
 
+local function renderFarmersTab(context, scroll, bugs, inventory, owned, farmerSlots, combatSlots)
+	local slotCount = 5 + tonumber(bugs.Prestige or 0) + tonumber(bugs.ExtraFarmerSlotsPurchased or 0)
+	local maxOwned = tonumber(BugConfig.MaxOwnedBugs) or 1000
+	local equipped = {}
+	for slotIndex, uid in ipairs(farmerSlots) do if uid and inventory[uid] then table.insert(equipped, {slotIndex=slotIndex, uid=uid, bug=inventory[uid], cfg=getBugConfig(inventory[uid]) or {}}) end end
+	local habitat = makeCard(scroll, UDim2.new(1,-20,0,168)); habitat.Name = "HabitatShowcaseFrame"; habitat.BackgroundColor3 = Color3.fromRGB(25,48,38); habitat.ClipsDescendants=true
+	if FARMER_HABITAT_BACKGROUND_IMAGE ~= "" then local bg=Instance.new("ImageLabel"); bg.Size=UDim2.fromScale(1,1); bg.BackgroundTransparency=1; bg.Image=FARMER_HABITAT_BACKGROUND_IMAGE; bg.Parent=habitat end
+	if #equipped == 0 then local t=Instance.new("TextLabel"); t.Size=UDim2.fromScale(1,1); t.BackgroundTransparency=1; t.Text="Equip bugs to see them here."; t.TextSize=18; styleLabel(t,true); t.TextColor3=COLORS.muted; t.Parent=habitat
+	else
+		for _, e in ipairs(equipped) do
+			local aura = Instance.new("Frame"); aura.Size=UDim2.fromOffset(58,58); aura.BackgroundColor3=getRarityColor(tostring(e.cfg.rarity or e.bug.Rarity or "Common")); aura.BackgroundTransparency=0.65; aura.Parent=habitat; Instance.new("UICorner", aura).CornerRadius=UDim.new(1,0)
+			local icon = Instance.new("ImageLabel"); icon.Size=UDim2.fromOffset(50,50); icon.BackgroundTransparency=1; icon.Image=getBugIcon(e.bug,e.cfg); icon.Parent=aura
+			local function move() if not aura.Parent then return end local x=math.random(6,math.max(6,habitat.AbsoluteSize.X-64)); local y=math.random(6,math.max(6,habitat.AbsoluteSize.Y-64)); game:GetService("TweenService"):Create(aura,TweenInfo.new(math.random(6,12),Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),{Position=UDim2.fromOffset(x,y)}):Play() end
+			move(); task.spawn(function() while aura.Parent and habitat.Parent do task.wait(math.random(5,10)); move() end end)
+		end
+	end
+	local pills = Instance.new("ScrollingFrame"); pills.Size=UDim2.new(1,-20,0,54); pills.BackgroundTransparency=1; pills.ScrollBarThickness=4; pills.AutomaticCanvasSize=Enum.AutomaticSize.X; pills.ScrollingDirection=Enum.ScrollingDirection.X; pills.Parent=scroll
+	local pl = Instance.new("UIListLayout", pills); pl.FillDirection=Enum.FillDirection.Horizontal; pl.Padding=UDim.new(0,8)
+	local totals = getActiveFarmerTotals(farmerSlots, inventory); local countP=0
+	for _,sf in ipairs(FARMER_STAT_FILTERS) do if sf.Id ~= "All" then local total=totals[sf.Id] or 0; if total > 0 then countP+=1; local maxV=getStatMaxForSlots(sf.Id, slotCount); local b=makeBadge(pills, string.format("%s / %s %s", formatPercent(total), formatPercent(maxV), sf.Label), Color3.fromRGB(44,94,122)); b.Size=UDim2.fromOffset(210,28) end end end
+	if countP==0 then local b=makeBadge(pills,"No active farmer buffs",Color3.fromRGB(70,85,102)); b.Size=UDim2.fromOffset(220,28) end
+	local inst = Instance.new("TextLabel"); inst.Size=UDim2.new(1,-20,0,34); inst.BackgroundTransparency=1; inst.TextXAlignment=Enum.TextXAlignment.Left; inst.TextWrapped=true; inst.Text="Equip bugs here for passive buffs. Catch bugs on your home screen to fill your collection."; inst.TextSize=13; styleLabel(inst,false); inst.TextColor3=COLORS.muted; inst.Parent=scroll
+	local eqh=Instance.new("TextLabel"); eqh.Size=UDim2.new(1,-20,0,24); eqh.BackgroundTransparency=1; eqh.TextXAlignment=Enum.TextXAlignment.Left; eqh.Text=string.format("Equipped (%d/%d)", #equipped, slotCount); eqh.TextSize=18; styleLabel(eqh,true); eqh.TextColor3=COLORS.accent; eqh.Parent=scroll
+	if #equipped==0 then local e=makeCard(scroll, UDim2.new(1,-20,0,56)); local t=Instance.new("TextLabel"); t.Size=UDim2.fromScale(1,1); t.BackgroundTransparency=1; t.Text="No farmer bugs equipped."; styleLabel(t,false); t.TextColor3=COLORS.muted; t.Parent=e end
+	for _,e in ipairs(equipped) do local row=makeCard(scroll, UDim2.new(1,-20,0,68)); local n=Instance.new("TextLabel"); n.Size=UDim2.new(1,-240,0,24); n.Position=UDim2.fromOffset(60,8); n.BackgroundTransparency=1; n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(e.bug,e.cfg); n.TextColor3=getRarityColor(tostring(e.cfg.rarity or e.bug.Rarity or "Common")); styleLabel(n,true); n.Parent=row; local i=Instance.new("ImageLabel"); i.Size=UDim2.fromOffset(44,44); i.Position=UDim2.fromOffset(8,12); i.BackgroundTransparency=1; i.Image=getBugIcon(e.bug,e.cfg); i.Parent=row; local btxt={}; for _,b in ipairs(getFarmerBonuses(e.bug)) do table.insert(btxt, formatBonus(b)) end; local st=Instance.new("TextLabel"); st.Size=UDim2.new(1,-240,0,20); st.Position=UDim2.fromOffset(60,34); st.BackgroundTransparency=1; st.TextXAlignment=Enum.TextXAlignment.Left; st.Text= (#btxt>0) and table.concat(btxt," | ") or "No farmer bonus"; st.TextSize=12; styleLabel(st,false); st.TextColor3=COLORS.good; st.Parent=row; local rm=makeButton(row,"Remove",COLORS.danger,UDim2.fromOffset(90,30)); rm.Position=UDim2.new(1,-98,0.5,-15); rm.Activated:Connect(function() context.Controllers.BugFarm.UnequipFarmer(e.slotIndex) end) end
+	local fs=Instance.new("ScrollingFrame"); fs.Size=UDim2.new(1,-20,0,48); fs.BackgroundTransparency=1; fs.ScrollBarThickness=3; fs.ScrollingDirection=Enum.ScrollingDirection.X; fs.AutomaticCanvasSize=Enum.AutomaticSize.X; fs.Parent=scroll; local fsl=Instance.new("UIListLayout",fs); fsl.FillDirection=Enum.FillDirection.Horizontal; fsl.Padding=UDim.new(0,6)
+	for _,sf in ipairs(FARMER_STAT_FILTERS) do local active=farmerStatFilter==sf.Id; local b=makeButton(fs,sf.Label,active and COLORS.accent or Color3.fromRGB(42,66,94),UDim2.fromOffset(math.max(90,#sf.Label*8+20),32)); if active then b.TextColor3=Color3.fromRGB(10,20,30) end; b.Activated:Connect(function() farmerStatFilter=sf.Id render(context) end) end
+	local hdr=makeCard(scroll, UDim2.new(1,-20,0,52)); local h=Instance.new("TextLabel"); h.Size=UDim2.new(0.5,0,1,0); h.BackgroundTransparency=1; h.TextXAlignment=Enum.TextXAlignment.Left; h.Text=string.format("Your Bugs (%d/%d)", #owned, maxOwned); styleLabel(h,true); h.Parent=hdr
+	for i,m in ipairs({"Rarity","Buff","Type"}) do local b=makeButton(hdr,m,farmerSortMode==m and COLORS.accent or Color3.fromRGB(42,66,94),UDim2.fromOffset(70,28)); b.Position=UDim2.new(1,-(230-(i-1)*76),0.5,-14); if farmerSortMode==m then b.TextColor3=Color3.fromRGB(10,20,30) end; b.Activated:Connect(function() farmerSortMode=m render(context) end) end
+	local rows={} for _,e in ipairs(owned) do if farmerStatFilter=="All" or hasBonusStat(e.Bug, farmerStatFilter) then table.insert(rows,e) end end
+	table.sort(rows,function(a,b) local acfg,bcfg=getBugConfig(a.Bug) or {}, getBugConfig(b.Bug) or {}; if farmerSortMode=="Type" then local ar=tostring(acfg.role or acfg.species or ""); local br=tostring(bcfg.role or bcfg.species or ""); if ar~=br then return ar<br end elseif farmerSortMode=="Buff" then local av=(farmerStatFilter=="All") and getBestFarmerBonusValue(a.Bug) or getBonusValueForStat(a.Bug,farmerStatFilter); local bv=(farmerStatFilter=="All") and getBestFarmerBonusValue(b.Bug) or getBonusValueForStat(b.Bug,farmerStatFilter); if av~=bv then return av>bv end else local ar=BugConfig.RarityOrder[tostring(acfg.rarity or a.Bug.Rarity or "Common")] or 1; local br=BugConfig.RarityOrder[tostring(bcfg.rarity or b.Bug.Rarity or "Common")] or 1; if ar~=br then return ar>br end end return getDisplayName(a.Bug,acfg)<getDisplayName(b.Bug,bcfg) end)
+	for _,e in ipairs(rows) do local uid,bug,cfg=e.Uid,e.Bug,getBugConfig(e.Bug) or {}; local row=makeCard(scroll, UDim2.new(1,-20,0,82)); local i=Instance.new("ImageLabel"); i.Size=UDim2.fromOffset(44,44); i.Position=UDim2.fromOffset(8,18); i.BackgroundTransparency=1; i.Image=getBugIcon(bug,cfg); i.Parent=row; local n=Instance.new("TextLabel"); n.Size=UDim2.new(1,-330,0,24); n.Position=UDim2.fromOffset(60,8); n.BackgroundTransparency=1; n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(bug,cfg); styleLabel(n,true); n.TextColor3=getRarityColor(tostring(cfg.rarity or bug.Rarity or "Common")); n.Parent=row; local sub=Instance.new("TextLabel"); sub.Size=UDim2.new(1,-330,0,18); sub.Position=UDim2.fromOffset(60,32); sub.BackgroundTransparency=1; sub.TextXAlignment=Enum.TextXAlignment.Left; sub.Text=string.format("%s • %s", tostring(cfg.role or "Unknown"), tostring(cfg.species or bug.BugId or "Unknown")); styleLabel(sub,false); sub.TextColor3=COLORS.muted; sub.Parent=row; local btxt={}; for _,b in ipairs(getFarmerBonuses(bug)) do table.insert(btxt, formatBonus(b)) end; local bon=Instance.new("TextLabel"); bon.Size=UDim2.new(1,-330,0,18); bon.Position=UDim2.fromOffset(60,54); bon.BackgroundTransparency=1; bon.TextXAlignment=Enum.TextXAlignment.Left; bon.Text=(#btxt>0) and table.concat(btxt," | ") or "No farmer bonus"; styleLabel(bon,false); bon.TextColor3=(#btxt>0) and COLORS.good or COLORS.muted; bon.Parent=row; local lk=makeButton(row, bug.Locked and "Unlock" or "Lock", Color3.fromRGB(72,86,110), UDim2.fromOffset(72,28)); lk.Position=UDim2.new(1,-232,0.5,-14); lk.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid) end); local rn=makeButton(row,"Rename",Color3.fromRGB(62,96,130),UDim2.fromOffset(78,28)); rn.Position=UDim2.new(1,-152,0.5,-14); rn.Activated:Connect(function() renameTargetUid=uid render(context) end); if table.find(farmerSlots, uid) then local b=makeBadge(row,"Equipped",Color3.fromRGB(70,196,156)); b.Position=UDim2.new(1,-74,0.5,-11) elseif table.find(combatSlots, uid) then local b=makeBadge(row,"Combat Team",Color3.fromRGB(236,168,96)); b.Position=UDim2.new(1,-102,0.5,-11) else local eq=makeButton(row,"Equip",Color3.fromRGB(86,214,140),UDim2.fromOffset(68,28)); eq.TextColor3=Color3.fromRGB(10,20,30); eq.Position=UDim2.new(1,-74,0.5,-14); eq.Activated:Connect(function() context.Controllers.BugFarm.EquipFarmer(uid,nil) end) end end
+	if #owned==0 then local e=makeCard(scroll, UDim2.new(1,-20,0,72)); local t=Instance.new("TextLabel"); t.Size=UDim2.fromScale(1,1); t.BackgroundTransparency=1; t.Text="No bugs owned.
+Catch bugs on your home screen to fill your collection."; t.TextWrapped=true; styleLabel(t,false); t.TextColor3=COLORS.muted; t.Parent=e elseif #rows==0 then local e=makeCard(scroll, UDim2.new(1,-20,0,72)); local t=Instance.new("TextLabel"); t.Size=UDim2.fromScale(1,1); t.BackgroundTransparency=1; t.Text=(farmerStatFilter=="All") and "No bugs found.
+Catch more bugs or change filters." or ("No bugs found for "..(farmerStatFilter=="FoodPerSec" and "Food/sec" or farmerStatFilter).."."); t.TextWrapped=true; styleLabel(t,false); t.TextColor3=COLORS.muted; t.Parent=e end
+	if renameTargetUid and inventory[renameTargetUid] then local modal=Instance.new("TextButton"); modal.Size=UDim2.fromScale(1,1); modal.Text=""; modal.BackgroundColor3=Color3.new(0,0,0); modal.BackgroundTransparency=0.35; modal.Parent=contentHost; local card=makeCard(modal, UDim2.fromOffset(360,180)); card.Position=UDim2.new(0.5,-180,0.5,-90); local title=Instance.new("TextLabel"); title.Size=UDim2.new(1,-20,0,28); title.Position=UDim2.fromOffset(10,10); title.BackgroundTransparency=1; title.Text="Rename Bug"; styleLabel(title,true); title.TextXAlignment=Enum.TextXAlignment.Left; title.Parent=card; local tb=Instance.new("TextBox"); tb.Size=UDim2.new(1,-20,0,36); tb.Position=UDim2.fromOffset(10,48); tb.BackgroundColor3=COLORS.cardDark; tb.ClearTextOnFocus=false; tb.Text=tostring(inventory[renameTargetUid].Nickname or (getBugConfig(inventory[renameTargetUid]) or {}).displayName or ""); tb.TextSize=14; tb.TextXAlignment=Enum.TextXAlignment.Left; tb.TextEditable=true; tb.MaxVisibleGraphemes=24; styleLabel(tb,false); tb.Parent=card; Instance.new("UICorner",tb).CornerRadius=UDim.new(0,8); local sv=makeButton(card,"Save",COLORS.good,UDim2.fromOffset(90,30)); sv.Position=UDim2.fromOffset(10,132); sv.Activated:Connect(function() context.Controllers.BugFarm.RenameBug(renameTargetUid, string.sub(tb.Text,1,24)); renameTargetUid=nil; render(context) end); local cl=makeButton(card,"Clear",Color3.fromRGB(91,110,138),UDim2.fromOffset(90,30)); cl.Position=UDim2.fromOffset(110,132); cl.Activated:Connect(function() context.Controllers.BugFarm.RenameBug(renameTargetUid,""); renameTargetUid=nil; render(context) end); local cn=makeButton(card,"Cancel",COLORS.danger,UDim2.fromOffset(90,30)); cn.Position=UDim2.fromOffset(210,132); cn.Activated:Connect(function() renameTargetUid=nil; render(context) end) end
+end
+
 local function render(context)
 	if not root then return end
 	clear(contentHost)
@@ -626,7 +739,7 @@ local function render(context)
 		render(context)
 	end)
 
-	if selectedTab == "Farmers" or selectedTab == "Combat Team" then
+	if selectedTab == "Combat Team" then
 	for i = 1, (selectedTab == "Combat Team" and 5 or 5 + tonumber(bugs.ExtraFarmerSlotsPurchased or 0)) do
 		local slot = makeCard(scroll, UDim2.new(1, -20, 0, 76))
 		local uid = selectedTab == "Combat Team" and combatSlots[i] or farmerSlots[i]
@@ -759,6 +872,8 @@ end
 			empty.Text = (#owned == 0) and "No bugs owned.\nCatch bugs to build your collection." or "No bugs found.\nTry another search or filter."
 			styleLabel(empty, true); empty.TextColor3 = COLORS.muted; empty.Parent = gridWrap
 		end
+	elseif selectedTab == "Farmers" then
+		renderFarmersTab(context, scroll, bugs, inventory, owned, farmerSlots, combatSlots)
 	else for _, entry in ipairs(owned) do
 		local uid, bug = entry.Uid, entry.Bug
 		local cfg = getBugCfg(bug.BugId) or {}
@@ -802,7 +917,7 @@ end
 				if not disabled then
 					selectBtn.Activated:Connect(function() selectedRecycle[uid] = not selectedRecycle[uid] render(context) end)
 				end
-			elseif selectedTab == "Farmers" or selectedTab == "Combat Team" then
+			elseif selectedTab == "Combat Team" then
 				local equip = makeButton(row, "Equip", COLORS.accent, UDim2.fromOffset(72, 28))
 				equip.TextColor3 = Color3.fromRGB(8, 20, 34)
 				equip.Position = UDim2.new(1, -74, 0.5, -14)
