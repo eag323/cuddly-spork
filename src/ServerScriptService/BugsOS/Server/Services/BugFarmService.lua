@@ -72,6 +72,7 @@ function BugFarmService.Init()
 	remotes.EquipCombat = ensureRemote(RemoteNames.BugFarm_EquipCombat)
 	remotes.UnequipCombat = ensureRemote(RemoteNames.BugFarm_UnequipCombat)
 	remotes.ToggleLock = ensureRemote(RemoteNames.BugFarm_ToggleLock)
+	remotes.RenameBug = ensureRemote(RemoteNames.BugFarm_RenameBug)
 	remotes.Recycle = ensureRemote(RemoteNames.BugFarm_Recycle)
 	remotes.Ascend = ensureRemote(RemoteNames.BugFarm_Ascend)
 	-- Canonical remote expected by client startup checks.
@@ -114,6 +115,23 @@ function BugFarmService.Start()
 		local d=ProfileService.GetPlayerData(player); if not d or type(payload)~="table" then return end; ensureData(d)
 		local uid=payload.Uid; local bug=d.Bugs.Inventory[uid]; if type(uid)~="string" or not bug then return end
 		bug.Locked = not (bug.Locked == true); ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
+	end)
+	remotes.RenameBug.OnServerEvent:Connect(function(player,payload)
+		local d=ProfileService.GetPlayerData(player); if not d or type(payload)~="table" then return end; ensureData(d)
+		local uid = payload.Uid
+		local rawName = payload.Name
+		local bug = d.Bugs.Inventory[uid]
+		if type(uid) ~= "string" or not bug or type(rawName) ~= "string" then return end
+		local cleaned = string.gsub(rawName, "^%s+", "")
+		cleaned = string.gsub(cleaned, "%s+$", "")
+		cleaned = string.sub(cleaned, 1, 24)
+		cleaned = string.gsub(cleaned, "[^%w%s%p]", "")
+		if cleaned == "" then
+			bug.Nickname = nil
+		else
+			bug.Nickname = cleaned
+		end
+		ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
 	end)
 	remotes.Recycle.OnServerEvent:Connect(function(player,payload)
 		local d=ProfileService.GetPlayerData(player); if not d or type(payload)~="table" or type(payload.Uids)~="table" then return end; ensureData(d)

@@ -142,12 +142,17 @@ Players.PlayerRemoving:Connect(function(p) activeByUser[p.UserId]=nil; sinceSpaw
 		clear(player)
 		local buffs = BuffService.GetPlayerBuffs(player)
 		local createdBug = nil
+		local createReason = nil
 		local wasNewDiscovery = false
 		local ok, err = pcall(function()
-			createdBug = BugInventoryService.CreateBug(player, st.SpeciesId, st.Rarity)
+			createdBug, createReason = BugInventoryService.CreateBug(player, st.SpeciesId, st.Rarity)
 			BugdexService.RecordCatch(player, st.SpeciesId)
 		end)
 		if not ok then warn(string.format("[BugSpawnService] Failed to create captured bug for %s: %s", player.Name, tostring(err))) end
+		if createdBug == nil and createReason == "InventoryFull" then
+			pushNotification(player, "Bug inventory full.", "Warning")
+			return
+		end
 		local finalPoints, rollBonusPoints, breakdown = calculateCaptureBugPoints(st.Rarity, createdBug and createdBug.BonusStats or nil, buffs)
 		if createdBug == nil then finalPoints, rollBonusPoints, breakdown = calculateCaptureBugPoints(st.Rarity, nil, buffs) end
 

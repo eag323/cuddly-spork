@@ -7,6 +7,7 @@ local ProfileService = require(script.Parent:WaitForChild("ProfileService"))
 local BugBonusConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugBonusConfig"))
 
 local BugInventoryService = {}
+local MAX_OWNED_BUGS = 1000
 
 local function createUid(): string
 	if type((UidUtil :: any).New) == "function" then
@@ -26,6 +27,11 @@ function BugInventoryService.CreateBug(player: Player, speciesId: string, rarity
 	if not playerData then return nil end
 	playerData.Bugs = playerData.Bugs or { Inventory = {}, Equipped = {}, SlotsUnlocked = 5 }
 	playerData.Bugs.Inventory = playerData.Bugs.Inventory or {}
+	local inventoryCount = 0
+	for _ in pairs(playerData.Bugs.Inventory) do inventoryCount += 1 end
+	if inventoryCount >= MAX_OWNED_BUGS then
+		return nil, "InventoryFull"
+	end
 
 	local bugCfg = BugConfig.GetBug(speciesId)
 	local species = bugCfg
@@ -72,7 +78,7 @@ function BugInventoryService.CreateBug(player: Player, speciesId: string, rarity
 	end
 	playerData.Bugs.Inventory[uid] = bug
 	ProfileService.PatchPlayerState(player, { "Bugs" }, playerData.Bugs)
-	return bug
+	return bug, nil
 end
 
 return BugInventoryService
