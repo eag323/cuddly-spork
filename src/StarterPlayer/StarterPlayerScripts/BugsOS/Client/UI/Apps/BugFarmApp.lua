@@ -31,6 +31,10 @@ local rarityTabs = {"All","Common","Uncommon","Rare","Epic","Legendary","Mythic"
 local FARMER_HABITAT_BACKGROUND_IMAGE = ""
 
 local recycleSortMode = "Rarity"
+local combatSortMode = "Power"
+local combatRarityFilter = "All"
+local combatEligibleOnly = false
+local combatSearchQuery = ""
 local recycleRarityFilter = "All"
 local recycleBonusFilter = "All"
 local recycleSafeOnly = true
@@ -362,6 +366,34 @@ local function getBugPower(bugConfig)
 		+ (tonumber(stats.CritDamage) or 0)
 		+ (tonumber(stats.RES) or 0) * 2
 		+ (tonumber(stats.ACC) or 0) * 2)
+end
+
+local function getBugCombatStats(bug, cfg)
+	local stats = (cfg and cfg.stats) or {}
+	local rank = getBugAscension(bug)
+	return {
+		HP = getAscendedCombatStatValue(stats.HP, rank),
+		ATK = getAscendedCombatStatValue(stats.ATK, rank),
+		DEF = getAscendedCombatStatValue(stats.DEF, rank),
+		SPD = getAscendedCombatStatValue(stats.SPD, rank),
+		CritRate = getAscendedCombatStatValue(stats.CritRate, rank),
+		CritDamage = getAscendedCombatStatValue(stats.CritDamage, rank),
+		RES = getAscendedCombatStatValue(stats.RES, rank),
+		ACC = getAscendedCombatStatValue(stats.ACC, rank),
+	}
+end
+
+local function getBugCombatPower(bug, cfg)
+	local st = getBugCombatStats(bug, cfg)
+	return math.floor(st.HP + st.ATK*4 + st.DEF*3 + st.SPD*2 + st.CritRate*8 + st.CritDamage + st.RES*2 + st.ACC*2)
+end
+
+local function getCombatRoleLabel(stats)
+	if stats.HP + stats.DEF*1.2 >= stats.ATK*2.2 then return "Tank" end
+	if stats.ATK >= stats.DEF and stats.ATK >= stats.SPD then return "Striker" end
+	if stats.SPD >= stats.ATK and stats.SPD >= stats.DEF then return "Speed" end
+	if (stats.RES + stats.ACC + stats.CritRate) > (stats.ATK + stats.DEF) then return "Support" end
+	return "Balanced"
 end
 
 local function getOwnedList(inventory)
@@ -936,6 +968,33 @@ end
 
 
 
+local function renderCombatTeamTab(context, scroll, bugs, inventory, owned, farmerSlots, combatSlots)
+	local modes = {"Power","Rarity","Rank","HP","ATK","DEF","SPD","Name"}
+	local filled,totalPower,totalRank,totalHP,totalATK,totalDEF,totalSPD = 0,0,0,0,0,0,0
+	local slotCard = makeCard(scroll, UDim2.new(1,-20,0,126)); slotCard.BackgroundColor3=Color3.fromRGB(12,30,50)
+	local title=Instance.new("TextLabel"); title.BackgroundTransparency=1; title.Size=UDim2.new(1,-20,0,28); title.Position=UDim2.fromOffset(10,8); title.TextXAlignment=Enum.TextXAlignment.Left; title.Text="COMBAT TEAM"; title.TextSize=20; styleLabel(title,true); title.Parent=slotCard
+	local desc=Instance.new("TextLabel"); desc.BackgroundTransparency=1; desc.Size=UDim2.new(1,-20,0,18); desc.Position=UDim2.fromOffset(10,34); desc.TextXAlignment=Enum.TextXAlignment.Left; desc.Text="Assign up to 5 bugs for battles, bosses, and expeditions."; desc.TextColor3=COLORS.muted; desc.TextSize=12; styleLabel(desc,false); desc.Parent=slotCard
+	for i=1,5 do local uid=getSlotUid(combatSlots[i]); local bug=uid and inventory[tostring(uid)] or nil; if bug then local cfg=getBugConfig(bug) or {}; local st=getBugCombatStats(bug,cfg); filled+=1; totalPower+=getBugCombatPower(bug,cfg); totalRank+=getBugAscension(bug); totalHP+=st.HP; totalATK+=st.ATK; totalDEF+=st.DEF; totalSPD+=st.SPD end end
+	local statsTxt=string.format("Power %s   Avg Rank %.1f   HP %s   ATK %s   DEF %s   Avg SPD %.1f   Slots %d/5", formatNum(totalPower), (filled>0 and (totalRank/filled) or 0), formatNum(totalHP), formatNum(totalATK), formatNum(totalDEF), (filled>0 and (totalSPD/filled) or 0), filled)
+	local stats=Instance.new("TextLabel"); stats.BackgroundTransparency=1; stats.Size=UDim2.new(1,-20,0,22); stats.Position=UDim2.fromOffset(10,76); stats.TextXAlignment=Enum.TextXAlignment.Left; stats.Text=statsTxt; stats.TextSize=14; styleLabel(stats,true); stats.Parent=slotCard
+
+	local slotsWrap=Instance.new("Frame"); slotsWrap.Size=UDim2.new(1,-20,0,260); slotsWrap.BackgroundTransparency=1; slotsWrap.Parent=scroll
+	local gl=Instance.new("UIGridLayout", slotsWrap); gl.CellSize=UDim2.new(0.5,-6,0,96); gl.CellPadding=UDim2.fromOffset(8,8)
+	for i=1,5 do local uid=getSlotUid(combatSlots[i]); local bug=uid and inventory[tostring(uid)] or nil; local card=makeCard(slotsWrap, UDim2.fromOffset(0,96)); card.BackgroundColor3=Color3.fromRGB(14,33,55); local t=Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.new(1,-16,0,18); t.Position=UDim2.fromOffset(8,6); t.TextXAlignment=Enum.TextXAlignment.Left; t.Text="Slot "..i; t.TextSize=12; styleLabel(t,true); t.Parent=card; if not bug then local e=Instance.new("TextLabel"); e.BackgroundTransparency=1; e.Size=UDim2.new(1,-16,0,36); e.Position=UDim2.fromOffset(8,30); e.TextXAlignment=Enum.TextXAlignment.Left; e.Text="Empty\nChoose a bug below"; e.TextColor3=COLORS.muted; e.TextSize=12; styleLabel(e,false); e.Parent=card else local cfg=getBugConfig(bug) or {}; local st=getBugCombatStats(bug,cfg); local n=Instance.new("TextLabel"); n.BackgroundTransparency=1; n.Size=UDim2.new(1,-128,0,18); n.Position=UDim2.fromOffset(8,24); n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(bug,cfg); n.TextSize=13; styleLabel(n,true); n.Parent=card; makeBadge(card,tostring(cfg.rarity or bug.Rarity or "Common"),getRarityColor(tostring(cfg.rarity or bug.Rarity or "Common"))).Position=UDim2.new(1,-106,0,6); renderAscensionStars(card,getBugAscension(bug),UDim2.new(1,-98,0,30),UDim2.fromOffset(86,16)); local line=Instance.new("TextLabel"); line.BackgroundTransparency=1; line.Size=UDim2.new(1,-116,0,32); line.Position=UDim2.fromOffset(8,46); line.TextXAlignment=Enum.TextXAlignment.Left; line.Text=string.format("PWR %d  HP %d ATK %d DEF %d SPD %d", getBugCombatPower(bug,cfg),st.HP,st.ATK,st.DEF,st.SPD); line.TextSize=11; styleLabel(line,false); line.Parent=card; local rm=makeButton(card,"Remove",Color3.fromRGB(148,52,52),UDim2.fromOffset(82,26)); rm.Position=UDim2.new(1,-90,1,-32); rm.Activated:Connect(function() context.Controllers.BugFarm.UnequipCombat(i) end) end end
+
+	local controls=makeCard(scroll, UDim2.new(1,-20,0,86)); controls.BackgroundColor3=Color3.fromRGB(13,31,52)
+	local search=Instance.new("TextBox"); search.PlaceholderText="Search bugs..."; search.Text=combatSearchQuery; search.Size=UDim2.new(0.4,-8,0,34); search.Position=UDim2.fromOffset(10,10); search.BackgroundColor3=COLORS.cardDark; search.ClearTextOnFocus=false; search.TextXAlignment=Enum.TextXAlignment.Left; styleLabel(search,false); search.Parent=controls; Instance.new("UICorner",search).CornerRadius=UDim.new(0,8); search:GetPropertyChangedSignal("Text"):Connect(function() combatSearchQuery=search.Text; render(context) end)
+	local sortBtn=makeButton(controls,"Sort: "..combatSortMode,COLORS.cardDark,UDim2.new(0.2,-6,0,34)); sortBtn.Position=UDim2.new(0.4,2,0,10); sortBtn.Activated:Connect(function() local i=table.find(modes,combatSortMode) or 1; combatSortMode=modes[(i%#modes)+1]; render(context) end)
+	local rarityBtn=makeButton(controls,"Rarity: "..combatRarityFilter,COLORS.cardDark,UDim2.new(0.22,-6,0,34)); rarityBtn.Position=UDim2.new(0.6,2,0,10); rarityBtn.Activated:Connect(function() local i=table.find(rarityTabs,combatRarityFilter) or 1; combatRarityFilter=rarityTabs[(i%#rarityTabs)+1]; render(context) end)
+	local elig=makeButton(controls,combatEligibleOnly and "Eligible: ON" or "Eligible: OFF",combatEligibleOnly and COLORS.good or COLORS.cardDark,UDim2.new(0.18,-6,0,34)); elig.Position=UDim2.new(0.82,0,0,10); elig.Activated:Connect(function() combatEligibleOnly=not combatEligibleOnly; render(context) end)
+
+	local list=Instance.new("Frame"); list.Size=UDim2.new(1,-20,0,0); list.AutomaticSize=Enum.AutomaticSize.Y; list.BackgroundTransparency=1; list.Parent=scroll; Instance.new("UIListLayout",list).Padding=UDim.new(0,8)
+	local rows={}
+	for _,e in ipairs(owned) do local uid,bug=tostring(e.Uid),e.Bug; local cfg=getBugConfig(bug) or {}; local rarity=tostring(cfg.rarity or bug.Rarity or "Common"); local inFarmer=isAssignedFarmer(uid,farmerSlots); local inCombat=isAssignedCombat(uid,combatSlots); local st=getBugCombatStats(bug,cfg); local power=getBugCombatPower(bug,cfg); local locked=isBugLocked(bug); local status=inFarmer and "Farmer Equipped" or (inCombat and "Combat Equipped" or (locked and "Locked" or "Eligible")); if (combatRarityFilter=="All" or rarity==combatRarityFilter) and (combatSearchQuery=="" or string.find(string.lower(getDisplayName(bug,cfg).." "..tostring(cfg.species or "").." "..tostring(cfg.role or "")),string.lower(combatSearchQuery),1,true)) and (not combatEligibleOnly or (not inFarmer and not inCombat)) then table.insert(rows,{Uid=uid,Bug=bug,Cfg=cfg,Rarity=rarity,Stats=st,Power=power,Rank=getBugAscension(bug),Status=status}) end end
+	table.sort(rows,function(a,b) if combatSortMode=="Power" then return a.Power>b.Power elseif combatSortMode=="Rarity" then return (BugConfig.RarityOrder[a.Rarity] or 1)>(BugConfig.RarityOrder[b.Rarity] or 1) elseif combatSortMode=="Rank" then return a.Rank>b.Rank elseif a.Stats[combatSortMode] and b.Stats[combatSortMode] then return a.Stats[combatSortMode]>b.Stats[combatSortMode] end return getDisplayName(a.Bug,a.Cfg)<getDisplayName(b.Bug,b.Cfg) end)
+	for _,r in ipairs(rows) do local row=makeCard(list,UDim2.new(1,0,0,84)); row.BackgroundColor3=Color3.fromRGB(15,34,56); local n=Instance.new("TextLabel"); n.BackgroundTransparency=1; n.Size=UDim2.new(1,-330,0,22); n.Position=UDim2.fromOffset(12,6); n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(r.Bug,r.Cfg); n.TextSize=16; styleLabel(n,true); n.TextColor3=getRarityColor(r.Rarity); n.Parent=row; renderAscensionStars(row,r.Rank,UDim2.new(1,-292,0,8),UDim2.fromOffset(84,18)); local s=Instance.new("TextLabel"); s.BackgroundTransparency=1; s.Size=UDim2.new(1,-330,0,16); s.Position=UDim2.fromOffset(12,28); s.TextXAlignment=Enum.TextXAlignment.Left; s.Text=string.format("%s • %s • %s", tostring(r.Cfg.role or "Unknown"), tostring(r.Cfg.species or "Unknown"), getCombatRoleLabel(r.Stats)); s.TextColor3=COLORS.muted; s.TextSize=12; styleLabel(s,false); s.Parent=row; local st=Instance.new("TextLabel"); st.BackgroundTransparency=1; st.Size=UDim2.new(1,-330,0,16); st.Position=UDim2.fromOffset(12,48); st.TextXAlignment=Enum.TextXAlignment.Left; st.Text=string.format("PWR %d | HP %d ATK %d DEF %d SPD %d", r.Power,r.Stats.HP,r.Stats.ATK,r.Stats.DEF,r.Stats.SPD); st.TextSize=12; styleLabel(st,false); st.Parent=row; local ab=(r.Cfg.ability and (r.Cfg.ability.name or r.Cfg.ability.id or r.Cfg.ability.type)) and tostring(r.Cfg.ability.name or r.Cfg.ability.id or r.Cfg.ability.type) or "No ability"; local abl=Instance.new("TextLabel"); abl.BackgroundTransparency=1; abl.Size=UDim2.new(1,-330,0,14); abl.Position=UDim2.fromOffset(12,66); abl.TextXAlignment=Enum.TextXAlignment.Left; abl.Text=ab; abl.TextSize=11; abl.TextColor3=COLORS.warn; styleLabel(abl,false); abl.Parent=row; makeBadge(row,r.Status,r.Status=="Eligible" and COLORS.good or COLORS.warn).Position=UDim2.new(1,-220,0,31); local teamFull=filled>=5; local btnTxt,btnColor="Equip",Color3.fromRGB(35,194,157); local disabled=false; if r.Status=="Combat Equipped" then btnTxt="Equipped"; disabled=true; btnColor=COLORS.cardDark elseif r.Status=="Farmer Equipped" then btnTxt="Farmer"; disabled=true; btnColor=COLORS.cardDark elseif teamFull then btnTxt="Team Full"; disabled=true; btnColor=COLORS.cardDark end local eq=makeButton(row,btnTxt,btnColor,UDim2.fromOffset(96,32)); eq.Position=UDim2.new(1,-106,0.5,-16); if not disabled then eq.Activated:Connect(function() context.Controllers.BugFarm.EquipCombat(r.Uid,nil) end) end end
+end
+
 local function clearRecycleModal()
 	if recycleModalOverlay then
 		recycleModalOverlay:Destroy()
@@ -1200,6 +1259,11 @@ render = function(context)
 	end
 	if selectedTab == "Recycling" then
 		renderRecyclingTab(context, scroll, bugs, inventory, owned, farmerSlots, combatSlots)
+		applyNoTextStrokeRecursive(scroll)
+		return
+	end
+	if selectedTab == "Combat Team" then
+		renderCombatTeamTab(context, scroll, bugs, inventory, owned, farmerSlots, combatSlots)
 		applyNoTextStrokeRecursive(scroll)
 		return
 	end
