@@ -77,10 +77,23 @@ local FARMER_STAT_FILTERS = {
 	{Id="BugEssenceGain", Label="Bug Essence Gain"},
 }
 local detailOverlay
+local detailTargetUid = nil
+local detailPendingAscendUid = nil
+local detailPendingAscendRank = nil
 local bugdexInlineHost
 local render
 local getLegacyBonusStats
 local getSlotUid
+
+local function closeDetailPopup()
+	if detailOverlay then
+		detailOverlay:Destroy()
+		detailOverlay = nil
+	end
+	detailTargetUid = nil
+	detailPendingAscendUid = nil
+	detailPendingAscendRank = nil
+end
 
 local COLORS = {
 	bg = Color3.fromRGB(6, 16, 30),
@@ -484,6 +497,7 @@ end
 
 local function makeDetailPopup(context, uid, bug)
 	if detailOverlay then detailOverlay:Destroy() detailOverlay = nil end
+	detailTargetUid = uid
 	detailOverlay = Instance.new("TextButton")
 	detailOverlay.Text = ""
 	detailOverlay.AutoButtonColor = false
@@ -547,7 +561,9 @@ local function makeDetailPopup(context, uid, bug)
 	closeBtn.Position = UDim2.new(1, -14, 0, 14)
 	closeBtn.ZIndex = 3
 	closeBtn.TextStrokeTransparency = 1
-	closeBtn.Activated:Connect(function() if detailOverlay then detailOverlay:Destroy() detailOverlay = nil end end)
+	closeBtn.Activated:Connect(function()
+		closeDetailPopup()
+	end)
 
 	
 	local iconPanel = makeCard(header, UDim2.fromOffset(110, 110)); iconPanel.Position = UDim2.fromOffset(0, 8); iconPanel.BackgroundColor3 = COLORS.cardDark
@@ -718,6 +734,8 @@ local function makeDetailPopup(context, uid, bug)
 	if canAscend then
 		ascBtn.Activated:Connect(function()
 			local requestedRank = rank
+			detailPendingAscendUid = uid
+			detailPendingAscendRank = requestedRank
 			setButtonEnabled(ascBtn, false, COLORS.accent)
 			ascBtn.Text = "Ascending..."
 			context.Controllers.BugFarm.Ascend(uid)
@@ -731,6 +749,8 @@ local function makeDetailPopup(context, uid, bug)
 				if currentRank <= requestedRank then
 					setButtonEnabled(ascBtn, true, COLORS.accent)
 					ascBtn.Text = "Ascend Bug"
+					detailPendingAscendUid = nil
+					detailPendingAscendRank = nil
 				end
 			end)
 		end)
@@ -752,10 +772,7 @@ local function makeDetailPopup(context, uid, bug)
 		local insidePanel = clickPos.X >= panelPos.X and clickPos.X <= (panelPos.X + panelSize.X)
 			and clickPos.Y >= panelPos.Y and clickPos.Y <= (panelPos.Y + panelSize.Y)
 		if insidePanel then return end
-		if detailOverlay then
-			detailOverlay:Destroy()
-			detailOverlay = nil
-		end
+		closeDetailPopup()
 	end)
 end
 
@@ -801,6 +818,26 @@ local function findOwnedBugByUid(inventory, uid)
 		end
 	end
 	return nil
+end
+
+local function refreshOpenDetailPopup(context)
+	if detailTargetUid == nil or not root then
+		return
+	end
+	local bugsState = getBugsState(context)
+	local refreshedBug = findOwnedBugByUid((bugsState and bugsState.Inventory) or {}, detailTargetUid)
+	if not refreshedBug then
+		closeDetailPopup()
+		return
+	end
+	makeDetailPopup(context, detailTargetUid, refreshedBug)
+	if detailPendingAscendUid ~= nil and tostring(detailPendingAscendUid) == tostring(detailTargetUid) then
+		local currentRank = getBugAscension(refreshedBug)
+		if detailPendingAscendRank ~= nil and currentRank > detailPendingAscendRank then
+			detailPendingAscendUid = nil
+			detailPendingAscendRank = nil
+		end
+	end
 end
 
 local function getEquippedFarmerBugs(farmerSlots, inventory)
@@ -1557,7 +1594,10 @@ function BugFarmApp.Mount(target, context)
 	contentHost.Parent = root
 
 	if context.Events and context.Events.StateChanged then
-		stateConn = context.Events.StateChanged.Event:Connect(function() render(context) end)
+		stateConn = context.Events.StateChanged.Event:Connect(function()
+			render(context)
+			refreshOpenDetailPopup(context)
+		end)
 	end
 	render(context)
 end
@@ -1565,6 +1605,7 @@ end
 function BugFarmApp.Unmount()
 	clearRecycleModal()
 	if stateConn then stateConn:Disconnect() end
+	closeDetailPopup()
 	if bugdexInlineHost then
 		BugdexView.Unmount()
 		bugdexInlineHost:Destroy()
