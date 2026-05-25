@@ -33,6 +33,8 @@ local recycleBonusFilter = "All"
 local recycleSafeOnly = true
 local recycleDuplicatesOnly = false
 local recycleConfirmState = nil
+local recycleModalOverlay = nil
+local recycleScrollY = 0
 local recycleSortModes = {"Rarity","Value","Newest","Name","Bonus","Locked Last"}
 
 local RECYCLE_RARITY_VALUES = {
@@ -747,6 +749,13 @@ end
 
 
 
+local function clearRecycleModal()
+	if recycleModalOverlay then
+		recycleModalOverlay:Destroy()
+		recycleModalOverlay = nil
+	end
+end
+
 local function getRecycleValue(ownedBug)
 	local cfg = getBugConfig(ownedBug)
 	if cfg and type(cfg.recycling) == "table" and tonumber(cfg.recycling.bugEssence) ~= nil then
@@ -764,13 +773,21 @@ local function getRecycleDisableReason(uid, bug, farmerSlots, combatSlots)
 end
 
 local function renderRecyclingTab(context, scroll, bugs, inventory, owned, farmerSlots, combatSlots)
+	scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+		recycleScrollY = scroll.CanvasPosition.Y
+	end)
 	local essence = (((context.State or {}).PlayerData or {}).Currencies or {}).BugEssence or 0
 	local duplicateCounts = {}
 	for _, entry in ipairs(owned) do
 		local bugId = tostring(getOwnedBugBugId(entry.Bug) or "")
 		duplicateCounts[bugId] = (duplicateCounts[bugId] or 0) + 1
 	end
-	for uid in pairs(selectedRecycle) do if inventory[uid] == nil then selectedRecycle[uid] = nil end end
+	for uid, picked in pairs(selectedRecycle) do
+		local bug = inventory[uid]
+		if picked and (not bug or getRecycleDisableReason(uid, bug, farmerSlots, combatSlots) ~= nil) then
+			selectedRecycle[uid] = nil
+		end
+	end
 	local selectedCount, baseGain, hasEpicPlus, hasHighRarity = 0, 0, false, false
 	for uid, picked in pairs(selectedRecycle) do
 		if picked and inventory[uid] then
@@ -784,38 +801,32 @@ local function renderRecyclingTab(context, scroll, bugs, inventory, owned, farme
 		end
 	end
 	local bonusTotal = 0
-	for _, slot in ipairs(farmerSlots or {}) do
-		local uid = getSlotUid(slot)
-		local bug = uid and inventory[tostring(uid)] or nil
-		if bug then bonusTotal += getBonusValueForStat(bug, "BugEssenceGain") end
-	end
+	for _, slot in ipairs(farmerSlots or {}) do local uid = getSlotUid(slot); local bug = uid and inventory[tostring(uid)] or nil; if bug then bonusTotal += getBonusValueForStat(bug, "BugEssenceGain") end end
 	local finalGain = math.floor(baseGain * (1 + bonusTotal) + 0.5)
 
-	local summary = makeCard(scroll, UDim2.new(1, -20, 0, 170))
-	local title = Instance.new("TextLabel"); title.BackgroundTransparency=1; title.Size=UDim2.new(1,-16,0,22); title.Position=UDim2.fromOffset(10,8); title.TextXAlignment=Enum.TextXAlignment.Left; title.Text="BUG RECYCLING"; title.TextSize=18; styleLabel(title,true); title.Parent=summary
-	local desc = Instance.new("TextLabel"); desc.BackgroundTransparency=1; desc.Size=UDim2.new(0.58,-10,0,34); desc.Position=UDim2.fromOffset(10,34); desc.TextWrapped=true; desc.TextXAlignment=Enum.TextXAlignment.Left; desc.TextYAlignment=Enum.TextYAlignment.Top; desc.Text="Recycle unwanted bugs into Bug Essence for ascension."; desc.TextSize=12; desc.TextColor3=COLORS.muted; styleLabel(desc,false); desc.Parent=summary
-	local stats={{"Current Essence", tostring(essence), COLORS.accent},{"Selected", tostring(selectedCount), COLORS.text},{"Base", "+"..tostring(baseGain), COLORS.warn},{"Bonus", formatPercent(bonusTotal), COLORS.good},{"Final", "+"..tostring(finalGain), COLORS.gold}}
-	for i, st in ipairs(stats) do local t=makeCard(summary, UDim2.fromOffset(114,56)); t.BackgroundColor3=COLORS.cardDark; t.Position=UDim2.new(1,-592+(i-1)*118,0,76); local l=Instance.new("TextLabel"); l.BackgroundTransparency=1; l.Size=UDim2.new(1,-8,0,14); l.Position=UDim2.fromOffset(5,8); l.Text=st[1]; l.TextXAlignment=Enum.TextXAlignment.Left; l.TextSize=11; l.TextColor3=COLORS.muted; styleLabel(l,false); l.Parent=t; local v=Instance.new("TextLabel"); v.BackgroundTransparency=1; v.Size=UDim2.new(1,-8,0,20); v.Position=UDim2.fromOffset(5,24); v.Text=st[2]; v.TextXAlignment=Enum.TextXAlignment.Left; v.TextSize=16; v.TextColor3=st[3]; styleLabel(v,true); v.Parent=t end
-	if hasHighRarity or hasEpicPlus then
-		local warn = Instance.new("TextLabel"); warn.BackgroundTransparency=1; warn.Size=UDim2.new(1,-16,0,20); warn.Position=UDim2.fromOffset(10,142); warn.TextXAlignment=Enum.TextXAlignment.Left; warn.TextSize=12; warn.TextColor3=hasHighRarity and COLORS.danger or COLORS.warn; warn.Text=hasHighRarity and "WARNING: Legendary/Mythic bugs selected. This action cannot be undone." or "Warning: Epic+ bugs selected for recycling."; styleLabel(warn,true); warn.Parent=summary
-	end
+	local summary = makeCard(scroll, UDim2.new(1, -20, 0, 130)); summary.BackgroundColor3 = Color3.fromRGB(13, 30, 50)
+	local title = Instance.new("TextLabel"); title.BackgroundTransparency=1; title.Size=UDim2.new(0.45,-16,0,24); title.Position=UDim2.fromOffset(12,10); title.TextXAlignment=Enum.TextXAlignment.Left; title.Text="BUG RECYCLING"; title.TextSize=20; styleLabel(title,true); title.Parent=summary
+	local desc = Instance.new("TextLabel"); desc.BackgroundTransparency=1; desc.Size=UDim2.new(0.45,-16,0,32); desc.Position=UDim2.fromOffset(12,36); desc.TextXAlignment=Enum.TextXAlignment.Left; desc.TextWrapped=true; desc.Text="Recycle unwanted bugs into Bug Essence for ascension."; desc.TextSize=13; desc.TextColor3=COLORS.muted; styleLabel(desc,false); desc.Parent=summary
+	if hasHighRarity or hasEpicPlus then local warn = Instance.new("TextLabel"); warn.BackgroundTransparency=1; warn.Size=UDim2.new(0.45,-16,0,34); warn.Position=UDim2.fromOffset(12,78); warn.TextXAlignment=Enum.TextXAlignment.Left; warn.TextWrapped=true; warn.TextSize=12; warn.TextColor3=hasHighRarity and COLORS.danger or COLORS.warn; warn.Text=hasHighRarity and "WARNING: Legendary/Mythic bugs selected." or "Warning: Epic bugs selected for recycling."; styleLabel(warn,true); warn.Parent=summary end
+	local stats={{"Current", tostring(essence), COLORS.accent},{"Selected", tostring(selectedCount), COLORS.text},{"Base", "+"..tostring(baseGain), COLORS.warn},{"Bonus", formatPercent(bonusTotal), COLORS.good},{"Final", "+"..tostring(finalGain), COLORS.gold}}
+	for i, st in ipairs(stats) do local t=makeCard(summary, UDim2.fromOffset(94,44)); t.BackgroundColor3=COLORS.cardDark; t.Position=UDim2.new(1,-500+(i-1)*98,0,74); local l=Instance.new("TextLabel"); l.BackgroundTransparency=1; l.Size=UDim2.new(1,-8,0,12); l.Position=UDim2.fromOffset(5,5); l.Text=st[1]; l.TextXAlignment=Enum.TextXAlignment.Left; l.TextSize=10; l.TextColor3=COLORS.muted; styleLabel(l,false); l.Parent=t; local v=Instance.new("TextLabel"); v.BackgroundTransparency=1; v.Size=UDim2.new(1,-8,0,18); v.Position=UDim2.fromOffset(5,20); v.Text=st[2]; v.TextXAlignment=Enum.TextXAlignment.Left; v.TextSize=15; v.TextColor3=st[3]; styleLabel(v,true); v.Parent=t end
 
-	local controls = makeCard(scroll, UDim2.new(1, -20, 0, 112))
-	local search = Instance.new("TextBox"); search.PlaceholderText="Search bugs..."; search.Text=searchQuery; search.Size=UDim2.new(0.38,-8,0,32); search.Position=UDim2.fromOffset(8,8); search.BackgroundColor3=COLORS.cardDark; search.ClearTextOnFocus=false; search.TextXAlignment=Enum.TextXAlignment.Left; styleLabel(search,false); search.Parent=controls; Instance.new("UICorner",search).CornerRadius=UDim.new(0,8)
-	search:GetPropertyChangedSignal("Text"):Connect(function() searchQuery=search.Text render(context) end)
-	local sortBtn = makeButton(controls, "Sort: "..recycleSortMode, COLORS.cardDark, UDim2.new(0.2,-8,0,32)); sortBtn.Position=UDim2.new(0.38,4,0,8); sortBtn.Activated:Connect(function() local i=table.find(recycleSortModes,recycleSortMode) or 1; recycleSortMode=recycleSortModes[(i%#recycleSortModes)+1]; render(context) end)
-	local safeBtn = makeButton(controls, recycleSafeOnly and "Safe Only: ON" or "Safe Only: OFF", recycleSafeOnly and COLORS.good or COLORS.cardDark, UDim2.new(0.2,-8,0,32)); safeBtn.Position=UDim2.new(0.58,4,0,8); safeBtn.Activated:Connect(function() recycleSafeOnly = not recycleSafeOnly render(context) end)
-	local dupBtn = makeButton(controls, recycleDuplicatesOnly and "Duplicates: ON" or "Duplicates: OFF", recycleDuplicatesOnly and COLORS.accent or COLORS.cardDark, UDim2.new(0.2,-8,0,32)); dupBtn.Position=UDim2.new(0.78,4,0,8); dupBtn.Activated:Connect(function() recycleDuplicatesOnly = not recycleDuplicatesOnly render(context) end)
-	for i, r in ipairs(rarityTabs) do local b=makeButton(controls, r, r==recycleRarityFilter and getRarityColor(r) or COLORS.cardDark, UDim2.fromOffset(88,26)); b.Position=UDim2.fromOffset(8 + (i-1)*90, 44); b.Activated:Connect(function() recycleRarityFilter=r render(context) end) end
+	local controls = makeCard(scroll, UDim2.new(1, -20, 0, 138)); controls.BackgroundColor3 = Color3.fromRGB(13, 31, 52)
+	local search = Instance.new("TextBox"); search.PlaceholderText="Search bugs..."; search.Text=searchQuery; search.Size=UDim2.fromOffset(260,34); search.Position=UDim2.fromOffset(10,10); search.BackgroundColor3=COLORS.cardDark; search.ClearTextOnFocus=false; search.TextXAlignment=Enum.TextXAlignment.Left; search.TextSize=14; styleLabel(search,false); search.Parent=controls; Instance.new("UICorner",search).CornerRadius=UDim.new(0,8)
+	search:GetPropertyChangedSignal("Text"):Connect(function() searchQuery=search.Text; recycleScrollY=0; render(context) end)
+	local sortBtn = makeButton(controls, "Sort: "..recycleSortMode, COLORS.cardDark, UDim2.fromOffset(180,34)); sortBtn.Position=UDim2.fromOffset(278,10); sortBtn.Activated:Connect(function() local i=table.find(recycleSortModes,recycleSortMode) or 1; recycleSortMode=recycleSortModes[(i%#recycleSortModes)+1]; recycleScrollY=0; render(context) end)
+	local safeBtn = makeButton(controls, recycleSafeOnly and "Safe: ON" or "Safe: OFF", recycleSafeOnly and COLORS.good or COLORS.cardDark, UDim2.fromOffset(130,34)); safeBtn.Position=UDim2.fromOffset(466,10); safeBtn.Activated:Connect(function() recycleSafeOnly = not recycleSafeOnly; recycleScrollY=0; render(context) end)
+	local dupBtn = makeButton(controls, recycleDuplicatesOnly and "Dupes: ON" or "Dupes: OFF", recycleDuplicatesOnly and COLORS.accent or COLORS.cardDark, UDim2.fromOffset(130,34)); dupBtn.Position=UDim2.fromOffset(604,10); dupBtn.Activated:Connect(function() recycleDuplicatesOnly = not recycleDuplicatesOnly; recycleScrollY=0; render(context) end)
+	local rarityStrip=Instance.new("ScrollingFrame"); rarityStrip.BackgroundTransparency=1; rarityStrip.BorderSizePixel=0; rarityStrip.Size=UDim2.new(1,-20,0,32); rarityStrip.Position=UDim2.fromOffset(10,52); rarityStrip.ScrollBarThickness=2; rarityStrip.ScrollingDirection=Enum.ScrollingDirection.X; rarityStrip.CanvasSize=UDim2.fromOffset(0,0); rarityStrip.Parent=controls
+	local rlist=Instance.new("UIListLayout", rarityStrip); rlist.FillDirection=Enum.FillDirection.Horizontal; rlist.Padding=UDim.new(0,6)
+	rlist:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() rarityStrip.CanvasSize=UDim2.fromOffset(rlist.AbsoluteContentSize.X+10,0) end)
+	for _, r in ipairs(rarityTabs) do local b=makeButton(rarityStrip, r, r==recycleRarityFilter and getRarityColor(r) or COLORS.cardDark, UDim2.fromOffset(92,28)); b.Activated:Connect(function() recycleRarityFilter=r; recycleScrollY=0; render(context) end) end
 	local bIndex=1; for i,f in ipairs(RECYCLE_BONUS_FILTERS) do if f.Id==recycleBonusFilter then bIndex=i break end end
-	local bonusBtn = makeButton(controls, "Bonus: "..RECYCLE_BONUS_FILTERS[bIndex].Label, COLORS.cardDark, UDim2.new(1,-16,0,24)); bonusBtn.Position=UDim2.fromOffset(8,78); bonusBtn.Activated:Connect(function() bIndex=(bIndex%#RECYCLE_BONUS_FILTERS)+1; recycleBonusFilter=RECYCLE_BONUS_FILTERS[bIndex].Id; render(context) end)
+	local bonusBtn = makeButton(controls, "Bonus: "..RECYCLE_BONUS_FILTERS[bIndex].Label.." ▾", COLORS.cardDark, UDim2.new(1,-20,0,34)); bonusBtn.Position=UDim2.fromOffset(10,92); bonusBtn.Activated:Connect(function() bIndex=(bIndex%#RECYCLE_BONUS_FILTERS)+1; recycleBonusFilter=RECYCLE_BONUS_FILTERS[bIndex].Id; recycleScrollY=0; render(context) end)
 
 	local function matchesBonus(bug)
 		if recycleBonusFilter == "All" then return true end
-		if recycleBonusFilter == "AllFood" then
-			for _,bonus in ipairs(getFarmerBonuses(bug)) do if BugBonusConfig.GetCategory(tostring(bonus.Id)) == "Farmer" then return true end end
-			return false
-		end
+		if recycleBonusFilter == "AllFood" then for _,bonus in ipairs(getFarmerBonuses(bug)) do if BugBonusConfig.GetCategory(tostring(bonus.Id)) == "Farmer" then return true end end; return false end
 		return hasBonusStat(bug, recycleBonusFilter)
 	end
 	local filtered, eligible = {}, 0
@@ -829,54 +840,65 @@ local function renderRecyclingTab(context, scroll, bugs, inventory, owned, farme
 		local dupOk = (not recycleDuplicatesOnly) or ((duplicateCounts[tostring(getOwnedBugBugId(bug) or "")] or 0) > 1)
 		if (recycleRarityFilter=="All" or rarity==recycleRarityFilter) and (searchQuery=="" or string.find(hay, string.lower(searchQuery),1,true)) and matchesBonus(bug) and dupOk and ((not recycleSafeOnly) or reason==nil) then table.insert(filtered, {Uid=uid, Bug=bug, Cfg=cfg, Reason=reason, Value=getRecycleValue(bug), Rarity=rarity}) end
 	end
-	table.sort(filtered, function(a,b)
-		if recycleSortMode=="Value" then return a.Value>b.Value end
-		if recycleSortMode=="Newest" then return tostring(a.Uid)>tostring(b.Uid) end
-		if recycleSortMode=="Name" then return tostring(a.Cfg.displayName or "")<tostring(b.Cfg.displayName or "") end
-		if recycleSortMode=="Bonus" then return getBestFarmerBonusValue(a.Bug)>getBestFarmerBonusValue(b.Bug) end
-		if recycleSortMode=="Locked Last" then return (a.Reason and 1 or 0)<(b.Reason and 1 or 0) end
-		return (BugConfig.RarityOrder[a.Rarity] or 1)>(BugConfig.RarityOrder[b.Rarity] or 1)
-	end)
+	table.sort(filtered, function(a,b) if recycleSortMode=="Value" then return a.Value>b.Value end if recycleSortMode=="Newest" then return tostring(a.Uid)>tostring(b.Uid) end if recycleSortMode=="Name" then return tostring(a.Cfg.displayName or "")<tostring(b.Cfg.displayName or "") end if recycleSortMode=="Bonus" then return getBestFarmerBonusValue(a.Bug)>getBestFarmerBonusValue(b.Bug) end if recycleSortMode=="Locked Last" then return (a.Reason and 1 or 0)<(b.Reason and 1 or 0) end return (BugConfig.RarityOrder[a.Rarity] or 1)>(BugConfig.RarityOrder[b.Rarity] or 1) end)
 
-	local quick = makeCard(scroll, UDim2.new(1,-20,0,46))
-	local qs={{"Select All Common",{"Common"}},{"Select All Uncommon",{"Uncommon"}},{"Select All Rare",{"Rare"}},{"Select Low Tier",{"Common","Uncommon","Rare"}},{"Select Duplicates",nil},{"Clear Selection",false}}
-	for i, q in ipairs(qs) do local b=makeButton(quick,q[1],COLORS.cardDark,UDim2.fromOffset(145,30)); b.Position=UDim2.fromOffset(8+(i-1)*152,8); b.Activated:Connect(function() if q[2]==false then selectedRecycle={} render(context) return end; for _,row in ipairs(filtered) do if not row.Reason then local pick=false if q[2]==nil then pick=(duplicateCounts[tostring(getOwnedBugBugId(row.Bug) or "")] or 0)>1 else for _,rar in ipairs(q[2]) do if row.Rarity==rar then pick=true break end end end if pick then selectedRecycle[row.Uid]=true end end end render(context) end) end
+	local quick = makeCard(scroll, UDim2.new(1,-20,0,56))
+	local qscroll=Instance.new("ScrollingFrame"); qscroll.Size=UDim2.new(1,-16,1,-12); qscroll.Position=UDim2.fromOffset(8,6); qscroll.BackgroundTransparency=1; qscroll.BorderSizePixel=0; qscroll.ScrollBarThickness=3; qscroll.ScrollingDirection=Enum.ScrollingDirection.X; qscroll.CanvasSize=UDim2.fromOffset(0,0); qscroll.Parent=quick
+	local qlist=Instance.new("UIListLayout", qscroll); qlist.FillDirection=Enum.FillDirection.Horizontal; qlist.Padding=UDim.new(0,8)
+	qlist:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() qscroll.CanvasSize=UDim2.fromOffset(qlist.AbsoluteContentSize.X+12,0) end)
+	local qs={{"Commons",{"Common"}},{"Uncommons",{"Uncommon"}},{"Rares",{"Rare"}},{"Low Tier",{"Common","Uncommon","Rare"}},{"Duplicates",nil},{"Clear",false}}
+	for _, q in ipairs(qs) do local b=makeButton(qscroll,q[1],COLORS.cardDark,UDim2.fromOffset(126,36)); b.Activated:Connect(function() if q[2]==false then selectedRecycle={}; render(context); return end; for _,row in ipairs(filtered) do if not row.Reason then local pick=false if q[2]==nil then pick=(duplicateCounts[tostring(getOwnedBugBugId(row.Bug) or "")] or 0)>1 else for _,rar in ipairs(q[2]) do if row.Rarity==rar then pick=true break end end end if pick then selectedRecycle[row.Uid]=true end end end render(context) end) end
 
 	if #owned == 0 then local e=makeCard(scroll, UDim2.new(1,-20,0,86)); local t=Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.fromScale(1,1); t.Text="No owned bugs. Catch bugs to start recycling."; t.TextColor3=COLORS.muted; t.TextSize=16; styleLabel(t,true); t.Parent=e; return end
 	if eligible == 0 then local e=makeCard(scroll, UDim2.new(1,-20,0,86)); local t=Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.fromScale(1,1); t.Text="No recyclable bugs. Everything is locked or equipped."; t.TextColor3=COLORS.muted; t.TextSize=16; styleLabel(t,true); t.Parent=e; return end
-	if #filtered == 0 then local e=makeCard(scroll, UDim2.new(1,-20,0,86)); local t=Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.fromScale(1,1); t.Text="No bugs match current filters."; t.TextColor3=COLORS.muted; t.TextSize=16; styleLabel(t,true); t.Parent=e; return end
 
 	for _, rowData in ipairs(filtered) do
 		local uid, bug, cfg, reason = rowData.Uid, rowData.Bug, rowData.Cfg, rowData.Reason
 		local selected = selectedRecycle[uid] == true
-		local row = makeCard(scroll, UDim2.new(1,-20,0,80)); row.BackgroundColor3 = selected and Color3.fromRGB(24,58,88) or COLORS.card
-		local stroke = row:FindFirstChildOfClass("UIStroke"); if stroke then stroke.Color = selected and COLORS.accent or Color3.fromRGB(42,86,126); stroke.Thickness = selected and 2 or 1 end
-		local icon=Instance.new("ImageLabel"); icon.BackgroundTransparency=1; icon.Size=UDim2.fromOffset(52,52); icon.Position=UDim2.fromOffset(10,14); icon.Image=getBugIcon(bug,cfg); icon.Parent=row
-		local name=Instance.new("TextLabel"); name.BackgroundTransparency=1; name.Size=UDim2.new(1,-390,0,22); name.Position=UDim2.fromOffset(70,9); name.TextXAlignment=Enum.TextXAlignment.Left; name.Text=tostring(getDisplayName(bug,cfg)); styleLabel(name,true); name.Parent=row
-		local sub=Instance.new("TextLabel"); sub.BackgroundTransparency=1; sub.Size=UDim2.new(1,-390,0,18); sub.Position=UDim2.fromOffset(70,31); sub.TextXAlignment=Enum.TextXAlignment.Left; sub.Text=tostring(cfg.species or cfg.role or "Unknown"); sub.TextColor3=COLORS.muted; sub.TextSize=12; styleLabel(sub,false); sub.Parent=row
-		local bonus = getFarmerBonuses(bug)[1]
-		local bonusLabel=Instance.new("TextLabel"); bonusLabel.BackgroundTransparency=1; bonusLabel.Size=UDim2.new(1,-390,0,16); bonusLabel.Position=UDim2.fromOffset(70,51); bonusLabel.TextXAlignment=Enum.TextXAlignment.Left; bonusLabel.Text=bonus and formatBonus(bonus) or "No farmer bonus"; bonusLabel.TextColor3=COLORS.good; bonusLabel.TextSize=11; styleLabel(bonusLabel,false); bonusLabel.Parent=row
-		local rarityBadge = makeBadge(row, rowData.Rarity, getRarityColor(rowData.Rarity)); rarityBadge.Position=UDim2.new(1,-308,0.5,-11)
-		local val = makeBadge(row, "+"..tostring(rowData.Value).." Essence", Color3.fromRGB(56,108,78)); val.Position=UDim2.new(1,-224,0.5,-11)
-		if reason then local st=makeBadge(row, reason, COLORS.warn); st.Position=UDim2.new(1,-140,0.5,-11) end
-		local lock=makeButton(row, isBugLocked(bug) and "Unlock" or "Lock", COLORS.cardDark, UDim2.fromOffset(62,26)); lock.Position=UDim2.new(1,-138,0,8); lock.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid) end)
-		local selectBtn=makeButton(row, selected and "Selected" or "Select", reason and COLORS.cardDark or (selected and COLORS.good or COLORS.accent), UDim2.fromOffset(96,30)); selectBtn.Position=UDim2.new(1,-104,0.5,-15); if not reason then selectBtn.Activated:Connect(function() selectedRecycle[uid]=not selectedRecycle[uid] render(context) end) end
+		local row = makeCard(scroll, UDim2.new(1,-20,0,78)); row.BackgroundColor3 = selected and Color3.fromRGB(26, 62, 90) or COLORS.card
+		local stroke = row:FindFirstChildOfClass("UIStroke"); if stroke then stroke.Color = selected and COLORS.good or Color3.fromRGB(42,86,126); stroke.Thickness = selected and 2 or 1 end
+		local icon=Instance.new("ImageLabel"); icon.BackgroundTransparency=1; icon.Size=UDim2.fromOffset(58,58); icon.Position=UDim2.fromOffset(10,10); icon.Image=getBugIcon(bug,cfg); icon.Parent=row
+		local name=Instance.new("TextLabel"); name.BackgroundTransparency=1; name.Size=UDim2.new(1,-370,0,24); name.Position=UDim2.fromOffset(76,8); name.TextXAlignment=Enum.TextXAlignment.Left; name.Text=tostring(getDisplayName(bug,cfg)); name.TextSize=15; styleLabel(name,true); name.Parent=row
+		local bonus = getFarmerBonuses(bug)[1]; local bonusLabel=Instance.new("TextLabel"); bonusLabel.BackgroundTransparency=1; bonusLabel.Size=UDim2.new(1,-370,0,18); bonusLabel.Position=UDim2.fromOffset(76,34); bonusLabel.TextXAlignment=Enum.TextXAlignment.Left; bonusLabel.Text=bonus and formatBonus(bonus) or "No farmer bonus"; bonusLabel.TextColor3=COLORS.good; bonusLabel.TextSize=13; styleLabel(bonusLabel,false); bonusLabel.Parent=row
+		local rarityBadge = makeBadge(row, rowData.Rarity, getRarityColor(rowData.Rarity)); rarityBadge.Position=UDim2.new(1,-298,0.5,-11)
+		local val = makeBadge(row, "+"..tostring(rowData.Value).." Essence", Color3.fromRGB(56,108,78)); val.Position=UDim2.new(1,-214,0.5,-11)
+		if reason then local st=makeBadge(row, reason, COLORS.warn); st.Position=UDim2.new(1,-130,0.5,-11) end
+		local lock=makeButton(row, isBugLocked(bug) and "🔓" or "🔒", COLORS.cardDark, UDim2.fromOffset(36,30)); lock.Position=UDim2.new(1,-146,0.5,-15); lock.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid) end)
+		local selectBtn=makeButton(row, selected and "Selected" or "Select", reason and Color3.fromRGB(62,74,89) or (selected and COLORS.good or COLORS.accent), UDim2.fromOffset(98,34)); selectBtn.Position=UDim2.new(1,-104,0.5,-17); if not reason then selectBtn.Activated:Connect(function() selectedRecycle[uid]=not selectedRecycle[uid] render(context) end) end
 	end
-	local footer = makeCard(scroll, UDim2.new(1,-20,0,52))
-	local recycle = makeButton(footer, "Recycle Selected", selectedCount>0 and COLORS.danger or COLORS.cardDark, UDim2.fromOffset(190,34)); recycle.Position=UDim2.fromOffset(8,9)
-	if selectedCount > 0 then recycle.Activated:Connect(function() recycleConfirmState={Count=selectedCount, Final=finalGain, High=hasHighRarity, Epic=hasEpicPlus} render(context) end) end
-	local clearBtn = makeButton(footer, "Clear Selection", COLORS.cardDark, UDim2.fromOffset(140,34)); clearBtn.Position=UDim2.fromOffset(206,9); clearBtn.Activated:Connect(function() selectedRecycle={} render(context) end)
+	local footer = makeCard(scroll, UDim2.new(1,-20,0,56)); footer.BackgroundColor3=Color3.fromRGB(14,30,51)
+	local recycle = makeButton(footer, "Recycle Selected", selectedCount>0 and COLORS.danger or Color3.fromRGB(67,74,88), UDim2.fromOffset(220,38)); recycle.Position=UDim2.fromOffset(8,9)
+	if selectedCount > 0 then recycle.Activated:Connect(function() recycleConfirmState={Count=selectedCount, Final=finalGain, High=hasHighRarity, Epic=hasEpicPlus}; clearRecycleModal(); render(context) end) end
+	local clearBtn = makeButton(footer, "Clear Selection", COLORS.cardDark, UDim2.fromOffset(170,38)); clearBtn.Position=UDim2.fromOffset(236,9); clearBtn.Activated:Connect(function() selectedRecycle={} render(context) end)
+
 	if recycleConfirmState then
-		local modal = makeCard(root, UDim2.fromOffset(470, 220)); modal.Position=UDim2.new(0.5,-235,0.5,-110); modal.ZIndex=20
-		local msg = recycleConfirmState.High and "Legendary/Mythic bugs included. This cannot be undone." or (recycleConfirmState.Epic and "Epic bugs included. Please confirm recycle." or "Recycle selected bugs into essence?")
-		local t=Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.new(1,-20,0,96); t.Position=UDim2.fromOffset(10,20); t.TextWrapped=true; t.Text=msg.."\nSelected: "..tostring(recycleConfirmState.Count).."\nEstimated Gain: +"..tostring(recycleConfirmState.Final); t.TextColor3=COLORS.text; styleLabel(t,true); t.Parent=modal
-		local ok=makeButton(modal,"Confirm",COLORS.danger,UDim2.fromOffset(120,34)); ok.Position=UDim2.new(0.5,-126,1,-46); ok.Activated:Connect(function() local uids={}; for uid,picked in pairs(selectedRecycle) do if picked and inventory[uid] then table.insert(uids,uid) end end; context.Controllers.BugFarm.RecycleSelected(uids, recycleConfirmState.High == true); selectedRecycle={}; recycleConfirmState=nil; render(context) end)
-		local cancel=makeButton(modal,"Cancel",COLORS.cardDark,UDim2.fromOffset(120,34)); cancel.Position=UDim2.new(0.5,6,1,-46); cancel.Activated:Connect(function() recycleConfirmState=nil render(context) end)
+		clearRecycleModal()
+		local confirmState = recycleConfirmState
+		local confirmHigh = confirmState and confirmState.High == true
+		local confirmCount = confirmState and confirmState.Count or 0
+		local confirmFinal = confirmState and confirmState.Final or 0
+		local confirmEpic = confirmState and confirmState.Epic == true
+		recycleModalOverlay = Instance.new("TextButton"); recycleModalOverlay.Name="RecycleConfirmOverlay"; recycleModalOverlay.BackgroundColor3=Color3.new(0,0,0); recycleModalOverlay.BackgroundTransparency=0.35; recycleModalOverlay.Text=""; recycleModalOverlay.AutoButtonColor=false; recycleModalOverlay.Size=UDim2.fromScale(1,1); recycleModalOverlay.ZIndex=50; recycleModalOverlay.Parent=contentHost
+		local modal = makeCard(recycleModalOverlay, UDim2.fromOffset(520, 290)); modal.Position=UDim2.new(0.5,-260,0.5,-145); modal.BackgroundColor3=Color3.fromRGB(14,34,58)
+		local mt=Instance.new("TextLabel"); mt.BackgroundTransparency=1; mt.Size=UDim2.new(1,-28,0,34); mt.Position=UDim2.fromOffset(14,14); mt.TextXAlignment=Enum.TextXAlignment.Left; mt.TextSize=22; mt.Text=confirmHigh and "High-Rarity Recycling Warning" or "Confirm Recycling"; styleLabel(mt,true); mt.Parent=modal
+		local msg = confirmHigh and "Legendary/Mythic bugs are included. This cannot be undone." or (confirmEpic and "Epic bugs are included. Please confirm." or "Recycle selected bugs into essence?")
+		local t=Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.new(1,-28,0,122); t.Position=UDim2.fromOffset(14,56); t.TextWrapped=true; t.TextXAlignment=Enum.TextXAlignment.Left; t.TextYAlignment=Enum.TextYAlignment.Top; t.Text=msg.."
+
+Selected Bugs: "..tostring(confirmCount).."
+Estimated Essence Gain: +"..tostring(confirmFinal).."
+
+This action is irreversible."; t.TextColor3=COLORS.text; t.TextSize=16; styleLabel(t,false); t.Parent=modal
+		local ok=makeButton(modal,"Confirm Recycling",COLORS.danger,UDim2.fromOffset(220,40)); ok.Position=UDim2.new(1,-236,1,-54); ok.Activated:Connect(function() local uids={}; for uid,picked in pairs(selectedRecycle) do if picked and inventory[uid] then table.insert(uids,uid) end end; clearRecycleModal(); recycleConfirmState=nil; if #uids==0 then selectedRecycle={}; render(context); return end; selectedRecycle={}; context.Controllers.BugFarm.RecycleSelected(uids, confirmHigh); render(context) end)
+		local cancel=makeButton(modal,"Cancel",COLORS.cardDark,UDim2.fromOffset(130,40)); cancel.Position=UDim2.new(0,14,1,-54); cancel.Activated:Connect(function() clearRecycleModal(); recycleConfirmState=nil; render(context) end)
+		for _, inst in ipairs(recycleModalOverlay:GetDescendants()) do if inst:IsA("GuiObject") then inst.ZIndex = math.max(inst.ZIndex, 51) end end
 	end
+	task.defer(function() local maxY = math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteSize.Y); scroll.CanvasPosition = Vector2.new(0, math.clamp(recycleScrollY, 0, maxY)) end)
 end
+
 
 render = function(context)
 	if not root then return end
+	clearRecycleModal()
 	clear(contentHost)
 	local bugs = getBugsState(context)
 	local inventory = bugs.Inventory or {}
@@ -1295,7 +1317,7 @@ function BugFarmApp.Mount(target, context)
 		underline.BorderSizePixel = 0
 		underline.Visible = false
 		underline.Parent = tab
-		tab.Activated:Connect(function() selectedTab = name render(context) end)
+		tab.Activated:Connect(function() if selectedTab == "Recycling" and name ~= "Recycling" then clearRecycleModal() end selectedTab = name render(context) end)
 		tabButtons[name] = tab
 	end
 
@@ -1312,6 +1334,7 @@ function BugFarmApp.Mount(target, context)
 end
 
 function BugFarmApp.Unmount()
+	clearRecycleModal()
 	if stateConn then stateConn:Disconnect() end
 	if bugdexInlineHost then
 		BugdexView.Unmount()
