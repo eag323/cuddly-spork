@@ -40,7 +40,10 @@ local function checkPriceAlerts()
 	end
 end
 
-local function patchAtPath(root: { [any]: any }, path: { string }, value: any): ()
+local function patchAtPath(root: { [any]: any }, path: { any }, value: any): ()
+	if #path == 0 then
+		return
+	end
 	local node = root
 	for i = 1, #path - 1 do
 		local key = path[i]
@@ -50,6 +53,24 @@ local function patchAtPath(root: { [any]: any }, path: { string }, value: any): 
 		node = node[key]
 	end
 	node[path[#path]] = value
+end
+
+local function applyStatePatchPayload(payload: { [string]: any }): boolean
+	if type(payload) ~= "table" then
+		return false
+	end
+	if type(payload.PlayerData) == "table" then
+		context.State.PlayerData = payload.PlayerData
+		return true
+	end
+	if type(payload.Path) ~= "table" then
+		return false
+	end
+	if type(context.State.PlayerData) ~= "table" then
+		context.State.PlayerData = {}
+	end
+	patchAtPath(context.State.PlayerData, payload.Path, payload.Value)
+	return true
 end
 
 local function refreshForPatch(path: { any }?): ()
@@ -104,16 +125,12 @@ function MarketController.Start(): ()
 	end)
 
 	context.Remotes.StatePatch.OnClientEvent:Connect(function(payload)
-		if type(payload) ~= "table" or type(payload.Path) ~= "table" then
+		local path = if type(payload) == "table" then payload.Path else nil
+		local shouldTrackPassiveFood = type(path) == "table" and path[1] == "Currencies" and path[2] == "Food"
+		local previousFoodValue = lastFoodValue
+		if not applyStatePatchPayload(payload) then
 			return
 		end
-		if type(context.State.PlayerData) ~= "table" then
-			context.State.PlayerData = {}
-		end
-
-		local shouldTrackPassiveFood = payload.Path[1] == "Currencies" and payload.Path[2] == "Food"
-		local previousFoodValue = lastFoodValue
-		patchAtPath(context.State.PlayerData, payload.Path, payload.Value)
 
 		if shouldTrackPassiveFood and type(payload.Value) == "number" then
 			local now = os.clock()
@@ -135,11 +152,35 @@ function MarketController.Start(): ()
 				passiveFlushAt = now + PASSIVE_FEEDBACK_WINDOW
 			end
 		end
-		refreshForPatch(payload.Path)
+		refreshForPatch(path)
 		if context.Events and context.Events.StateChanged then
 			context.Events.StateChanged:Fire(context.State.PlayerData)
 		end
 	end)
+
+
+	if context.Remotes.CurrencyUpdated then
+		context.Remotes.CurrencyUpdated.OnClientEvent:Connect(function(payload)
+			if type(payload) ~= "table" then
+				return
+			end
+			if type(context.State.PlayerData) ~= "table" then
+				context.State.PlayerData = {}
+			end
+			if type(context.State.PlayerData.Currencies) ~= "table" then
+				context.State.PlayerData.Currencies = {}
+			end
+			for key, value in pairs(payload) do
+				if type(key) == "string" then
+					context.State.PlayerData.Currencies[key] = value
+				end
+			end
+			refreshForPatch({"Currencies"})
+			if context.Events and context.Events.StateChanged then
+				context.Events.StateChanged:Fire(context.State.PlayerData)
+			end
+		end)
+	end
 
 	context.Remotes.MarketPriceUpdated.OnClientEvent:Connect(function(payload)
 		if type(payload) ~= "table" then
