@@ -882,12 +882,14 @@ local function renderRecyclingTab(context, scroll, bugs, inventory, owned, farme
 		local modal = makeCard(recycleModalOverlay, UDim2.fromOffset(520, 290)); modal.Position=UDim2.new(0.5,-260,0.5,-145); modal.BackgroundColor3=Color3.fromRGB(14,34,58)
 		local mt=Instance.new("TextLabel"); mt.BackgroundTransparency=1; mt.Size=UDim2.new(1,-28,0,34); mt.Position=UDim2.fromOffset(14,14); mt.TextXAlignment=Enum.TextXAlignment.Left; mt.TextSize=22; mt.Text=confirmHigh and "High-Rarity Recycling Warning" or "Confirm Recycling"; styleLabel(mt,true); mt.Parent=modal
 		local msg = confirmHigh and "Legendary/Mythic bugs are included. This cannot be undone." or (confirmEpic and "Epic bugs are included. Please confirm." or "Recycle selected bugs into essence?")
-		local t=Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.new(1,-28,0,122); t.Position=UDim2.fromOffset(14,56); t.TextWrapped=true; t.TextXAlignment=Enum.TextXAlignment.Left; t.TextYAlignment=Enum.TextYAlignment.Top; t.Text=msg.."
-
-Selected Bugs: "..tostring(confirmCount).."
-Estimated Essence Gain: +"..tostring(confirmFinal).."
-
-This action is irreversible."; t.TextColor3=COLORS.text; t.TextSize=16; styleLabel(t,false); t.Parent=modal
+		local t=Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.new(1,-28,0,122); t.Position=UDim2.fromOffset(14,56); t.TextWrapped=true; t.TextXAlignment=Enum.TextXAlignment.Left; t.TextYAlignment=Enum.TextYAlignment.Top; t.Text=table.concat({
+			msg,
+			"",
+			"Selected Bugs: "..tostring(confirmCount),
+			"Estimated Essence Gain: +"..tostring(confirmFinal),
+			"",
+			"This action is irreversible.",
+		}, "\n"); t.TextColor3=COLORS.text; t.TextSize=16; styleLabel(t,false); t.Parent=modal
 		local ok=makeButton(modal,"Confirm Recycling",COLORS.danger,UDim2.fromOffset(220,40)); ok.Position=UDim2.new(1,-236,1,-54); ok.Activated:Connect(function() local uids={}; for uid,picked in pairs(selectedRecycle) do if picked and inventory[uid] then table.insert(uids,uid) end end; clearRecycleModal(); recycleConfirmState=nil; if #uids==0 then selectedRecycle={}; render(context); return end; selectedRecycle={}; context.Controllers.BugFarm.RecycleSelected(uids, confirmHigh); render(context) end)
 		local cancel=makeButton(modal,"Cancel",COLORS.cardDark,UDim2.fromOffset(130,40)); cancel.Position=UDim2.new(0,14,1,-54); cancel.Activated:Connect(function() clearRecycleModal(); recycleConfirmState=nil; render(context) end)
 		for _, inst in ipairs(recycleModalOverlay:GetDescendants()) do if inst:IsA("GuiObject") then inst.ZIndex = math.max(inst.ZIndex, 51) end end
