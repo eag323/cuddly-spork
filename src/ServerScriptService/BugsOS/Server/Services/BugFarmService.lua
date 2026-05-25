@@ -158,22 +158,70 @@ function BugFarmService.Start()
 		ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
 	end)
 	remotes.Ascend.OnServerEvent:Connect(function(player,payload)
-		local d=ProfileService.GetPlayerData(player); if not d or type(payload)~="table" then return end; ensureData(d)
-		d.Currencies = d.Currencies or {}; d.Currencies.BugEssence = tonumber(d.Currencies.BugEssence) or 0
-		local uid = payload.Uid; local bug = d.Bugs.Inventory[uid]; if type(uid)~="string" or not bug then return end
+		local playerName = if player then player.Name else "<nil>"
+		local uid = if type(payload) == "table" then payload.Uid else nil
+		print("[BugFarmService] Ascend request", playerName, uid)
+
+		local d = ProfileService.GetPlayerData(player)
+		if not d then
+			warn("[BugFarmService] Ascend rejected: missing player data")
+			return
+		end
+		if type(payload) ~= "table" then
+			warn("[BugFarmService] Ascend rejected: invalid payload")
+			return
+		end
+
+		ensureData(d)
+		d.Currencies = d.Currencies or {}
+		d.Currencies.BugEssence = tonumber(d.Currencies.BugEssence) or 0
+
+		if type(uid) ~= "string" or uid == "" then
+			warn("[BugFarmService] Ascend rejected: invalid uid")
+			return
+		end
+		local bug = d.Bugs.Inventory[uid]
+		if not bug then
+			warn("[BugFarmService] Ascend rejected: bug not found", uid)
+			return
+		end
+
 		local cfg = BugConfig.GetBug(bug.BugId)
 		local maxRank = BugAscensionConfig.GetMaxRank()
 		local rank = math.max(0, tonumber(bug.Ascension) or 0)
-		if rank >= maxRank then notify(player, "Max ascension reached.", "Info"); return end
+		if rank >= maxRank then
+			warn("[BugFarmService] Ascend rejected: max rank", uid, rank)
+			notify(player, "Max ascension reached.", "Info")
+			return
+		end
 		local rarity = tostring((cfg and cfg.rarity) or bug.Rarity or "Common")
 		local cost = tonumber(BugAscensionConfig.GetCost(rarity, rank))
-		if cost == nil then notify(player, "Max ascension reached.", "Info"); return end
-		if cost <= 0 then notify(player, "Ascension is unavailable for this bug right now.", "Warning"); return end
-		if d.Currencies.BugEssence < cost then notify(player, "Not enough Bug Essence.", "Warning"); return end
-		d.Currencies.BugEssence -= cost; bug.Ascension = rank + 1
+
+		if cost == nil then
+			warn("[BugFarmService] Ascend rejected: missing cost", uid, rarity, rank)
+			notify(player, "Max ascension reached.", "Info")
+			return
+		end
+		if cost <= 0 then
+			warn("[BugFarmService] Ascend rejected: invalid cost", uid, cost)
+			notify(player, "Ascension is unavailable for this bug right now.", "Warning")
+			return
+		end
+		if d.Currencies.BugEssence < cost then
+			warn("[BugFarmService] Ascend rejected: not enough essence", uid, d.Currencies.BugEssence, cost)
+			notify(player, "Not enough Bug Essence.", "Warning")
+			return
+		end
+
+		local oldRank = rank
+		local newRank = rank + 1
+		d.Currencies.BugEssence -= cost
+		bug.Ascension = newRank
+
 		ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
 		ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
 		notify(player, string.format("Bug ascended to Rank %d.", bug.Ascension), "Success")
+		print("[BugFarmService] Ascend success", uid, oldRank, newRank, cost, d.Currencies.BugEssence)
 	end)
 	remotes.BuyExtraSlot.OnServerEvent:Connect(function(player)
 		local d=ProfileService.GetPlayerData(player); if not d then return end; ensureData(d)

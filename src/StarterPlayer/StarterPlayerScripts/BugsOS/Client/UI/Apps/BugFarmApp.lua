@@ -717,9 +717,22 @@ local function makeDetailPopup(context, uid, bug)
 	local ascBtn = makeButton(ascSec, ascBtnText, COLORS.accent, UDim2.new(1,0,0,32)); ascBtn.TextColor3=Color3.fromRGB(8,20,34)
 	if canAscend then
 		ascBtn.Activated:Connect(function()
+			local requestedRank = rank
 			setButtonEnabled(ascBtn, false, COLORS.accent)
 			ascBtn.Text = "Ascending..."
 			context.Controllers.BugFarm.Ascend(uid)
+			task.delay(2, function()
+				if not detailOverlay or not detailOverlay.Parent then
+					return
+				end
+				local currentBugs = getBugsState(context)
+				local currentBug = (currentBugs.Inventory or {})[uid]
+				local currentRank = getBugAscension(currentBug)
+				if currentRank <= requestedRank then
+					setButtonEnabled(ascBtn, true, COLORS.accent)
+					ascBtn.Text = "Ascend Bug"
+				end
+			end)
 		end)
 	else
 		setButtonEnabled(ascBtn, false, COLORS.accent)
