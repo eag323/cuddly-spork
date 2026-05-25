@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
 local BugConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugConfig"))
 local BugBonusConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugBonusConfig"))
+local BugAscensionConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugAscensionConfig"))
 local Window = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("Window"))
 local BugdexView = require(script.Parent:WaitForChild("Views"):WaitForChild("BugdexView"))
 
@@ -108,15 +109,6 @@ end
 
 
 
-local FALLBACK_ASCENSION_COSTS = {
-	Common = {5, 10, 20, 40, 80},
-	Uncommon = {10, 20, 40, 80, 160},
-	Rare = {25, 50, 100, 200, 400},
-	Epic = {75, 150, 300, 600, 1200},
-	Legendary = {250, 500, 1000, 2000, 4000},
-	Mythic = {1000, 2000, 4000, 8000, 16000},
-}
-
 local function getOwnedBugUid(ownedBug, fallbackUid)
 	if type(ownedBug) ~= "table" then return fallbackUid end
 	return ownedBug.Uid or ownedBug.Id or ownedBug.InstanceId or fallbackUid
@@ -214,9 +206,45 @@ end
 
 local function getBugAscension(ownedBug)
 	if type(ownedBug) ~= "table" then return 0 end
-	return math.max(0, math.min(5, tonumber(ownedBug.Ascension) or 0))
+	return math.max(0, math.min(BugAscensionConfig.GetMaxRank(), tonumber(ownedBug.Ascension) or 0))
 end
 
+
+local function getAscendedCombatStatValue(baseValue, rank)
+	local numericBase = tonumber(baseValue) or 0
+	local multiplier = BugAscensionConfig.GetCombatMultiplier(rank)
+	return math.floor(numericBase * multiplier + 0.5)
+end
+
+local function makeAscensionStatPreviewRow(parent, statLabel, baseValue, currentRank, maxRank)
+	local row = Instance.new("Frame")
+	row.BackgroundTransparency = 1
+	row.Size = UDim2.new(1, 0, 0, 20)
+	row.Parent = parent
+
+	local currentValue = getAscendedCombatStatValue(baseValue, currentRank)
+	local nextRank = math.min(maxRank, currentRank + 1)
+	local nextValue = getAscendedCombatStatValue(baseValue, nextRank)
+
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.new(0.28, 0, 1, 0)
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Text = statLabel
+	label.TextSize = 12
+	styleLabel(label, true)
+	label.Parent = row
+
+	local value = Instance.new("TextLabel")
+	value.BackgroundTransparency = 1
+	value.Size = UDim2.new(0.72, 0, 1, 0)
+	value.Position = UDim2.new(0.28, 0, 0, 0)
+	value.TextXAlignment = Enum.TextXAlignment.Right
+	value.Text = string.format("%d → %d", currentValue, nextValue)
+	value.TextSize = 12
+	styleLabel(value, false)
+	value.Parent = row
+end
 local function clear(container)
 	for _, child in ipairs(container:GetChildren()) do
 		child:Destroy()
@@ -594,15 +622,74 @@ local function makeDetailPopup(context, uid, bug)
 	end
 
 	local rank = getBugAscension(bug)
-	local costTable = ((cfg.ascension or {}).essenceRequiredByRank) or FALLBACK_ASCENSION_COSTS[rarity] or FALLBACK_ASCENSION_COSTS.Common
-	local cost = tonumber(costTable[rank + 1]) or tonumber(costTable[rank + 2]) or 0
+	local maxRank = BugAscensionConfig.GetMaxRank()
+	local rarityName = tostring(rarity)
+	local cost = tonumber(BugAscensionConfig.GetCost(rarityName, rank))
 	local essence = tonumber((((context.State.PlayerData or {}).Currencies or {}).BugEssence)) or 0
-	local ascSec = makeCard(bodyContent, UDim2.new(1,0,0,74)); ascSec.BackgroundColor3=COLORS.cardDark
-	local ascPad = Instance.new("UIPadding", ascSec); ascPad.PaddingLeft=UDim.new(0,10); ascPad.PaddingRight=UDim.new(0,10); ascPad.PaddingTop=UDim.new(0,8); ascPad.PaddingBottom=UDim.new(0,8)
-	local ascTitle = Instance.new("TextLabel"); ascTitle.BackgroundTransparency=1; ascTitle.Size=UDim2.new(1,-170,0,16); ascTitle.Position=UDim2.fromOffset(0,0); ascTitle.Text="ASCENSION"; ascTitle.TextXAlignment=Enum.TextXAlignment.Left; ascTitle.TextSize=13; styleLabel(ascTitle,true); ascTitle.TextColor3=COLORS.accent; ascTitle.Parent=ascSec
-	local ascInfo = Instance.new("TextLabel"); ascInfo.BackgroundTransparency=1; ascInfo.Size=UDim2.new(1,-170,0,32); ascInfo.Position=UDim2.fromOffset(0,24); ascInfo.TextXAlignment=Enum.TextXAlignment.Left; ascInfo.TextYAlignment=Enum.TextYAlignment.Top; ascInfo.TextWrapped=true; ascInfo.Text=("Rank %d / 5 • Cost: %d • Essence: %d"):format(rank,cost,essence); ascInfo.TextSize=12; styleLabel(ascInfo,false); ascInfo.Parent=ascSec
-	local ascBtn = makeButton(ascSec, rank >= 5 and "Max Ascension" or "Ascend", COLORS.accent, UDim2.fromOffset(146, 32)); ascBtn.Position=UDim2.new(1,-146,0.5,-16); ascBtn.TextColor3=Color3.fromRGB(8,20,34)
-	if rank >= 5 or essence < cost then setButtonEnabled(ascBtn, false, COLORS.accent) if essence < cost and rank < 5 then ascBtn.Text = "Not Enough Essence" end else ascBtn.Activated:Connect(function() context.Controllers.BugFarm.Ascend(uid) if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end) end
+	local hasNextRank = rank < maxRank and cost ~= nil
+	local neededEssence = (cost and cost > essence) and (cost - essence) or 0
+
+	local ascSec = makeCard(bodyContent, UDim2.new(1,0,0,238)); ascSec.BackgroundColor3 = COLORS.cardDark
+	local ascPad = Instance.new("UIPadding", ascSec); ascPad.PaddingLeft=UDim.new(0,10); ascPad.PaddingRight=UDim.new(0,10); ascPad.PaddingTop=UDim.new(0,8); ascPad.PaddingBottom=UDim.new(0,10)
+	local ascList = Instance.new("UIListLayout", ascSec); ascList.FillDirection=Enum.FillDirection.Vertical; ascList.Padding=UDim.new(0,6); ascList.SortOrder=Enum.SortOrder.LayoutOrder
+
+	local headerRow = Instance.new("Frame"); headerRow.BackgroundTransparency=1; headerRow.Size=UDim2.new(1,0,0,20); headerRow.Parent=ascSec
+	local ascTitle = Instance.new("TextLabel"); ascTitle.BackgroundTransparency=1; ascTitle.Size=UDim2.new(0.6,0,1,0); ascTitle.Text="ASCENSION"; ascTitle.TextXAlignment=Enum.TextXAlignment.Left; ascTitle.TextSize=13; styleLabel(ascTitle,true); ascTitle.TextColor3=COLORS.accent; ascTitle.Parent=headerRow
+	local rankBadge = Instance.new("TextLabel"); rankBadge.BackgroundTransparency=1; rankBadge.Size=UDim2.new(0.4,0,1,0); rankBadge.Position=UDim2.fromScale(0.6,0); rankBadge.TextXAlignment=Enum.TextXAlignment.Right; rankBadge.Text=BugAscensionConfig.GetDisplayRank(rank); rankBadge.TextSize=12; styleLabel(rankBadge,true); rankBadge.TextColor3=COLORS.text; rankBadge.Parent=headerRow
+
+	local desc = Instance.new("TextLabel"); desc.BackgroundTransparency=1; desc.Size=UDim2.new(1,0,0,30); desc.TextWrapped=true; desc.TextXAlignment=Enum.TextXAlignment.Left; desc.TextYAlignment=Enum.TextYAlignment.Top; desc.Text="Improves combat stats. Farmer bonuses are not increased."; desc.TextSize=11; styleLabel(desc,false); desc.TextColor3=COLORS.muted; desc.Parent=ascSec
+
+	local pipRow = Instance.new("Frame"); pipRow.BackgroundTransparency=1; pipRow.Size=UDim2.new(1,0,0,16); pipRow.Parent=ascSec
+	for pipIndex = 1, maxRank do
+		local pip = Instance.new("Frame")
+		pip.Size = UDim2.fromOffset(12, 12)
+		pip.Position = UDim2.fromOffset((pipIndex - 1) * 18, 2)
+		pip.BackgroundColor3 = pipIndex <= rank and COLORS.good or Color3.fromRGB(58, 78, 100)
+		pip.BorderSizePixel = 0
+		pip.Parent = pipRow
+		Instance.new("UICorner", pip).CornerRadius = UDim.new(1, 0)
+	end
+
+	local costLabel = Instance.new("TextLabel"); costLabel.BackgroundTransparency=1; costLabel.Size=UDim2.new(1,0,0,18); costLabel.TextXAlignment=Enum.TextXAlignment.Left; costLabel.TextSize=12; styleLabel(costLabel,false); costLabel.Parent=ascSec
+	if hasNextRank and cost then
+		costLabel.Text = string.format("Required Essence: %d   •   You have: %d", cost, essence)
+	else
+		costLabel.Text = string.format("Required Essence: --   •   You have: %d", essence)
+	end
+
+	local statusLabel = Instance.new("TextLabel"); statusLabel.BackgroundTransparency=1; statusLabel.Size=UDim2.new(1,0,0,18); statusLabel.TextXAlignment=Enum.TextXAlignment.Left; statusLabel.TextSize=12; styleLabel(statusLabel,true); statusLabel.Parent=ascSec
+	if rank >= maxRank then
+		statusLabel.Text = "Max ascension reached."
+		statusLabel.TextColor3 = COLORS.muted
+	elseif cost and cost > 0 and essence >= cost then
+		statusLabel.Text = "Ready to ascend."
+		statusLabel.TextColor3 = COLORS.good
+	else
+		statusLabel.Text = string.format("Need %d more Bug Essence.", math.max(0, neededEssence))
+		statusLabel.TextColor3 = COLORS.warn
+	end
+
+	local statsPreview = Instance.new("Frame"); statsPreview.BackgroundTransparency=1; statsPreview.Size=UDim2.new(1,0,0,84); statsPreview.Parent=ascSec
+	local statsPreviewList = Instance.new("UIListLayout", statsPreview); statsPreviewList.FillDirection=Enum.FillDirection.Vertical; statsPreviewList.Padding=UDim.new(0,2)
+	for _, entry in ipairs({{"HP", stats.HP}, {"ATK", stats.ATK}, {"DEF", stats.DEF}, {"SPD", stats.SPD}}) do
+		makeAscensionStatPreviewRow(statsPreview, entry[1], entry[2], rank, maxRank)
+	end
+
+	local canAscend = rank < maxRank and cost ~= nil and cost > 0 and essence >= cost
+	local ascBtnText = "Ascend Bug"
+	if rank >= maxRank then
+		ascBtnText = "Max Ascension"
+	elseif cost == nil or cost <= 0 then
+		ascBtnText = "Ascension Unavailable"
+	elseif essence < cost then
+		ascBtnText = string.format("Need %d Essence", neededEssence)
+	end
+	local ascBtn = makeButton(ascSec, ascBtnText, COLORS.accent, UDim2.new(1,0,0,32)); ascBtn.TextColor3=Color3.fromRGB(8,20,34)
+	if canAscend then
+		ascBtn.Activated:Connect(function() context.Controllers.BugFarm.Ascend(uid) if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end)
+	else
+		setButtonEnabled(ascBtn, false, COLORS.accent)
+	end
 
 	applyNoTextStrokeRecursive(panel)
 

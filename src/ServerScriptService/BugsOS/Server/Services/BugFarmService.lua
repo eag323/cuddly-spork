@@ -7,6 +7,7 @@ local Remotes = Shared:WaitForChild("Remotes")
 local RemoteNames = require(Remotes:WaitForChild("RemoteNames"))
 local BugConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugConfig"))
 local MarketplaceConfig = require(Shared:WaitForChild("Config"):WaitForChild("MarketplaceConfig"))
+local BugAscensionConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugAscensionConfig"))
 local ProfileService = require(script.Parent:WaitForChild("ProfileService"))
 local BuffService = require(script.Parent:WaitForChild("BuffService"))
 
@@ -161,15 +162,18 @@ function BugFarmService.Start()
 		d.Currencies = d.Currencies or {}; d.Currencies.BugEssence = tonumber(d.Currencies.BugEssence) or 0
 		local uid = payload.Uid; local bug = d.Bugs.Inventory[uid]; if type(uid)~="string" or not bug then return end
 		local cfg = BugConfig.GetBug(bug.BugId)
-		local maxRank = 5
+		local maxRank = BugAscensionConfig.GetMaxRank()
 		local rank = math.max(0, tonumber(bug.Ascension) or 0)
 		if rank >= maxRank then notify(player, "Max ascension reached.", "Info"); return end
-		local base = ({Common=0,Uncommon=10,Rare=30,Epic=100,Legendary=300,Mythic=800})[tostring((cfg and cfg.rarity) or bug.Rarity or "Common")] or 0
-		local cost = base * (rank + 1)
+		local rarity = tostring((cfg and cfg.rarity) or bug.Rarity or "Common")
+		local cost = tonumber(BugAscensionConfig.GetCost(rarity, rank))
+		if cost == nil then notify(player, "Max ascension reached.", "Info"); return end
+		if cost <= 0 then notify(player, "Ascension is unavailable for this bug right now.", "Warning"); return end
 		if d.Currencies.BugEssence < cost then notify(player, "Not enough Bug Essence.", "Warning"); return end
 		d.Currencies.BugEssence -= cost; bug.Ascension = rank + 1
 		ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
 		ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
+		notify(player, string.format("Bug ascended to Rank %d.", bug.Ascension), "Success")
 	end)
 	remotes.BuyExtraSlot.OnServerEvent:Connect(function(player)
 		local d=ProfileService.GetPlayerData(player); if not d then return end; ensureData(d)
