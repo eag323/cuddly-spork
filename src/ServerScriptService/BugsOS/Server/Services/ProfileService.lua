@@ -6,8 +6,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BugsOSFolder = ReplicatedStorage:WaitForChild("BugsOS")
 local SharedFolder = BugsOSFolder:WaitForChild("Shared")
 local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local ConfigFolder = SharedFolder:WaitForChild("Config")
 
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
+local EconomyConfig = require(ConfigFolder:WaitForChild("EconomyConfig"))
+local BugConfig = require(ConfigFolder:WaitForChild("BugConfig"))
 
 type PlayerData = { [string]: any }
 
@@ -194,6 +197,50 @@ local function loadDefaultPlayerData(_player: Player): PlayerData
 	return deepCopy(DEFAULT_PLAYER_DATA)
 end
 
+local function maybeGrantAscensionTestKit(playerData: PlayerData): ()
+	if not (EconomyConfig.DEV_MODE and EconomyConfig.DEV_GRANT_ASCENSION_TEST_KIT) then
+		return
+	end
+
+	playerData.Currencies = playerData.Currencies or {}
+	local targetEssence = math.max(0, tonumber(EconomyConfig.DEV_TEST_BUG_ESSENCE) or 0)
+	playerData.Currencies.BugEssence = math.max(targetEssence, tonumber(playerData.Currencies.BugEssence) or 0)
+
+	playerData.Bugs = playerData.Bugs or {}
+	playerData.Bugs.Inventory = playerData.Bugs.Inventory or {}
+	local inventory = playerData.Bugs.Inventory
+	local currentCount = 0
+	for _uid, _bug in inventory do
+		currentCount += 1
+	end
+
+	local bugIds = {}
+	for bugId, _bugData in BugConfig.Bugs do
+		table.insert(bugIds, bugId)
+	end
+	if #bugIds == 0 then
+		return
+	end
+
+	local desiredCount = math.max(0, tonumber(EconomyConfig.DEV_TEST_RANDOM_BUG_COUNT) or 0)
+	local maxOwnedBugs = math.max(0, tonumber(BugConfig.MaxOwnedBugs) or 0)
+	local targetInventoryCount = math.min(maxOwnedBugs, math.max(currentCount, desiredCount))
+	local createCount = targetInventoryCount - currentCount
+	for index = 1, createCount do
+		local bugId = bugIds[math.random(1, #bugIds)]
+		local uid = string.format("dev_bug_%d_%06d", currentCount + index, math.random(0, 999999))
+		while inventory[uid] ~= nil do
+			uid = string.format("dev_bug_%d_%06d", currentCount + index, math.random(0, 999999))
+		end
+		inventory[uid] = {
+			Uid = uid,
+			BugId = bugId,
+			Locked = false,
+			Ascension = 0,
+		}
+	end
+end
+
 local function normalizeCosmetics(playerData: PlayerData): ()
 	playerData.Cosmetics = playerData.Cosmetics or {}
 	playerData.Cosmetics.Owned = playerData.Cosmetics.Owned or {}
@@ -234,6 +281,7 @@ end
 local function syncPlayer(player: Player): ()
 	local playerData = loadDefaultPlayerData(player)
 	normalizeCosmetics(playerData)
+	maybeGrantAscensionTestKit(playerData)
 	playerDataByUserId[player.UserId] = playerData
 
 	if stateFullSyncRemote then

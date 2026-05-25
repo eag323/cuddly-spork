@@ -209,6 +209,12 @@ local function getBugAscension(ownedBug)
 	return math.max(0, math.min(BugAscensionConfig.GetMaxRank(), tonumber(ownedBug.Ascension) or 0))
 end
 
+local function styleLabel(label, bold)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = COLORS.text
+	label.Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham
+	label.TextStrokeTransparency = 1
+end
 
 local function renderAscensionStars(parent, rank, position, size)
 	local starRank = math.max(0, math.floor(tonumber(rank) or 0))
@@ -356,13 +362,6 @@ end
 
 local function getRarityColor(rarity)
 	return rarityColors[rarity] or Color3.fromRGB(210, 210, 215)
-end
-
-local function styleLabel(label, bold)
-	label.BackgroundTransparency = 1
-	label.TextColor3 = COLORS.text
-	label.Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham
-	label.TextStrokeTransparency = 1
 end
 
 local function makeCard(parent, size)
@@ -658,7 +657,7 @@ local function makeDetailPopup(context, uid, bug)
 	local hasNextRank = rank < maxRank and cost ~= nil
 	local neededEssence = (cost and cost > essence) and (cost - essence) or 0
 
-	local ascSec = makeCard(bodyContent, UDim2.new(1,0,0,310)); ascSec.BackgroundColor3 = COLORS.cardDark
+	local ascSec = makeCard(bodyContent, UDim2.new(1,0,0,350)); ascSec.BackgroundColor3 = COLORS.cardDark
 	local ascPad = Instance.new("UIPadding", ascSec); ascPad.PaddingLeft=UDim.new(0,10); ascPad.PaddingRight=UDim.new(0,10); ascPad.PaddingTop=UDim.new(0,8); ascPad.PaddingBottom=UDim.new(0,10)
 	local ascList = Instance.new("UIListLayout", ascSec); ascList.FillDirection=Enum.FillDirection.Vertical; ascList.Padding=UDim.new(0,6); ascList.SortOrder=Enum.SortOrder.LayoutOrder
 
