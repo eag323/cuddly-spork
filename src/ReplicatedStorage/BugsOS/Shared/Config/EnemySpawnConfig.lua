@@ -1,0 +1,41 @@
+--!strict
+
+local EnemySpawnConfig = {
+	SpawnIntervalSecondsMin = 45,
+	SpawnIntervalSecondsMax = 90,
+	EnemyLifetimeSeconds = 120,
+	MaxActiveEnemiesPerPlayer = 1,
+	DesktopMarginPixels = 80,
+	EnemySizePixels = 76,
+	AuraSizePixels = 108,
+
+	-- Placeholder balance for v1; tune once we have live combat telemetry.
+	Tiers = {
+		CommonEnemy = {
+			Weight = 70,
+			StatMultiplier = 0.75,
+			RewardBugEssence = { Min = 1, Max = 3 },
+			RewardBugDust = { Min = 1, Max = 2 },
+		},
+		RareEnemy = {
+			Weight = 23,
+			StatMultiplier = 1.0,
+			RewardBugEssence = { Min = 3, Max = 7 },
+			RewardBugDust = { Min = 2, Max = 5 },
+		},
+		EliteEnemy = {
+			Weight = 6,
+			StatMultiplier = 1.35,
+			RewardBugEssence = { Min = 8, Max = 15 },
+			RewardBugDust = { Min = 6, Max = 12 },
+		},
+		MythicEnemy = {
+			Weight = 1,
+			StatMultiplier = 1.85,
+			RewardBugEssence = { Min = 20, Max = 40 },
+			RewardBugDust = { Min = 15, Max = 30 },
+		},
+	},
+}
+
+return EnemySpawnConfig
