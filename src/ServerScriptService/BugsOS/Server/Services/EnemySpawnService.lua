@@ -35,18 +35,23 @@ function S.Start()
  Players.PlayerRemoving:Connect(function(p) activeByUserId[p.UserId]=nil end)
  task.spawn(function() while true do for _,p in ipairs(Players:GetPlayers()) do if ProfileService.GetPlayerData(p) and not activeByUserId[p.UserId] then spawnForPlayer(p) end end task.wait(math.random(EnemySpawnConfig.SpawnIntervalSecondsMin,EnemySpawnConfig.SpawnIntervalSecondsMax)) end end)
  remotes.Attack.OnServerEvent:Connect(function(player,payload)
-  if type(payload)~="table" or type(payload.EnemyId)~="string" then remotes.AttackResult:FireClient(player,{Success=false,Reason="InvalidPayload"}); return end
-  local enemy=activeByUserId[player.UserId]; if not enemy then remotes.AttackResult:FireClient(player,{Success=false,Reason="NoEnemy"}); return end
-  if enemy.EnemyId~=payload.EnemyId then remotes.AttackResult:FireClient(player,{Success=false,Reason="NoEnemy"}); return end
-  if os.time()>enemy.ExpiresAt then activeByUserId[player.UserId]=nil; remotes.Despawned:FireClient(player,{EnemyId=enemy.EnemyId,Reason="Expired"}); remotes.AttackResult:FireClient(player,{Success=false,Reason="EnemyExpired"}); return end
-  local team,reason,d=buildCombatTeam(player); if not team then remotes.AttackResult:FireClient(player,{Success=false,Reason=reason}); return end
+  local requestEnemyId = type(payload)=="table" and payload.EnemyId or nil
+  print("[EnemySpawnService] Attack request", player.Name, tostring(requestEnemyId))
+
+  if type(payload)~="table" or type(payload.EnemyId)~="string" then warn("[EnemySpawnService] Attack rejected: InvalidPayload"); remotes.AttackResult:FireClient(player,{Success=false,Reason="InvalidPayload",EnemyId=requestEnemyId}); return end
+  local enemy=activeByUserId[player.UserId]; if not enemy then warn("[EnemySpawnService] Attack rejected: NoEnemy"); remotes.AttackResult:FireClient(player,{Success=false,Reason="NoEnemy",EnemyId=payload.EnemyId}); return end
+  if enemy.EnemyId~=payload.EnemyId then warn("[EnemySpawnService] Attack rejected: NoEnemy"); remotes.AttackResult:FireClient(player,{Success=false,Reason="NoEnemy",EnemyId=payload.EnemyId}); return end
+  if os.time()>enemy.ExpiresAt then activeByUserId[player.UserId]=nil; warn("[EnemySpawnService] Attack rejected: EnemyExpired"); remotes.Despawned:FireClient(player,{EnemyId=enemy.EnemyId,Reason="Expired"}); remotes.AttackResult:FireClient(player,{Success=false,Reason="EnemyExpired",EnemyId=enemy.EnemyId}); return end
+  local team,reason,d=buildCombatTeam(player); if not team then warn("[EnemySpawnService] Attack rejected: "..tostring(reason)); remotes.AttackResult:FireClient(player,{Success=false,Reason=reason,EnemyId=enemy.EnemyId}); return end
   local res=BattleSimulator.Run(team,{{Id=enemy.EnemyId,Name=enemy.DisplayName,Icon=enemy.Icon,Rarity=enemy.Rarity,Rank=0,Team="Enemy",Stats=enemy.Stats}},os.time(),40)
-  local out={Success=true,Winner=res.Winner,Log=res.Log,Rewards={BugEssence=0,BugDust=0},EnemyId=enemy.EnemyId}
+  local out={Success=true,Winner=res.Winner,Turns=res.Turns,PlayerRemaining=res.PlayerRemaining,EnemyRemaining=res.EnemyRemaining,Log=res.Log,Rewards={BugEssence=0,BugDust=0},EnemyId=enemy.EnemyId}
+  print("[EnemySpawnService] Attack resolved", tostring(res.Winner), enemy.EnemyId)
   if res.Winner=="Player" then d.Currencies=d.Currencies or {}; d.Currencies.BugEssence=(tonumber(d.Currencies.BugEssence)or 0)+(enemy.RewardsPreview.BugEssence or 0); d.Currencies.BugDust=(tonumber(d.Currencies.BugDust)or 0)+(enemy.RewardsPreview.BugDust or 0); out.Rewards=enemy.RewardsPreview
    ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence); ProfileService.PatchPlayerState(player,{"Currencies","BugDust"},d.Currencies.BugDust)
-   activeByUserId[player.UserId]=nil; remotes.Despawned:FireClient(player,{EnemyId=enemy.EnemyId,Reason="Defeated"})
+   activeByUserId[player.UserId]=nil
   end
   remotes.AttackResult:FireClient(player,out)
+  if res.Winner=="Player" then task.delay(0.25,function() remotes.Despawned:FireClient(player,{EnemyId=enemy.EnemyId,Reason="Defeated"}) end) end
  end)
 end
 return S
