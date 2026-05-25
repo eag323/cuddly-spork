@@ -5,12 +5,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
 local RemotesFolder = Shared:WaitForChild("Remotes")
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
+local ascendResultConn = nil
+local ascendResultHandlers: {((payload: {[string]: any}) -> ())} = {}
 
 function BugFarmController.Init(context): ()
 	contextRef = context
 end
-
-function BugFarmController.Start(): () end
 
 local function getRemote(...: string)
 	local tried = {}
@@ -51,6 +51,46 @@ local function getRemote(...: string)
 		warn(string.format("[BugFarmController] Missing remote for keys: %s", table.concat(tried, ", ")))
 	end
 	return nil
+end
+
+function BugFarmController.Start(): ()
+	local remote = getRemote("BugFarm_AscendResult")
+	if remote and not ascendResultConn then
+		ascendResultConn = remote.OnClientEvent:Connect(function(payload)
+			if type(payload) ~= "table" or not contextRef then return end
+			local uid = payload.Uid
+			local newRank = tonumber(payload.NewRank)
+			local bugEssence = tonumber(payload.BugEssence)
+			local playerData = ((contextRef.State or {}).PlayerData or {})
+			local bugs = playerData.Bugs
+			local inventory = bugs and bugs.Inventory
+			if type(uid) == "string" and type(inventory) == "table" and type(inventory[uid]) == "table" and newRank ~= nil then
+				inventory[uid].Ascension = newRank
+			end
+			if bugEssence ~= nil then
+				playerData.Currencies = playerData.Currencies or {}
+				playerData.Currencies.BugEssence = bugEssence
+			end
+			for _, handler in ipairs(ascendResultHandlers) do
+				handler(payload)
+			end
+			if contextRef.Events and contextRef.Events.StateChanged then
+				contextRef.Events.StateChanged:Fire()
+			end
+		end)
+	end
+end
+
+function BugFarmController.BindAscendResult(handler: (payload: {[string]: any}) -> ()): (() -> ())
+	table.insert(ascendResultHandlers, handler)
+	return function()
+		for i, fn in ipairs(ascendResultHandlers) do
+			if fn == handler then
+				table.remove(ascendResultHandlers, i)
+				break
+			end
+		end
+	end
 end
 
 local function fire(remoteNames: {string}, payload: {[string]: any}?): boolean

@@ -17,6 +17,7 @@ local root
 local tabButtons: {[string]: TextButton} = {}
 local contentHost
 local stateConn
+local ascendResultUnbind: (() -> ())? = nil
 local selectedTab = "My Bugs"
 local selectedRecycle: {[string]: boolean} = {}
 local searchQuery = ""
@@ -1599,12 +1600,23 @@ function BugFarmApp.Mount(target, context)
 			refreshOpenDetailPopup(context)
 		end)
 	end
+	if context.Controllers and context.Controllers.BugFarm and type(context.Controllers.BugFarm.BindAscendResult) == "function" then
+		ascendResultUnbind = context.Controllers.BugFarm.BindAscendResult(function(payload)
+			local uid = if type(payload) == "table" then payload.Uid else nil
+			if uid ~= nil and detailTargetUid ~= nil and tostring(uid) == tostring(detailTargetUid) then
+				detailPendingAscendUid = nil
+				detailPendingAscendRank = nil
+				refreshOpenDetailPopup(context)
+			end
+		end)
+	end
 	render(context)
 end
 
 function BugFarmApp.Unmount()
 	clearRecycleModal()
 	if stateConn then stateConn:Disconnect() end
+	if ascendResultUnbind then ascendResultUnbind(); ascendResultUnbind = nil end
 	closeDetailPopup()
 	if bugdexInlineHost then
 		BugdexView.Unmount()

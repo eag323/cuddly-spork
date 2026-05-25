@@ -32,6 +32,7 @@ local RemoteNames: RemoteNameMap = {
 	BugFarm_ToggleLock = "BugFarm_ToggleLock",
 	BugFarm_Recycle = "BugFarm_Recycle",
 	BugFarm_Ascend = "BugFarm_Ascend",
+	BugFarm_AscendResult = "BugFarm_AscendResult",
 	BugFarm_GetState = "BugFarm_GetState",
 	BugFarm_PromptExtraFarmerSlotPurchase = "BugFarm_PromptExtraFarmerSlotPurchase",
 	Bug_Recycle = "Bug_Recycle",
