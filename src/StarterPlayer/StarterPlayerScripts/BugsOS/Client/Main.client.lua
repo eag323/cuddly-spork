@@ -52,6 +52,7 @@ local requiredRemoteNames = {
 	GeneratorPromptExtraSlotPurchase = RemoteNames.Generator_PromptExtraSlotPurchase,
 	PrestigeRequest = RemoteNames.Prestige_Request,
 	NotificationPush = RemoteNames.Notification_Push,
+	CurrencyUpdated = RemoteNames.Currency_Updated,
 	BugSpawned = RemoteNames.Bug_Spawned,
 	BugCaptured = RemoteNames.Bug_Captured,
 	BugEscaped = RemoteNames.Bug_Escaped,
