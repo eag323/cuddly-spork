@@ -1,6 +1,7 @@
 --!strict
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
 local BugConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugConfig"))
@@ -715,15 +716,34 @@ local function makeDetailPopup(context, uid, bug)
 	end
 	local ascBtn = makeButton(ascSec, ascBtnText, COLORS.accent, UDim2.new(1,0,0,32)); ascBtn.TextColor3=Color3.fromRGB(8,20,34)
 	if canAscend then
-		ascBtn.Activated:Connect(function() context.Controllers.BugFarm.Ascend(uid) if detailOverlay then detailOverlay:Destroy(); detailOverlay=nil end end)
+		ascBtn.Activated:Connect(function()
+			setButtonEnabled(ascBtn, false, COLORS.accent)
+			ascBtn.Text = "Ascending..."
+			context.Controllers.BugFarm.Ascend(uid)
+		end)
 	else
 		setButtonEnabled(ascBtn, false, COLORS.accent)
 	end
 
 	applyNoTextStrokeRecursive(panel)
 
-	detailOverlay.Activated:Connect(function() if detailOverlay then detailOverlay:Destroy() detailOverlay = nil end end)
-	panel.InputBegan:Connect(function() end)
+	detailOverlay.InputBegan:Connect(function(input)
+		local inputType = input.UserInputType
+		if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then return end
+		local clickPos = UserInputService:GetMouseLocation()
+		if inputType == Enum.UserInputType.Touch and input.Position then
+			clickPos = Vector2.new(input.Position.X, input.Position.Y)
+		end
+		local panelPos = panel.AbsolutePosition
+		local panelSize = panel.AbsoluteSize
+		local insidePanel = clickPos.X >= panelPos.X and clickPos.X <= (panelPos.X + panelSize.X)
+			and clickPos.Y >= panelPos.Y and clickPos.Y <= (panelPos.Y + panelSize.Y)
+		if insidePanel then return end
+		if detailOverlay then
+			detailOverlay:Destroy()
+			detailOverlay = nil
+		end
+	end)
 end
 
 
