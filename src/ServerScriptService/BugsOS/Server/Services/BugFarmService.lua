@@ -77,6 +77,7 @@ function BugFarmService.Init()
 	remotes.Recycle = ensureRemote(RemoteNames.BugFarm_Recycle)
 	remotes.Ascend = ensureRemote(RemoteNames.BugFarm_Ascend)
 	remotes.AscendResult = ensureRemote(RemoteNames.BugFarm_AscendResult)
+	remotes.CombatTeamResult = ensureRemote(RemoteNames.BugFarm_CombatTeamResult)
 	-- Canonical remote expected by client startup checks.
 	remotes.BuyExtraSlot = ensureRemote(RemoteNames.BugFarm_BuyExtraFarmerSlot)
 	-- Backward compatibility for any legacy callers still firing the older prompt name.
@@ -101,17 +102,24 @@ function BugFarmService.Start()
 		local i=tonumber(payload.SlotIndex); if not i then return end; d.Bugs.FarmerSlots[i]=nil; ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
 	end)
 	remotes.EquipCombat.OnServerEvent:Connect(function(player,payload)
-		local d=ProfileService.GetPlayerData(player); if not d or type(payload)~="table" then return end; ensureData(d)
-		local uid=payload.Uid; if type(uid)~="string" or not d.Bugs.Inventory[uid] then return end
-		if inSlots(d.Bugs.FarmerSlots, uid) then notify(player, "This bug is already assigned to Farmers.", "Warning"); return end
-		if inSlots(d.Bugs.CombatSlots, uid) then notify(player, "Bug is already on the Combat Team.", "Info"); return end
+		local d=ProfileService.GetPlayerData(player); if not d then return end; ensureData(d)
+		if type(payload)~="table" then remotes.CombatTeamResult:FireClient(player,{Success=false,Action="Equip",Reason="InvalidPayload"}); return end
+		local uid=payload.Uid; if type(uid)~="string" or not d.Bugs.Inventory[uid] then remotes.CombatTeamResult:FireClient(player,{Success=false,Action="Equip",Uid=uid,Reason="BugNotFound"}); return end
+		if inSlots(d.Bugs.FarmerSlots, uid) then notify(player, "This bug is already assigned to Farmers.", "Warning"); remotes.CombatTeamResult:FireClient(player,{Success=false,Action="Equip",Uid=uid,Reason="AlreadyFarmer"}); return end
+		if inSlots(d.Bugs.CombatSlots, uid) then notify(player, "Bug is already on the Combat Team.", "Info"); remotes.CombatTeamResult:FireClient(player,{Success=false,Action="Equip",Uid=uid,Reason="AlreadyCombat"}); return end
 		local idx=tonumber(payload.SlotIndex) or firstEmpty(d.Bugs.CombatSlots, 5)
-		if not idx or idx<1 or idx>5 or d.Bugs.CombatSlots[idx] then notify(player,"Combat Team is full.","Warning"); return end
+		if idx and (idx<1 or idx>5) then remotes.CombatTeamResult:FireClient(player,{Success=false,Action="Equip",Uid=uid,SlotIndex=idx,Reason="InvalidSlot"}); return end
+		if not idx or d.Bugs.CombatSlots[idx] then notify(player,"Combat Team is full.","Warning"); remotes.CombatTeamResult:FireClient(player,{Success=false,Action="Equip",Uid=uid,Reason="TeamFull"}); return end
 		d.Bugs.CombatSlots[idx]=uid; ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
+		remotes.CombatTeamResult:FireClient(player, {Success = true, Action = "Equip", Uid = uid, SlotIndex = idx, CombatSlots = d.Bugs.CombatSlots, Bugs = d.Bugs})
 	end)
 	remotes.UnequipCombat.OnServerEvent:Connect(function(player,payload)
-		local d=ProfileService.GetPlayerData(player); if not d or type(payload)~="table" then return end; ensureData(d)
-		local i=tonumber(payload.SlotIndex); if not i or i < 1 or i > 5 then return end; d.Bugs.CombatSlots[i]=nil; ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
+		local d=ProfileService.GetPlayerData(player); if not d then return end; ensureData(d)
+		if type(payload)~="table" then remotes.CombatTeamResult:FireClient(player,{Success=false,Action="Unequip",Reason="InvalidPayload"}); return end
+		local i=tonumber(payload.SlotIndex); if not i or i < 1 or i > 5 then remotes.CombatTeamResult:FireClient(player,{Success=false,Action="Unequip",SlotIndex=payload.SlotIndex,Reason="InvalidSlot"}); return end
+		if d.Bugs.CombatSlots[i] == nil then remotes.CombatTeamResult:FireClient(player,{Success=false,Action="Unequip",SlotIndex=i,Reason="BugNotFound"}); return end
+		d.Bugs.CombatSlots[i]=nil; ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
+		remotes.CombatTeamResult:FireClient(player, {Success = true, Action = "Unequip", SlotIndex = i, CombatSlots = d.Bugs.CombatSlots, Bugs = d.Bugs})
 	end)
 	remotes.ToggleLock.OnServerEvent:Connect(function(player,payload)
 		local d=ProfileService.GetPlayerData(player); if not d or type(payload)~="table" then return end; ensureData(d)

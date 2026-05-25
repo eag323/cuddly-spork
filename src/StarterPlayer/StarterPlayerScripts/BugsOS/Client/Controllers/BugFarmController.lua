@@ -7,6 +7,8 @@ local RemotesFolder = Shared:WaitForChild("Remotes")
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
 local ascendResultConn = nil
 local ascendResultHandlers: {((payload: {[string]: any}) -> ())} = {}
+local combatTeamResultConn = nil
+local combatTeamResultHandlers: {((payload: {[string]: any}) -> ())} = {}
 
 function BugFarmController.Init(context): ()
 	contextRef = context
@@ -79,6 +81,26 @@ function BugFarmController.Start(): ()
 			end
 		end)
 	end
+	local combatTeamRemote = getRemote("BugFarm_CombatTeamResult")
+	if combatTeamRemote and not combatTeamResultConn then
+		combatTeamResultConn = combatTeamRemote.OnClientEvent:Connect(function(payload)
+			if type(payload) ~= "table" or not contextRef then return end
+			print("[BugFarmController] Combat team result", payload.Action, payload.Success, payload.Uid, payload.SlotIndex, payload.Reason)
+			local playerData = ((contextRef.State or {}).PlayerData or {})
+			playerData.Bugs = playerData.Bugs or {}
+			if type(payload.Bugs) == "table" then
+				playerData.Bugs = payload.Bugs
+			elseif type(payload.CombatSlots) == "table" then
+				playerData.Bugs.CombatSlots = payload.CombatSlots
+			end
+			for _, handler in ipairs(combatTeamResultHandlers) do
+				handler(payload)
+			end
+			if contextRef.Events and contextRef.Events.StateChanged then
+				contextRef.Events.StateChanged:Fire()
+			end
+		end)
+	end
 end
 
 function BugFarmController.BindAscendResult(handler: (payload: {[string]: any}) -> ()): (() -> ())
@@ -87,6 +109,18 @@ function BugFarmController.BindAscendResult(handler: (payload: {[string]: any}) 
 		for i, fn in ipairs(ascendResultHandlers) do
 			if fn == handler then
 				table.remove(ascendResultHandlers, i)
+				break
+			end
+		end
+	end
+end
+
+function BugFarmController.BindCombatTeamResult(handler: (payload: {[string]: any}) -> ()): (() -> ())
+	table.insert(combatTeamResultHandlers, handler)
+	return function()
+		for i, fn in ipairs(combatTeamResultHandlers) do
+			if fn == handler then
+				table.remove(combatTeamResultHandlers, i)
 				break
 			end
 		end
