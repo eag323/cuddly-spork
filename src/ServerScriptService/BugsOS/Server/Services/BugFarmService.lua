@@ -76,6 +76,7 @@ function BugFarmService.Init()
 	remotes.RenameBug = ensureRemote(RemoteNames.BugFarm_RenameBug)
 	remotes.Recycle = ensureRemote(RemoteNames.BugFarm_Recycle)
 	remotes.Ascend = ensureRemote(RemoteNames.BugFarm_Ascend)
+	remotes.AscendResult = ensureRemote(RemoteNames.BugFarm_AscendResult)
 	-- Canonical remote expected by client startup checks.
 	remotes.BuyExtraSlot = ensureRemote(RemoteNames.BugFarm_BuyExtraFarmerSlot)
 	-- Backward compatibility for any legacy callers still firing the older prompt name.
@@ -220,6 +221,13 @@ function BugFarmService.Start()
 
 		ProfileService.PatchPlayerState(player,{"Bugs"},d.Bugs)
 		ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
+		remotes.AscendResult:FireClient(player, {
+			Uid = uid,
+			OldRank = oldRank,
+			NewRank = newRank,
+			Cost = cost,
+			BugEssence = d.Currencies.BugEssence,
+		})
 		notify(player, string.format("Bug ascended to Rank %d.", bug.Ascension), "Success")
 		print("[BugFarmService] Ascend success", uid, oldRank, newRank, cost, d.Currencies.BugEssence)
 	end)
