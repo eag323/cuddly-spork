@@ -93,6 +93,10 @@ local RemoteNames: RemoteNameMap = {
 	ServerEvent_Started = "ServerEvent_Started",
 	MysteryCache_Spawned = "MysteryCache_Spawned",
 	Profile_SummaryUpdated = "Profile_SummaryUpdated",
+	EnemyBug_Spawned = "EnemyBug_Spawned",
+	EnemyBug_Despawned = "EnemyBug_Despawned",
+	EnemyBug_Attack = "EnemyBug_Attack",
+	EnemyBug_AttackResult = "EnemyBug_AttackResult",
 }
 
 return RemoteNames

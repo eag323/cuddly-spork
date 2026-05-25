@@ -32,6 +32,7 @@ local BugMinigameController = require(ControllersFolder:WaitForChild("BugMinigam
 local BugFarmController = require(ControllersFolder:WaitForChild("BugFarmController"))
 local ColonyMapController = require(ControllersFolder:WaitForChild("ColonyMapController"))
 local BootSequenceController = require(ControllersFolder:WaitForChild("BootSequenceController"))
+local EnemySpawnController = require(ControllersFolder:WaitForChild("EnemySpawnController"))
 
 local requiredRemoteNames = {
 	ClickRequest = RemoteNames.Click_Request,
@@ -68,6 +69,10 @@ local requiredRemoteNames = {
 	BugFarmAscendResult = RemoteNames.BugFarm_AscendResult,
 	BugFarmBuyExtraFarmerSlot = RemoteNames.BugFarm_BuyExtraFarmerSlot,
 	AchievementClaim = RemoteNames.Achievement_Claim,
+	EnemyBugSpawned = RemoteNames.EnemyBug_Spawned,
+	EnemyBugDespawned = RemoteNames.EnemyBug_Despawned,
+	EnemyBugAttack = RemoteNames.EnemyBug_Attack,
+	EnemyBugAttackResult = RemoteNames.EnemyBug_AttackResult,
 }
 
 local remotes = {}
@@ -93,13 +98,16 @@ context.Controllers.BugMinigame = BugMinigameController
 context.Controllers.BugFarm = BugFarmController
 context.Controllers.ColonyMap = ColonyMapController
 context.Controllers.BootSequence = BootSequenceController
+context.Controllers.EnemySpawn = EnemySpawnController
 
 DesktopController.Init(context); WindowController.Init(context); CurrencyHUDController.Init(context); MarketController.Init(context)
 UpgradeController.Init(context); GeneratorController.Init(context); NotificationController.Init(context); BugMinigameController.Init(context); BugFarmController.Init(context)
 ColonyMapController.Init(context)
 BootSequenceController.Init(context)
+EnemySpawnController.Init(context)
 
 DesktopController.Start(); WindowController.Start(); CurrencyHUDController.Start(); MarketController.Start()
 UpgradeController.Start(); GeneratorController.Start(); NotificationController.Start(); BugMinigameController.Start(); BugFarmController.Start()
 ColonyMapController.Start()
 BootSequenceController.Start()
+EnemySpawnController.Start()
