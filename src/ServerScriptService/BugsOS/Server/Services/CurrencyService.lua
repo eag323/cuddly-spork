@@ -1,5 +1,6 @@
 --!strict
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local BugsOSFolder = ServerScriptService:WaitForChild("BugsOS")
@@ -7,6 +8,10 @@ local ServerFolder = BugsOSFolder:WaitForChild("Server")
 local ServicesFolder = ServerFolder:WaitForChild("Services")
 
 local ProfileService = require(ServicesFolder:WaitForChild("ProfileService"))
+
+local SharedFolder = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
 
 type PlayerData = { [string]: any }
 
@@ -140,7 +145,15 @@ function CurrencyService.AddCoins(player: Player, amount: number): boolean
 end
 
 function CurrencyService.Init(): ()
-	-- Intentionally no-op; no runtime setup needed yet.
+	local remoteName = RemoteNames.Currency_Updated or "Currency_Updated"
+	local existing = RemotesFolder:FindFirstChild(remoteName)
+	if existing and existing:IsA("RemoteEvent") then
+		return
+	end
+
+	local remote = Instance.new("RemoteEvent")
+	remote.Name = remoteName
+	remote.Parent = RemotesFolder
 end
 
 function CurrencyService.Start(): ()
