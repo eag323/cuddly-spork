@@ -44,14 +44,27 @@ function S.Start()
   if os.time()>enemy.ExpiresAt then activeByUserId[player.UserId]=nil; warn("[EnemySpawnService] Attack rejected: EnemyExpired"); remotes.Despawned:FireClient(player,{EnemyId=enemy.EnemyId,Reason="Expired"}); remotes.AttackResult:FireClient(player,{Success=false,Reason="EnemyExpired",EnemyId=enemy.EnemyId}); return end
   local team,reason,d=buildCombatTeam(player); if not team then warn("[EnemySpawnService] Attack rejected: "..tostring(reason)); remotes.AttackResult:FireClient(player,{Success=false,Reason=reason,EnemyId=enemy.EnemyId}); return end
   local res=BattleSimulator.Run(team,{{Id=enemy.EnemyId,Name=enemy.DisplayName,Icon=enemy.Icon,Rarity=enemy.Rarity,Rank=0,Team="Enemy",Stats=enemy.Stats}},os.time(),40)
-  local out={Success=true,Winner=res.Winner,Turns=res.Turns,PlayerRemaining=res.PlayerRemaining,EnemyRemaining=res.EnemyRemaining,Log=res.Log,Rewards={BugEssence=0,BugDust=0},EnemyId=enemy.EnemyId}
+  local out={
+   Success=true,
+   EnemyId=enemy.EnemyId,
+   Winner=res.Winner,
+   Turns=res.Turns,
+   PlayerRemaining=res.PlayerRemaining,
+   EnemyRemaining=res.EnemyRemaining,
+   Rewards={BugEssence=0,BugDust=0},
+   Log=res.Log,
+   FinalUnits=res.FinalUnits,
+   EnemyName=enemy.DisplayName,
+   EnemyIcon=enemy.Icon
+  }
   print("[EnemySpawnService] Attack resolved", tostring(res.Winner), enemy.EnemyId)
   if res.Winner=="Player" then d.Currencies=d.Currencies or {}; d.Currencies.BugEssence=(tonumber(d.Currencies.BugEssence)or 0)+(enemy.RewardsPreview.BugEssence or 0); d.Currencies.BugDust=(tonumber(d.Currencies.BugDust)or 0)+(enemy.RewardsPreview.BugDust or 0); out.Rewards=enemy.RewardsPreview
    ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence); ProfileService.PatchPlayerState(player,{"Currencies","BugDust"},d.Currencies.BugDust)
-   activeByUserId[player.UserId]=nil
   end
+  activeByUserId[player.UserId]=nil
   remotes.AttackResult:FireClient(player,out)
-  if res.Winner=="Player" then task.delay(0.25,function() remotes.Despawned:FireClient(player,{EnemyId=enemy.EnemyId,Reason="Defeated"}) end) end
+  local resultReason=(res.Winner=="Player") and "Defeated" or "EscapedAfterBattle"
+  task.delay(0.5,function() remotes.Despawned:FireClient(player,{EnemyId=enemy.EnemyId,Reason=resultReason}) end)
  end)
 end
 return S
