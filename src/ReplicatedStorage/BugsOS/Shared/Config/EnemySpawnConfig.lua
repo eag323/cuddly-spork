@@ -1,8 +1,8 @@
 --!strict
 
 local EnemySpawnConfig = {
-	SpawnIntervalSecondsMin = 45,
-	SpawnIntervalSecondsMax = 90,
+	SpawnIntervalSecondsMin = 10,
+	SpawnIntervalSecondsMax = 20,
 	EnemyLifetimeSeconds = 120,
 	MaxActiveEnemiesPerPlayer = 1,
 	DesktopMarginPixels = 80,
