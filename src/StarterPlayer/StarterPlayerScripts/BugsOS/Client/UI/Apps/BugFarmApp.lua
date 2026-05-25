@@ -210,6 +210,35 @@ local function getBugAscension(ownedBug)
 end
 
 
+local function renderAscensionStars(parent, rank, position, size)
+	local starRank = math.max(0, math.floor(tonumber(rank) or 0))
+	if starRank <= 0 then return nil end
+	local badgeSize = size or UDim2.fromOffset(84, 18)
+	local badge = Instance.new("TextLabel")
+	badge.Name = "AscensionStars"
+	badge.Size = badgeSize
+	badge.Position = position or UDim2.fromOffset(0, 0)
+	badge.BackgroundColor3 = Color3.fromRGB(37, 23, 56)
+	badge.BackgroundTransparency = 0.15
+	badge.BorderSizePixel = 0
+	badge.Text = string.rep("★", starRank)
+	badge.TextSize = 12
+	badge.TextXAlignment = Enum.TextXAlignment.Center
+	badge.TextYAlignment = Enum.TextYAlignment.Center
+	badge.TextStrokeTransparency = 1
+	styleLabel(badge, true)
+	badge.TextColor3 = Color3.fromRGB(232, 92, 255)
+	badge.Parent = parent
+	Instance.new("UICorner", badge).CornerRadius = UDim.new(1, 0)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(166, 88, 199)
+	stroke.Thickness = 1
+	stroke.Transparency = 0.35
+	stroke.Parent = badge
+	return badge
+end
+
+
 local function getAscendedCombatStatValue(baseValue, rank)
 	local numericBase = tonumber(baseValue) or 0
 	local multiplier = BugAscensionConfig.GetCombatMultiplier(rank)
@@ -629,13 +658,14 @@ local function makeDetailPopup(context, uid, bug)
 	local hasNextRank = rank < maxRank and cost ~= nil
 	local neededEssence = (cost and cost > essence) and (cost - essence) or 0
 
-	local ascSec = makeCard(bodyContent, UDim2.new(1,0,0,238)); ascSec.BackgroundColor3 = COLORS.cardDark
+	local ascSec = makeCard(bodyContent, UDim2.new(1,0,0,310)); ascSec.BackgroundColor3 = COLORS.cardDark
 	local ascPad = Instance.new("UIPadding", ascSec); ascPad.PaddingLeft=UDim.new(0,10); ascPad.PaddingRight=UDim.new(0,10); ascPad.PaddingTop=UDim.new(0,8); ascPad.PaddingBottom=UDim.new(0,10)
 	local ascList = Instance.new("UIListLayout", ascSec); ascList.FillDirection=Enum.FillDirection.Vertical; ascList.Padding=UDim.new(0,6); ascList.SortOrder=Enum.SortOrder.LayoutOrder
 
 	local headerRow = Instance.new("Frame"); headerRow.BackgroundTransparency=1; headerRow.Size=UDim2.new(1,0,0,20); headerRow.Parent=ascSec
 	local ascTitle = Instance.new("TextLabel"); ascTitle.BackgroundTransparency=1; ascTitle.Size=UDim2.new(0.6,0,1,0); ascTitle.Text="ASCENSION"; ascTitle.TextXAlignment=Enum.TextXAlignment.Left; ascTitle.TextSize=13; styleLabel(ascTitle,true); ascTitle.TextColor3=COLORS.accent; ascTitle.Parent=headerRow
 	local rankBadge = Instance.new("TextLabel"); rankBadge.BackgroundTransparency=1; rankBadge.Size=UDim2.new(0.4,0,1,0); rankBadge.Position=UDim2.fromScale(0.6,0); rankBadge.TextXAlignment=Enum.TextXAlignment.Right; rankBadge.Text=BugAscensionConfig.GetDisplayRank(rank); rankBadge.TextSize=12; styleLabel(rankBadge,true); rankBadge.TextColor3=COLORS.text; rankBadge.Parent=headerRow
+	renderAscensionStars(headerRow, rank, UDim2.new(1, -92, 0, 22), UDim2.fromOffset(88, 16))
 
 	local desc = Instance.new("TextLabel"); desc.BackgroundTransparency=1; desc.Size=UDim2.new(1,0,0,30); desc.TextWrapped=true; desc.TextXAlignment=Enum.TextXAlignment.Left; desc.TextYAlignment=Enum.TextYAlignment.Top; desc.Text="Improves combat stats. Farmer bonuses are not increased."; desc.TextSize=11; styleLabel(desc,false); desc.TextColor3=COLORS.muted; desc.Parent=ascSec
 
@@ -813,7 +843,7 @@ local function renderFarmersTab(context, scroll, bugs, inventory, owned, farmerS
 	local equippedList = Instance.new("Frame"); equippedList.Size=UDim2.new(1,-20,0,0); equippedList.AutomaticSize=Enum.AutomaticSize.Y; equippedList.BackgroundTransparency=1; equippedList.LayoutOrder=5; equippedList.Parent=scroll
 	Instance.new("UIListLayout", equippedList).Padding=UDim.new(0,8)
 	if #equipped==0 then local e=makeCard(equippedList, UDim2.new(1,0,0,56)); local t=Instance.new("TextLabel"); t.Size=UDim2.fromScale(1,1); t.BackgroundTransparency=1; t.Text="No farmer bugs equipped."; styleLabel(t,false); t.TextColor3=COLORS.muted; t.Parent=e end
-	for _,e in ipairs(equipped) do local row=makeCard(equippedList, UDim2.new(1,0,0,66)); row.BackgroundColor3=Color3.fromRGB(15,34,56); local i=Instance.new("ImageLabel"); i.Size=UDim2.fromOffset(48,48); i.Position=UDim2.fromOffset(14,9); i.BackgroundTransparency=1; i.Image=getBugIcon(e.Bug,e.Config); i.Parent=row; local n=Instance.new("TextLabel"); n.Size=UDim2.new(1,-198,0,22); n.Position=UDim2.fromOffset(76,8); n.BackgroundTransparency=1; n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(e.Bug,e.Config); n.TextSize=17; styleLabel(n,true); n.TextColor3=getRarityColor(tostring(e.Config.rarity or e.Bug.Rarity or "Common")); n.Parent=row; local st=Instance.new("TextLabel"); st.Size=UDim2.new(1,-198,0,20); st.Position=UDim2.fromOffset(76,33); st.BackgroundTransparency=1; st.TextXAlignment=Enum.TextXAlignment.Left; local btxt={}; for _,b in ipairs(getFarmerBonuses(e.Bug)) do table.insert(btxt, formatBonus(b)) end; st.Text=(#btxt>0) and table.concat(btxt," | ") or "No farmer bonus"; styleLabel(st,false); st.TextColor3=(#btxt>0) and COLORS.good or COLORS.muted; st.Parent=row; local rm=makeButton(row,"Remove",Color3.fromRGB(148,52,52),UDim2.fromOffset(94,34)); rm.Position=UDim2.new(1,-104,0.5,-17); rm.Activated:Connect(function() context.Controllers.BugFarm.UnequipFarmer(e.SlotIndex) end) end
+	for _,e in ipairs(equipped) do local row=makeCard(equippedList, UDim2.new(1,0,0,66)); row.BackgroundColor3=Color3.fromRGB(15,34,56); local i=Instance.new("ImageLabel"); i.Size=UDim2.fromOffset(48,48); i.Position=UDim2.fromOffset(14,9); i.BackgroundTransparency=1; i.Image=getBugIcon(e.Bug,e.Config); i.Parent=row; local n=Instance.new("TextLabel"); n.Size=UDim2.new(1,-198,0,22); n.Position=UDim2.fromOffset(76,8); n.BackgroundTransparency=1; n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(e.Bug,e.Config); n.TextSize=17; styleLabel(n,true); n.TextColor3=getRarityColor(tostring(e.Config.rarity or e.Bug.Rarity or "Common")); n.Parent=row; renderAscensionStars(row, getBugAscension(e.Bug), UDim2.new(1,-202,0,10), UDim2.fromOffset(84,18)); local st=Instance.new("TextLabel"); st.Size=UDim2.new(1,-198,0,20); st.Position=UDim2.fromOffset(76,33); st.BackgroundTransparency=1; st.TextXAlignment=Enum.TextXAlignment.Left; local btxt={}; for _,b in ipairs(getFarmerBonuses(e.Bug)) do table.insert(btxt, formatBonus(b)) end; st.Text=(#btxt>0) and table.concat(btxt," | ") or "No farmer bonus"; styleLabel(st,false); st.TextColor3=(#btxt>0) and COLORS.good or COLORS.muted; st.Parent=row; local rm=makeButton(row,"Remove",Color3.fromRGB(148,52,52),UDim2.fromOffset(94,34)); rm.Position=UDim2.new(1,-104,0.5,-17); rm.Activated:Connect(function() context.Controllers.BugFarm.UnequipFarmer(e.SlotIndex) end) end
 
 	local fs=Instance.new("ScrollingFrame"); fs.Size=UDim2.new(1,-20,0,40); fs.LayoutOrder=6; fs.BackgroundTransparency=1; fs.ScrollBarThickness=1; fs.ScrollingDirection=Enum.ScrollingDirection.X; fs.CanvasSize=UDim2.fromOffset(0,0); fs.Parent=scroll
 	local fpad=Instance.new("UIPadding",fs); fpad.PaddingLeft=UDim.new(0,10); fpad.PaddingRight=UDim.new(0,10)
@@ -829,7 +859,7 @@ local function renderFarmersTab(context, scroll, bugs, inventory, owned, farmerS
 	table.sort(rows,function(a,b) local acfg,bcfg=getBugConfig(a.Bug) or {}, getBugConfig(b.Bug) or {}; if farmerSortMode=="Type" then local ar=tostring(acfg.role or acfg.species or ""); local br=tostring(bcfg.role or bcfg.species or ""); if ar~=br then return ar<br end elseif farmerSortMode=="Buff" then local av=(farmerStatFilter=="All") and getBestFarmerBonusValue(a.Bug) or getBonusValueForStat(a.Bug,farmerStatFilter); local bv=(farmerStatFilter=="All") and getBestFarmerBonusValue(b.Bug) or getBonusValueForStat(b.Bug,farmerStatFilter); if av~=bv then return av>bv end else local ar=BugConfig.RarityOrder[tostring(acfg.rarity or a.Bug.Rarity or "Common")] or 1; local br=BugConfig.RarityOrder[tostring(bcfg.rarity or b.Bug.Rarity or "Common")] or 1; if ar~=br then return ar>br end end return getDisplayName(a.Bug,acfg)<getDisplayName(b.Bug,bcfg) end)
 	local availableList = Instance.new("Frame"); availableList.Size=UDim2.new(1,-20,0,0); availableList.AutomaticSize=Enum.AutomaticSize.Y; availableList.BackgroundTransparency=1; availableList.LayoutOrder=8; availableList.Parent=scroll
 	Instance.new("UIListLayout", availableList).Padding=UDim.new(0,8)
-	for _,e in ipairs(rows) do local uid,bug,cfg=e.Uid,e.Bug,getBugConfig(e.Bug) or {}; local row=makeCard(availableList, UDim2.new(1,0,0,78)); row.BackgroundColor3=Color3.fromRGB(15,34,56); local i=Instance.new("ImageLabel"); i.Size=UDim2.fromOffset(48,48); i.Position=UDim2.fromOffset(12,14); i.BackgroundTransparency=1; i.Image=getBugIcon(bug,cfg); i.Parent=row; local n=Instance.new("TextLabel"); n.Size=UDim2.new(1,-336,0,22); n.Position=UDim2.fromOffset(72,7); n.BackgroundTransparency=1; n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(bug,cfg); n.TextSize=17; styleLabel(n,true); n.TextColor3=getRarityColor(tostring(cfg.rarity or bug.Rarity or "Common")); n.Parent=row; local sub=Instance.new("TextLabel"); sub.Size=UDim2.new(1,-336,0,18); sub.Position=UDim2.fromOffset(72,29); sub.BackgroundTransparency=1; sub.TextXAlignment=Enum.TextXAlignment.Left; sub.Text=string.format("%s • %s", tostring(cfg.role or "Unknown"), tostring(cfg.species or bug.BugId or "Unknown")); styleLabel(sub,false); sub.TextColor3=COLORS.muted; sub.Parent=row; local btxt={}; for _,b in ipairs(getFarmerBonuses(bug)) do table.insert(btxt, formatBonus(b)) end; local bon=Instance.new("TextLabel"); bon.Size=UDim2.new(1,-336,0,18); bon.Position=UDim2.fromOffset(72,50); bon.BackgroundTransparency=1; bon.TextXAlignment=Enum.TextXAlignment.Left; bon.Text=(#btxt>0) and table.concat(btxt," | ") or "No farmer bonus"; styleLabel(bon,false); bon.TextColor3=(#btxt>0) and COLORS.good or COLORS.muted; bon.Parent=row; local lk=makeIconButton(row, isBugLocked(bug) and "🔓" or "🔒", "Lock", Color3.fromRGB(39,66,92)); lk.Size=UDim2.fromOffset(34,34); lk.Position=UDim2.new(1,-206,0.5,-17); local rn=makeIconButton(row,"✏️","Edit",Color3.fromRGB(39,76,104)); rn.Size=UDim2.fromOffset(34,34); rn.Position=UDim2.new(1,-166,0.5,-17); lk.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid) end); rn.Activated:Connect(function() renameTargetUid=uid if render then render(context) end end); if isAssignedFarmer(uid, farmerSlots) then local b=makeBadge(row,"Equipped",Color3.fromRGB(70,196,156)); b.Position=UDim2.new(1,-96,0.5,-11) elseif isAssignedCombat(uid, combatSlots) then local b=makeBadge(row,"Combat Team",Color3.fromRGB(118,132,152)); b.Position=UDim2.new(1,-128,0.5,-11) else local eq=makeButton(row,"Equip",Color3.fromRGB(35,194,157),UDim2.fromOffset(88,32)); eq.Position=UDim2.new(1,-96,0.5,-16); eq.Activated:Connect(function() context.Controllers.BugFarm.EquipFarmer(uid,nil) end) end end
+	for _,e in ipairs(rows) do local uid,bug,cfg=e.Uid,e.Bug,getBugConfig(e.Bug) or {}; local row=makeCard(availableList, UDim2.new(1,0,0,78)); row.BackgroundColor3=Color3.fromRGB(15,34,56); local i=Instance.new("ImageLabel"); i.Size=UDim2.fromOffset(48,48); i.Position=UDim2.fromOffset(12,14); i.BackgroundTransparency=1; i.Image=getBugIcon(bug,cfg); i.Parent=row; local n=Instance.new("TextLabel"); n.Size=UDim2.new(1,-336,0,22); n.Position=UDim2.fromOffset(72,7); n.BackgroundTransparency=1; n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(bug,cfg); n.TextSize=17; styleLabel(n,true); n.TextColor3=getRarityColor(tostring(cfg.rarity or bug.Rarity or "Common")); n.Parent=row; renderAscensionStars(row, getBugAscension(bug), UDim2.new(1,-290,0,8), UDim2.fromOffset(84,18)); local sub=Instance.new("TextLabel"); sub.Size=UDim2.new(1,-336,0,18); sub.Position=UDim2.fromOffset(72,29); sub.BackgroundTransparency=1; sub.TextXAlignment=Enum.TextXAlignment.Left; sub.Text=string.format("%s • %s", tostring(cfg.role or "Unknown"), tostring(cfg.species or bug.BugId or "Unknown")); styleLabel(sub,false); sub.TextColor3=COLORS.muted; sub.Parent=row; local btxt={}; for _,b in ipairs(getFarmerBonuses(bug)) do table.insert(btxt, formatBonus(b)) end; local bon=Instance.new("TextLabel"); bon.Size=UDim2.new(1,-336,0,18); bon.Position=UDim2.fromOffset(72,50); bon.BackgroundTransparency=1; bon.TextXAlignment=Enum.TextXAlignment.Left; bon.Text=(#btxt>0) and table.concat(btxt," | ") or "No farmer bonus"; styleLabel(bon,false); bon.TextColor3=(#btxt>0) and COLORS.good or COLORS.muted; bon.Parent=row; local lk=makeIconButton(row, isBugLocked(bug) and "🔓" or "🔒", "Lock", Color3.fromRGB(39,66,92)); lk.Size=UDim2.fromOffset(34,34); lk.Position=UDim2.new(1,-206,0.5,-17); local rn=makeIconButton(row,"✏️","Edit",Color3.fromRGB(39,76,104)); rn.Size=UDim2.fromOffset(34,34); rn.Position=UDim2.new(1,-166,0.5,-17); lk.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid) end); rn.Activated:Connect(function() renameTargetUid=uid if render then render(context) end end); if isAssignedFarmer(uid, farmerSlots) then local b=makeBadge(row,"Equipped",Color3.fromRGB(70,196,156)); b.Position=UDim2.new(1,-96,0.5,-11) elseif isAssignedCombat(uid, combatSlots) then local b=makeBadge(row,"Combat Team",Color3.fromRGB(118,132,152)); b.Position=UDim2.new(1,-128,0.5,-11) else local eq=makeButton(row,"Equip",Color3.fromRGB(35,194,157),UDim2.fromOffset(88,32)); eq.Position=UDim2.new(1,-96,0.5,-16); eq.Activated:Connect(function() context.Controllers.BugFarm.EquipFarmer(uid,nil) end) end end
 
 	if renameTargetUid and inventory[renameTargetUid] then local modal=Instance.new("TextButton"); modal.Size=UDim2.fromScale(1,1); modal.Text=""; modal.BackgroundColor3=Color3.new(0,0,0); modal.BackgroundTransparency=0.35; modal.Parent=contentHost; local card=makeCard(modal, UDim2.fromOffset(360,180)); card.Position=UDim2.new(0.5,-180,0.5,-90); card.BackgroundColor3=Color3.fromRGB(11,27,46); local title=Instance.new("TextLabel"); title.Size=UDim2.new(1,-20,0,28); title.Position=UDim2.fromOffset(10,10); title.BackgroundTransparency=1; title.Text="Rename Bug"; styleLabel(title,true); title.TextXAlignment=Enum.TextXAlignment.Left; title.Parent=card; local tb=Instance.new("TextBox"); tb.Size=UDim2.new(1,-20,0,36); tb.Position=UDim2.fromOffset(10,48); tb.BackgroundColor3=COLORS.cardDark; tb.ClearTextOnFocus=false; tb.Text=tostring(inventory[renameTargetUid].Nickname or (getBugConfig(inventory[renameTargetUid]) or {}).displayName or ""); tb.TextSize=14; tb.TextXAlignment=Enum.TextXAlignment.Left; tb.TextEditable=true; tb.MaxVisibleGraphemes=24; styleLabel(tb,false); tb.Parent=card; Instance.new("UICorner",tb).CornerRadius=UDim.new(0,8); local sv=makeButton(card,"Save",COLORS.good,UDim2.fromOffset(90,30)); sv.Position=UDim2.fromOffset(10,132); sv.Activated:Connect(function() context.Controllers.BugFarm.RenameBug(renameTargetUid, string.sub(tb.Text,1,24)); renameTargetUid=nil; if render then render(context) end end); local cl=makeButton(card,"Clear",Color3.fromRGB(91,110,138),UDim2.fromOffset(90,30)); cl.Position=UDim2.fromOffset(110,132); cl.Activated:Connect(function() context.Controllers.BugFarm.RenameBug(renameTargetUid,""); renameTargetUid=nil; if render then render(context) end end); local cn=makeButton(card,"Cancel",COLORS.danger,UDim2.fromOffset(90,30)); cn.Position=UDim2.fromOffset(210,132); cn.Activated:Connect(function() renameTargetUid=nil; if render then render(context) end end) end
 end
@@ -1336,7 +1366,7 @@ end
 				local previewBonus = getLegacyBonusStats(bug)[1]
 				local p = Instance.new("TextLabel"); p.BackgroundTransparency = 1; p.Size = UDim2.new(1, -16, 0, 14); p.Position = UDim2.fromOffset(8, 194); p.Text = previewBonus and formatBonusLine(previewBonus) or "No bonus"; p.TextSize = 12; styleLabel(p, true); p.TextColor3 = COLORS.good; p.Parent = card
 				if isBugLocked(bug) then local l=makeBadge(card, "LOCKED", COLORS.warn); l.Size=UDim2.fromOffset(62,18); l.Position=UDim2.new(1,-70,0,8); setBadgeTextColor(l, Color3.fromRGB(32, 22, 8)) end
-				local asc = getBugAscension(bug); if asc > 0 then local a=makeBadge(card, "A"..tostring(asc), Color3.fromRGB(106, 229, 186)); a.Size=UDim2.fromOffset(38,18); a.Position=UDim2.fromOffset(88,8); setBadgeTextColor(a, Color3.fromRGB(10, 26, 20)) end
+				local asc = getBugAscension(bug); renderAscensionStars(card, asc, UDim2.fromOffset(84,8), UDim2.fromOffset(78,18))
 				local hoverHint = Instance.new("TextLabel"); hoverHint.BackgroundTransparency = 0.28; hoverHint.BackgroundColor3 = Color3.fromRGB(8, 20, 34); hoverHint.Size = UDim2.fromOffset(90, 18); hoverHint.Position = UDim2.new(1, -96, 1, -24); hoverHint.Text = "View Details"; hoverHint.TextSize = 10; hoverHint.Visible = false; styleLabel(hoverHint, true); hoverHint.Parent = card; Instance.new("UICorner", hoverHint).CornerRadius = UDim.new(0, 6)
 				card.MouseEnter:Connect(function() card.BackgroundColor3 = COLORS.card:Lerp(Color3.new(1,1,1), 0.1); if stroke then stroke.Transparency = 0; stroke.Color = getRarityColor(rarity):Lerp(Color3.new(1,1,1), 0.1) end hoverHint.Visible = true end)
 				card.MouseLeave:Connect(function() card.BackgroundColor3 = COLORS.card; if stroke then stroke.Transparency = 0.15; stroke.Color = getRarityColor(rarity) end hoverHint.Visible = false end)
@@ -1385,6 +1415,7 @@ end
 			sub.Parent = row
 			local badge = makeBadge(row, tostring(cfg.rarity or bug.Rarity or "Common"))
 			badge.Position = UDim2.new(1, -270, 0.5, -11)
+			renderAscensionStars(row, getBugAscension(bug), UDim2.new(1, -360, 0.5, -9), UDim2.fromOffset(82, 18))
 			local lock = makeButton(row, bug.Locked and "Unlock" or "Lock", bug.Locked and COLORS.gold or COLORS.cardDark, UDim2.fromOffset(72, 28))
 			lock.Position = UDim2.new(1, -166, 0.5, -14)
 			lock.Activated:Connect(function() context.Controllers.BugFarm.ToggleLock(uid) end)
@@ -1453,7 +1484,12 @@ function BugFarmApp.Mount(target, context)
 		Size = UDim2.fromOffset(940, 640),
 		Position = UDim2.fromScale(0.08, 0.1),
 		Parent = target,
-		OnClose = function() context.Controllers.Window.Close("BugFarm") end,
+		OnClose = function()
+			local windowController = context and context.Controllers and context.Controllers.Window
+			if windowController and windowController.Close then
+				windowController.Close("Bugs")
+			end
+		end,
 	})
 	root = Instance.new("Frame")
 	root.Size = UDim2.fromScale(1, 1)
