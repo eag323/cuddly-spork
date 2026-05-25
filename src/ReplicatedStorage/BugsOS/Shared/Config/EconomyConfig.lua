@@ -21,6 +21,12 @@ local EconomyConfig = {
 	DEV_FORCE_RARITY = nil,
 	-- DEVELOPMENT ONLY: Optional bonus quality override. Allowed: nil, "Good", "Great", "Perfect".
 	DEV_FORCE_BONUS_QUALITY = nil,
+	-- DEVELOPMENT ONLY: Grants a large ascension testing kit at player initialization.
+	DEV_GRANT_ASCENSION_TEST_KIT = true,
+	-- DEVELOPMENT ONLY: Minimum Bug Essence when ascension test kit is granted.
+	DEV_TEST_BUG_ESSENCE = 10000000000,
+	-- DEVELOPMENT ONLY: Minimum random bug inventory count when ascension test kit is granted.
+	DEV_TEST_RANDOM_BUG_COUNT = 100,
 }
 
 return EconomyConfig
