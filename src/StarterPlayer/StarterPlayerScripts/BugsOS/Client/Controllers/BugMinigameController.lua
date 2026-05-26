@@ -150,9 +150,9 @@ local function showRewardScreen(payload)
 	local rarity = tostring(payload.Rarity or bug.Rarity or cfg.rarity or "Common")
 	local style = getRarityStyle(rarity)
 	local bonuses = type(payload.BonusStats)=="table" and payload.BonusStats or (type(bug.BonusStats)=="table" and bug.BonusStats or {})
-	local overlay = Instance.new("Frame"); overlay.Size = UDim2.fromScale(1,1); overlay.BackgroundColor3=Color3.new(0,0,0); overlay.BackgroundTransparency=0.35; overlay.Parent=context.UI.WorldLayer; activeRewardGui=overlay
+	local overlay = Instance.new("Frame"); overlay.Size = UDim2.fromScale(1,1); overlay.BackgroundColor3=Color3.new(0,0,0); overlay.BackgroundTransparency=0.35; overlay.ZIndex=90; overlay.Parent=context.UI.HUDLayer; activeRewardGui=overlay
 
-	local card = Instance.new("Frame"); card.AnchorPoint=Vector2.new(0.5,0.5); card.Size=UDim2.fromOffset(560,690); card.Position=UDim2.fromScale(0.5,0.5); card.BackgroundColor3=Color3.fromRGB(9,22,45); card.Parent=overlay; card.ClipsDescendants=true
+	local card = Instance.new("Frame"); card.AnchorPoint=Vector2.new(0.5,0.5); card.Size=UDim2.fromOffset(560,690); card.Position=UDim2.fromScale(0.5,0.5); card.BackgroundColor3=Color3.fromRGB(9,22,45); card.ZIndex=91; card.Parent=overlay; card.ClipsDescendants=true
 	Instance.new("UICorner",card).CornerRadius=UDim.new(0,16)
 	local cStroke = Instance.new("UIStroke", card); cStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; cStroke.Thickness = (rarity=="Epic" or rarity=="Legendary" or rarity=="Mythic") and 2.8 or 2.2; cStroke.Color = style.Accent
 	local pad = Instance.new("UIPadding", card); pad.PaddingTop=UDim.new(0,20); pad.PaddingBottom=UDim.new(0,16); pad.PaddingLeft=UDim.new(0,20); pad.PaddingRight=UDim.new(0,20)
@@ -220,6 +220,12 @@ local function showRewardScreen(payload)
 		if wc and wc.Open then wc.Open("Bugs") return end
 		if wc and wc.OpenApp then wc.OpenApp("Bugs") return end
 	end)
+
+	for _, desc in ipairs(card:GetDescendants()) do
+		if desc:IsA("GuiObject") then
+			desc.ZIndex = math.max(desc.ZIndex, 92)
+		end
+	end
 
 	for i=1,style.Sparkles do
 		task.delay(i*0.045, function()

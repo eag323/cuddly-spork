@@ -20,6 +20,12 @@ local playbackSkipped = false
 local terminalOpen = false
 local playbackToken = 0
 local awaitingResult = false
+local playbackStartedAt = 0
+
+local BOOT_LINE_DELAY = 0.4
+local ACTION_LINE_DELAY = 0.85
+local FINAL_RESULT_DELAY = 1.25
+local MIN_TERMINAL_DISPLAY = 4
 
 local function clearEnemy()
 	if enemyGui then
@@ -64,16 +70,16 @@ local function friendlyFailure(reason: string): string
 	return "Attack failed. Try again."
 end
 
-local function createTerminalLine(text: string)
+local function createTerminalLine(text: string, color: Color3?)
 	if not terminalLinesFrame then return end
 	local line = Instance.new("TextLabel")
 	line.BackgroundTransparency = 1
-	line.Size = UDim2.new(1, -8, 0, 18)
+	line.Size = UDim2.new(1, -8, 0, 22)
 	line.TextXAlignment = Enum.TextXAlignment.Left
 	line.Text = text
-	line.TextColor3 = Color3.fromRGB(80, 245, 140)
+	line.TextColor3 = color or Color3.fromRGB(80, 245, 140)
 	line.Font = Enum.Font.Code
-	line.TextSize = 14
+	line.TextSize = 16
 	line.ZIndex = 63
 	line.Parent = terminalLinesFrame
 	task.defer(function()
@@ -100,46 +106,121 @@ local function showFinalPopup(result)
 	local hud = context.UI.HUDLayer
 	if not hud then return end
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.fromOffset(420, 280)
+	frame.Size = UDim2.fromOffset(500, 380)
 	frame.Position = UDim2.fromScale(0.5, 0.5)
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.BackgroundColor3 = Color3.fromRGB(18, 20, 30)
+	frame.BackgroundColor3 = Color3.fromRGB(8, 16, 30)
 	frame.ZIndex = 70
 	frame.Parent = hud
-	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
+	local border = Instance.new("UIStroke", frame)
+	border.Thickness = 2
+	border.Color = (result.Winner == "Player" and Color3.fromRGB(88, 255, 170)) or (result.Winner == "Enemy" and Color3.fromRGB(255, 96, 96)) or Color3.fromRGB(240, 180, 120)
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -20, 0, 36)
+	title.Size = UDim2.new(1, -20, 0, 48)
 	title.Position = UDim2.fromOffset(10, 10)
 	title.BackgroundTransparency = 1
-	title.Font = Enum.Font.GothamBold
-	title.TextSize = 26
-	title.Text = (result.Winner == "Player" and "Victory!") or (result.Winner == "Enemy" and "Defeat") or "Draw"
+	title.Font = Enum.Font.GothamBlack
+	title.TextSize = 34
+	title.TextXAlignment = Enum.TextXAlignment.Center
+	title.Text = (result.Winner == "Player" and "VICTORY!") or (result.Winner == "Enemy" and "DEFEAT") or "DRAW"
 	title.TextColor3 = (result.Winner == "Player" and Color3.fromRGB(115, 255, 125)) or Color3.fromRGB(255, 105, 105)
 	title.ZIndex = 71
 	title.Parent = frame
-	local info = Instance.new("TextLabel")
-	info.Size = UDim2.new(1, -20, 0, 150)
-	info.Position = UDim2.fromOffset(10, 56)
-	info.BackgroundTransparency = 1
-	info.TextXAlignment = Enum.TextXAlignment.Left
-	info.TextYAlignment = Enum.TextYAlignment.Top
-	info.Font = Enum.Font.Gotham
-	info.TextSize = 14
-	info.TextColor3 = Color3.fromRGB(220, 230, 250)
+	local enemyIcon = Instance.new("ImageLabel")
+	enemyIcon.Size = UDim2.fromOffset(76, 76)
+	enemyIcon.Position = UDim2.fromOffset(24, 66)
+	enemyIcon.BackgroundTransparency = 1
+	enemyIcon.Image = tostring(result.EnemyIcon or "")
+	enemyIcon.ZIndex = 71
+	enemyIcon.Parent = frame
+	local enemyName = Instance.new("TextLabel")
+	enemyName.Size = UDim2.new(1, -120, 0, 34)
+	enemyName.Position = UDim2.fromOffset(112, 78)
+	enemyName.BackgroundTransparency = 1
+	enemyName.TextXAlignment = Enum.TextXAlignment.Left
+	enemyName.Font = Enum.Font.GothamBold
+	enemyName.TextSize = 20
+	enemyName.TextColor3 = Color3.fromRGB(230, 242, 255)
+	enemyName.Text = tostring(result.EnemyName or "Enemy")
+	enemyName.ZIndex = 71
+	enemyName.Parent = frame
+	local detailRow = Instance.new("TextLabel")
+	detailRow.Size = UDim2.new(1, -120, 0, 24)
+	detailRow.Position = UDim2.fromOffset(112, 112)
+	detailRow.BackgroundTransparency = 1
+	detailRow.TextXAlignment = Enum.TextXAlignment.Left
+	detailRow.Font = Enum.Font.Code
+	detailRow.TextSize = 14
+	detailRow.TextColor3 = Color3.fromRGB(120, 230, 185)
+	detailRow.Text = string.format("Turns %s   |   Player %s   |   Enemy %s", tostring(result.Turns or "?"), tostring(result.PlayerRemaining or "?"), tostring(result.EnemyRemaining or "?"))
+	detailRow.ZIndex = 71
+	detailRow.Parent = frame
 	local rewards = result.Rewards or {BugEssence = 0, BugDust = 0}
 	if result.Winner ~= "Player" then rewards = {BugEssence = 0, BugDust = 0} end
-	local extra = result.Winner == "Player" and "Rewards granted." or "The enemy escaped after the battle."
-	info.Text = string.format("Enemy: %s\nTurns: %s\nPlayer Remaining: %s\nEnemy Remaining: %s\nBug Essence: +%d\nBug Dust: +%d\n%s", tostring(result.EnemyName or "Enemy"), tostring(result.Turns or "?"), tostring(result.PlayerRemaining or "?"), tostring(result.EnemyRemaining or "?"), tonumber(rewards.BugEssence) or 0, tonumber(rewards.BugDust) or 0, extra)
+	local info = Instance.new("TextLabel")
+	info.Size = UDim2.new(1, -40, 0, 54)
+	info.Position = UDim2.fromOffset(20, 150)
+	info.BackgroundTransparency = 1
+	info.TextXAlignment = Enum.TextXAlignment.Center
+	info.TextYAlignment = Enum.TextYAlignment.Center
+	info.Font = Enum.Font.Gotham
+	info.TextSize = 16
+	info.TextColor3 = Color3.fromRGB(220, 230, 250)
+	info.Text = result.Winner == "Player" and "Rewards granted." or "The enemy escaped after the battle."
 	info.ZIndex = 71
 	info.Parent = frame
+	local function createRewardCard(xOffset, label, value)
+		local card = Instance.new("Frame")
+		card.Size = UDim2.fromOffset(210, 70)
+		card.Position = UDim2.fromOffset(xOffset, 216)
+		card.BackgroundColor3 = Color3.fromRGB(20, 36, 54)
+		card.ZIndex = 71
+		card.Parent = frame
+		Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
+		local stroke = Instance.new("UIStroke", card)
+		stroke.Color = Color3.fromRGB(90, 240, 190)
+		stroke.Transparency = 0.25
+		local labelText = Instance.new("TextLabel")
+		labelText.BackgroundTransparency = 1
+		labelText.Size = UDim2.new(1, -16, 0, 24)
+		labelText.Position = UDim2.fromOffset(8, 8)
+		labelText.TextXAlignment = Enum.TextXAlignment.Left
+		labelText.Font = Enum.Font.GothamSemibold
+		labelText.TextSize = 14
+		labelText.TextColor3 = Color3.fromRGB(196, 215, 255)
+		labelText.Text = label
+		labelText.ZIndex = 72
+		labelText.Parent = card
+		local amount = Instance.new("TextLabel")
+		amount.BackgroundTransparency = 1
+		amount.Size = UDim2.new(1, -16, 0, 30)
+		amount.Position = UDim2.fromOffset(8, 30)
+		amount.TextXAlignment = Enum.TextXAlignment.Left
+		amount.Font = Enum.Font.GothamBlack
+		amount.TextSize = 24
+		amount.TextColor3 = Color3.fromRGB(125, 255, 170)
+		amount.Text = "+0"
+		amount.ZIndex = 72
+		amount.Parent = card
+		if result.Winner == "Player" then task.spawn(function() for i = 0, value do if not amount.Parent then return end amount.Text = "+" .. tostring(i) task.wait(0.02) end end) else amount.Text = "+0" end
+		return card
+	end
+	local essenceCard = createRewardCard(24, "Bug Essence", tonumber(rewards.BugEssence) or 0)
+	local dustCard = createRewardCard(266, "Bug Dust", tonumber(rewards.BugDust) or 0)
+	if result.Winner == "Player" then
+		for i = 1, 12 do task.delay(i * 0.05, function() if not frame.Parent then return end local sparkle = Instance.new("Frame") sparkle.Size = UDim2.fromOffset(math.random(4, 8), math.random(4, 8)) sparkle.Position = UDim2.new(0, math.random(20, 480), 0, math.random(20, 290)) sparkle.BorderSizePixel = 0 sparkle.BackgroundColor3 = Color3.fromRGB(130, 255, 190) sparkle.ZIndex = 73 sparkle.Parent = frame Instance.new("UICorner", sparkle).CornerRadius = UDim.new(1, 0) TweenService:Create(sparkle, TweenInfo.new(0.45), {BackgroundTransparency = 1}):Play() task.delay(0.5, function() if sparkle then sparkle:Destroy() end end) end) end
+		TweenService:Create(essenceCard, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(220, 76)}):Play()
+		TweenService:Create(dustCard, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(220, 76)}):Play()
+	end
 	local closeBtn = Instance.new("TextButton")
-	closeBtn.Size = UDim2.fromOffset(130, 36)
-	closeBtn.Position = UDim2.new(1, -140, 1, -46)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(70, 74, 92)
+	closeBtn.Size = UDim2.fromOffset(180, 42)
+	closeBtn.Position = UDim2.new(0.5, -90, 1, -54)
+	closeBtn.BackgroundColor3 = (result.Winner == "Player" and Color3.fromRGB(66, 236, 166)) or Color3.fromRGB(80, 86, 105)
 	closeBtn.TextColor3 = Color3.new(1, 1, 1)
-	closeBtn.Text = result.Winner == "Player" and "Claim" or "Close"
+	closeBtn.Text = result.Winner == "Player" and "Claim Rewards" or "Close"
 	closeBtn.Font = Enum.Font.GothamBold
-	closeBtn.TextSize = 14
+	closeBtn.TextSize = 16
 	closeBtn.ZIndex = 71
 	closeBtn.Parent = frame
 	Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
@@ -153,6 +234,7 @@ local function finishPlayback(result)
 		terminalCloseButton.AutoButtonColor = true
 	end
 	closeTerminal()
+	print("[EnemySpawnController] Playback complete", tostring(result and result.EnemyId))
 	showFinalPopup(result)
 end
 
@@ -164,17 +246,27 @@ local function startTerminalPlayback(result)
 	playbackSkipped = false
 	playbackToken += 1
 	local myToken = playbackToken
+	playbackStartedAt = os.clock()
 	if terminalSkipButton then
 		terminalSkipButton.Active = true
 		terminalSkipButton.AutoButtonColor = true
 		terminalSkipButton.Text = "Skip"
 	end
-	createTerminalLine("> BUG.OS COMBAT SIM v1.0")
-	createTerminalLine("> Target: " .. tostring(result.EnemyName or "Enemy"))
-	createTerminalLine("> Combat Team deployed.")
-	createTerminalLine("> ---")
+	print("[EnemySpawnController] Playback line delay started", tostring(result.EnemyId))
 	local logs = result.Log or {}
 	task.spawn(function()
+		local bootLines = {
+			"> BUG.OS COMBAT SIM v1.0",
+			"> Target: " .. tostring(result.EnemyName or "Enemy"),
+			"> Combat Team deployed.",
+			"> Running turn simulation...",
+			"> ---",
+		}
+		for _, bootLine in ipairs(bootLines) do
+			if not terminalOpen or myToken ~= playbackToken then return end
+			createTerminalLine(bootLine)
+			if not playbackSkipped then task.wait(BOOT_LINE_DELAY) end
+		end
 		while terminalOpen and myToken == playbackToken and playbackIndex < #logs do
 			if playbackSkipped then
 				for i = playbackIndex + 1, #logs do createTerminalLine(string.format("[%02d] %s", i, tostring(logs[i]))) end
@@ -182,12 +274,29 @@ local function startTerminalPlayback(result)
 				break
 			end
 			playbackIndex += 1
-			createTerminalLine(string.format("[%02d] %s", playbackIndex, tostring(logs[playbackIndex])))
-			task.wait(0.42)
+			local logLine = tostring(logs[playbackIndex])
+			local lowerLine = string.lower(logLine)
+			local lineColor = Color3.fromRGB(80, 245, 140)
+			if string.find(lowerLine, "crit", 1, true) then
+				lineColor = Color3.fromRGB(255, 242, 130)
+			elseif string.find(lowerLine, "defeat", 1, true) or string.find(lowerLine, "defeated", 1, true) then
+				lineColor = Color3.fromRGB(255, 132, 90)
+			end
+			createTerminalLine(string.format("[%02d] %s", playbackIndex, logLine), lineColor)
+			task.wait(ACTION_LINE_DELAY)
 		end
 		if not terminalOpen or myToken ~= playbackToken then return end
 		createTerminalLine("> ---")
-		createTerminalLine("> RESULT: " .. string.upper(tostring(result.Winner or "Unknown")))
+		local winner = string.lower(tostring(result.Winner or "Unknown"))
+		local resultColor = Color3.fromRGB(255, 176, 120)
+		if winner == "player" then resultColor = Color3.fromRGB(128, 255, 164)
+		elseif winner == "enemy" then resultColor = Color3.fromRGB(255, 120, 120) end
+		createTerminalLine("> RESULT: " .. string.upper(tostring(result.Winner or "Unknown")), resultColor)
+		if not playbackSkipped then
+			local elapsed = os.clock() - playbackStartedAt
+			if elapsed < MIN_TERMINAL_DISPLAY then task.wait(MIN_TERMINAL_DISPLAY - elapsed) end
+			task.wait(FINAL_RESULT_DELAY)
+		end
 		finishPlayback(result)
 	end)
 end
@@ -255,9 +364,6 @@ local function openTerminalWaiting(enemy)
 		print("[EnemySpawnController] Battle playback skipped", tostring(activeBattleResult.EnemyId))
 		playbackSkipped = true
 	end)
-	createTerminalLine("> Initializing combat simulation...")
-	createTerminalLine("> Loading Combat Team...")
-	createTerminalLine("> Target acquired: " .. tostring(enemy.DisplayName))
 	createTerminalLine("> Awaiting server result...")
 end
 
