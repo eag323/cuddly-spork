@@ -41,7 +41,7 @@ local function createOsWindow(title: string, size: UDim2, zIndex: number, onClos
 	if not hud then return nil end
 	local ref = Window.Create({
 		Title = title,
-		Icon = "▣",
+		Icon = "⚔️",
 		Size = size,
 		Position = UDim2.fromScale(0.5, 0.5),
 		Parent = hud,
@@ -91,6 +91,31 @@ local function createButton(parent: Instance, text: string, pos: UDim2, size: UD
 	button.ZIndex = z
 	button.Parent = parent
 	return button
+end
+
+local function styleButton(button: TextButton, normal: Color3, hover: Color3, pressed: Color3, textColor: Color3?)
+	button.BackgroundColor3 = normal
+	button.TextColor3 = textColor or Color3.fromRGB(20, 20, 20)
+	button.AutoButtonColor = false
+	button.MouseEnter:Connect(function()
+		if button.Active then button.BackgroundColor3 = hover end
+	end)
+	button.MouseLeave:Connect(function()
+		if button.Active then button.BackgroundColor3 = normal end
+	end)
+	button.MouseButton1Down:Connect(function()
+		if button.Active then button.BackgroundColor3 = pressed end
+	end)
+	button.MouseButton1Up:Connect(function()
+		if button.Active then button.BackgroundColor3 = hover end
+	end)
+end
+
+local function enemyTierLabel(tier: any): string
+	local raw = tostring(tier or "CommonEnemy")
+	local spaced = string.gsub(raw, "Enemy$", " Enemy")
+	spaced = string.gsub(spaced, "(%l)(%u)", "%1 %2")
+	return spaced
 end
 
 local function clearEnemy()
@@ -190,11 +215,14 @@ local function highlightUnit(name: string, color: Color3?)
 	end)
 end
 
+local COMBAT_CARD_HEIGHT = 32
+local COMBAT_CARD_GAP = 4
+
 local function createCombatantCard(parent: Instance, unit, y: number)
 	local name = tostring(unit.Name or unit.Id or "Unit")
 	local card = Instance.new("Frame")
 	card.Name = "CombatantCard"
-	card.Size = UDim2.new(1, -12, 0, 56)
+	card.Size = UDim2.new(1, -12, 0, COMBAT_CARD_HEIGHT)
 	card.Position = UDim2.fromOffset(6, y)
 	card.BackgroundColor3 = Color3.fromRGB(18, 28, 32)
 	card.BorderSizePixel = 1
@@ -203,40 +231,40 @@ local function createCombatantCard(parent: Instance, unit, y: number)
 	card.Parent = parent
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = Color3.fromRGB(135, 255, 210)
-	stroke.Transparency = 0.7
+	stroke.Transparency = 0.72
 	stroke.Parent = card
 	local icon = Instance.new("ImageLabel")
-	icon.Size = UDim2.fromOffset(34, 34)
-	icon.Position = UDim2.fromOffset(6, 6)
+	icon.Size = UDim2.fromOffset(24, 24)
+	icon.Position = UDim2.fromOffset(5, 4)
 	icon.BackgroundTransparency = 1
 	icon.Image = tostring(unit.Icon or "")
 	icon.ZIndex = MODAL_Z + 19
 	icon.Parent = card
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -50, 0, 20)
-	label.Position = UDim2.fromOffset(46, 5)
+	label.Size = UDim2.new(1, -94, 0, 15)
+	label.Position = UDim2.fromOffset(34, 3)
 	label.BackgroundTransparency = 1
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.TextTruncate = Enum.TextTruncate.AtEnd
 	label.Font = Enum.Font.ArialBold
-	label.TextSize = 13
+	label.TextSize = 12
 	label.TextColor3 = Color3.fromRGB(230, 250, 244)
 	label.Text = name
 	label.ZIndex = MODAL_Z + 19
 	label.Parent = card
 	local status = Instance.new("TextLabel")
-	status.Size = UDim2.new(1, -50, 0, 16)
-	status.Position = UDim2.fromOffset(46, 24)
+	status.Size = UDim2.fromOffset(52, 15)
+	status.Position = UDim2.new(1, -58, 0, 3)
 	status.BackgroundTransparency = 1
-	status.TextXAlignment = Enum.TextXAlignment.Left
+	status.TextXAlignment = Enum.TextXAlignment.Right
 	status.Font = Enum.Font.Code
-	status.TextSize = 12
+	status.TextSize = 10
 	status.TextColor3 = Color3.fromRGB(140, 255, 185)
 	status.ZIndex = MODAL_Z + 19
 	status.Parent = card
 	local barBack = Instance.new("Frame")
-	barBack.Size = UDim2.new(1, -52, 0, 6)
-	barBack.Position = UDim2.fromOffset(46, 43)
+	barBack.Size = UDim2.new(1, -40, 0, 6)
+	barBack.Position = UDim2.fromOffset(34, 22)
 	barBack.BackgroundColor3 = Color3.fromRGB(48, 56, 58)
 	barBack.BorderSizePixel = 0
 	barBack.ZIndex = MODAL_Z + 19
@@ -264,10 +292,10 @@ local function populateCombatPanels(result)
 	for _, unit in ipairs(result.FinalUnits or {}) do
 		if unit.Team == "Player" then
 			createCombatantCard(terminalTeamPanel, unit, playerY)
-			playerY += 62
+			playerY += COMBAT_CARD_HEIGHT + COMBAT_CARD_GAP
 		elseif unit.Team == "Enemy" then
 			createCombatantCard(terminalEnemyPanel, unit, enemyY)
-			enemyY += 62
+			enemyY += COMBAT_CARD_HEIGHT + COMBAT_CARD_GAP
 		end
 	end
 end
@@ -295,99 +323,158 @@ local function applyLogState(logLine: string)
 	end
 end
 
+local function createResultStat(parent: Instance, labelText: string, valueText: string, x: number)
+	local card = createInsetPanel(parent, UDim2.fromOffset(x, 0), UDim2.fromOffset(148, 54), REWARD_Z + 14, Color3.fromRGB(224, 224, 224))
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -10, 0, 18)
+	label.Position = UDim2.fromOffset(5, 5)
+	label.BackgroundTransparency = 1
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = Enum.Font.ArialBold
+	label.TextSize = 12
+	label.TextColor3 = Color3.fromRGB(42, 42, 42)
+	label.Text = labelText
+	label.ZIndex = REWARD_Z + 18
+	label.Parent = card
+	local value = Instance.new("TextLabel")
+	value.Size = UDim2.new(1, -10, 0, 24)
+	value.Position = UDim2.fromOffset(5, 24)
+	value.BackgroundTransparency = 1
+	value.TextXAlignment = Enum.TextXAlignment.Left
+	value.Font = Enum.Font.ArialBold
+	value.TextSize = 18
+	value.TextColor3 = Color3.fromRGB(10, 10, 10)
+	value.Text = valueText
+	value.ZIndex = REWARD_Z + 18
+	value.Parent = card
+end
+
 local function showFinalPopup(result)
 	print("[EnemySpawnController] Final result popup", tostring(result and result.Winner))
-	local windowRef = createOsWindow("Battle Results", UDim2.fromOffset(530, 430), REWARD_Z, nil)
+	local windowRef = createOsWindow("Battle Results", UDim2.fromOffset(560, 500), REWARD_Z, nil)
 	if not windowRef then return end
 	local frame = windowRef.Content
 	local winner = tostring(result.Winner or "Draw")
 	local isVictory = winner == "Player"
 	local isDefeat = winner == "Enemy"
-	local accent = isVictory and Color3.fromRGB(70, 235, 150) or (isDefeat and Color3.fromRGB(230, 76, 76) or Color3.fromRGB(232, 176, 86))
+	local resultText = isVictory and "VICTORY" or (isDefeat and "DEFEAT" or "DRAW")
+	local accent = isVictory and Color3.fromRGB(100, 255, 160) or (isDefeat and Color3.fromRGB(255, 96, 96) or Color3.fromRGB(255, 196, 92))
+	local rewards = (isVictory and result.Rewards) or {BugEssence = 0}
+	local essence = tonumber(rewards and rewards.BugEssence) or 0
+
+	local banner = createInsetPanel(frame, UDim2.fromOffset(16, 12), UDim2.new(1, -32, 0, 64), REWARD_Z + 12, isVictory and Color3.fromRGB(5, 54, 32) or (isDefeat and Color3.fromRGB(58, 22, 22) or Color3.fromRGB(62, 42, 12)))
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -24, 0, 48)
-	title.Position = UDim2.fromOffset(12, 10)
+	title.Size = UDim2.new(1, -24, 1, 0)
+	title.Position = UDim2.fromOffset(12, 0)
 	title.BackgroundTransparency = 1
 	title.Font = Enum.Font.ArialBold
-	title.TextSize = 34
+	title.TextSize = 36
 	title.TextXAlignment = Enum.TextXAlignment.Center
-	title.Text = isVictory and "VICTORY!" or (isDefeat and "DEFEAT" or "DRAW")
+	title.Text = resultText
 	title.TextColor3 = accent
-	title.ZIndex = REWARD_Z + 15
-	title.Parent = frame
-	local heroPanel = createInsetPanel(frame, UDim2.fromOffset(18, 66), UDim2.new(1, -36, 0, 92), REWARD_Z + 12, Color3.fromRGB(22, 34, 48))
+	title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	title.TextStrokeTransparency = 0.25
+	title.ZIndex = REWARD_Z + 18
+	title.Parent = banner
+
+	local enemyPanel = createInsetPanel(frame, UDim2.fromOffset(16, 88), UDim2.new(1, -32, 0, 86), REWARD_Z + 12, Color3.fromRGB(22, 34, 48))
 	local enemyIcon = Instance.new("ImageLabel")
-	enemyIcon.Size = UDim2.fromOffset(68, 68)
+	enemyIcon.Size = UDim2.fromOffset(62, 62)
 	enemyIcon.Position = UDim2.fromOffset(12, 12)
 	enemyIcon.BackgroundTransparency = 1
 	enemyIcon.Image = tostring(result.EnemyIcon or "")
 	enemyIcon.ZIndex = REWARD_Z + 16
-	enemyIcon.Parent = heroPanel
+	enemyIcon.Parent = enemyPanel
 	local enemyName = Instance.new("TextLabel")
-	enemyName.Size = UDim2.new(1, -96, 0, 28)
-	enemyName.Position = UDim2.fromOffset(92, 16)
+	enemyName.Size = UDim2.new(1, -92, 0, 28)
+	enemyName.Position = UDim2.fromOffset(88, 14)
 	enemyName.BackgroundTransparency = 1
 	enemyName.TextXAlignment = Enum.TextXAlignment.Left
+	enemyName.TextTruncate = Enum.TextTruncate.AtEnd
 	enemyName.Font = Enum.Font.ArialBold
 	enemyName.TextSize = 21
 	enemyName.TextColor3 = Color3.fromRGB(244, 248, 255)
 	enemyName.Text = tostring(result.EnemyName or "Enemy")
 	enemyName.ZIndex = REWARD_Z + 16
-	enemyName.Parent = heroPanel
+	enemyName.Parent = enemyPanel
 	local detailRow = Instance.new("TextLabel")
-	detailRow.Size = UDim2.new(1, -96, 0, 24)
-	detailRow.Position = UDim2.fromOffset(92, 48)
+	detailRow.Size = UDim2.new(1, -92, 0, 24)
+	detailRow.Position = UDim2.fromOffset(88, 46)
 	detailRow.BackgroundTransparency = 1
 	detailRow.TextXAlignment = Enum.TextXAlignment.Left
 	detailRow.Font = Enum.Font.Code
 	detailRow.TextSize = 14
 	detailRow.TextColor3 = Color3.fromRGB(130, 240, 200)
-	detailRow.Text = string.format("Turns %s   |   Player Remaining %s   |   Enemy Remaining %s", tostring(result.Turns or "?"), tostring(result.PlayerRemaining or "?"), tostring(result.EnemyRemaining or "?"))
+	detailRow.Text = isVictory and "Enemy defeated. Rewards granted." or "The enemy escaped after the battle."
 	detailRow.ZIndex = REWARD_Z + 16
-	detailRow.Parent = heroPanel
-	local rewards = (isVictory and result.Rewards) or {BugEssence = 0}
-	local essence = tonumber(rewards and rewards.BugEssence) or 0
-	local rewardCard = createInsetPanel(frame, UDim2.fromOffset(56, 178), UDim2.new(1, -112, 0, 104), REWARD_Z + 12, isVictory and Color3.fromRGB(15, 58, 42) or Color3.fromRGB(50, 34, 34))
-	local rewardLabel = Instance.new("TextLabel")
-	rewardLabel.Size = UDim2.new(1, -24, 0, 28)
-	rewardLabel.Position = UDim2.fromOffset(12, 16)
-	rewardLabel.BackgroundTransparency = 1
-	rewardLabel.Font = Enum.Font.ArialBold
-	rewardLabel.TextSize = 18
-	rewardLabel.TextColor3 = Color3.fromRGB(236, 252, 244)
-	rewardLabel.Text = "Bug Essence"
-	rewardLabel.ZIndex = REWARD_Z + 16
-	rewardLabel.Parent = rewardCard
-	local amount = Instance.new("TextLabel")
-	amount.Size = UDim2.new(1, -24, 0, 44)
-	amount.Position = UDim2.fromOffset(12, 44)
-	amount.BackgroundTransparency = 1
-	amount.Font = Enum.Font.ArialBold
-	amount.TextSize = 34
-	amount.TextColor3 = isVictory and Color3.fromRGB(120, 255, 178) or Color3.fromRGB(255, 130, 130)
-	amount.Text = "+0"
-	amount.ZIndex = REWARD_Z + 16
-	amount.Parent = rewardCard
+	detailRow.Parent = enemyPanel
+
+	local statsRow = Instance.new("Frame")
+	statsRow.Size = UDim2.new(1, -32, 0, 54)
+	statsRow.Position = UDim2.fromOffset(16, 186)
+	statsRow.BackgroundTransparency = 1
+	statsRow.ZIndex = REWARD_Z + 12
+	statsRow.Parent = frame
+	createResultStat(statsRow, "Turns", tostring(result.Turns or "?"), 0)
+	createResultStat(statsRow, "Player Remaining", tostring(result.PlayerRemaining or "?"), 188)
+	createResultStat(statsRow, "Enemy Remaining", tostring(result.EnemyRemaining or "?"), 376)
+
+	local rewardsPanel = createInsetPanel(frame, UDim2.fromOffset(16, 252), UDim2.new(1, -32, 0, 94), REWARD_Z + 12, isVictory and Color3.fromRGB(15, 58, 42) or Color3.fromRGB(48, 42, 42))
+	local rewardHeader = Instance.new("TextLabel")
+	rewardHeader.Size = UDim2.new(1, -24, 0, 24)
+	rewardHeader.Position = UDim2.fromOffset(12, 9)
+	rewardHeader.BackgroundTransparency = 1
+	rewardHeader.TextXAlignment = Enum.TextXAlignment.Left
+	rewardHeader.Font = Enum.Font.ArialBold
+	rewardHeader.TextSize = 16
+	rewardHeader.TextColor3 = Color3.fromRGB(236, 252, 244)
+	rewardHeader.Text = "Rewards Earned"
+	rewardHeader.ZIndex = REWARD_Z + 16
+	rewardHeader.Parent = rewardsPanel
+	local essenceLabel = Instance.new("TextLabel")
+	essenceLabel.Size = UDim2.new(1, -24, 0, 44)
+	essenceLabel.Position = UDim2.fromOffset(12, 36)
+	essenceLabel.BackgroundTransparency = 1
+	essenceLabel.Font = Enum.Font.ArialBold
+	essenceLabel.TextSize = 32
+	essenceLabel.TextXAlignment = Enum.TextXAlignment.Left
+	essenceLabel.TextColor3 = isVictory and Color3.fromRGB(120, 255, 178) or Color3.fromRGB(255, 150, 150)
+	essenceLabel.Text = "Bug Essence +0"
+	essenceLabel.ZIndex = REWARD_Z + 16
+	essenceLabel.Parent = rewardsPanel
+
+	local equipmentPanel = createInsetPanel(frame, UDim2.fromOffset(16, 358), UDim2.new(1, -32, 0, 54), REWARD_Z + 12, Color3.fromRGB(214, 214, 214))
+	local equipmentText = Instance.new("TextLabel")
+	equipmentText.Size = UDim2.new(1, -24, 1, 0)
+	equipmentText.Position = UDim2.fromOffset(12, 0)
+	equipmentText.BackgroundTransparency = 1
+	equipmentText.TextXAlignment = Enum.TextXAlignment.Left
+	equipmentText.Font = Enum.Font.Arial
+	equipmentText.TextSize = 15
+	equipmentText.TextColor3 = Color3.fromRGB(55, 55, 55)
+	equipmentText.Text = "Equipment Drops: None"
+	equipmentText.ZIndex = REWARD_Z + 16
+	equipmentText.Parent = equipmentPanel
+
 	local message = Instance.new("TextLabel")
-	message.Size = UDim2.new(1, -40, 0, 32)
-	message.Position = UDim2.fromOffset(20, 302)
+	message.Size = UDim2.new(1, -40, 0, 24)
+	message.Position = UDim2.fromOffset(20, 420)
 	message.BackgroundTransparency = 1
 	message.Font = Enum.Font.Arial
-	message.TextSize = 16
+	message.TextSize = 15
 	message.TextColor3 = Color3.fromRGB(38, 38, 38)
-	message.Text = isVictory and "Bug Essence collected." or "The enemy escaped after the battle."
+	message.Text = isVictory and "Bug Essence collected." or "No rewards were granted."
 	message.ZIndex = REWARD_Z + 15
 	message.Parent = frame
-	local closeBtn = createButton(frame, isVictory and "Claim Essence" or "Close", UDim2.new(0.5, -92, 1, -54), UDim2.fromOffset(184, 36), REWARD_Z + 15, isVictory and Color3.fromRGB(88, 230, 140) or Color3.fromRGB(192, 192, 192))
+	local closeBtn = createButton(frame, isVictory and "Claim Essence" or "Close", UDim2.new(0.5, -98, 1, -44), UDim2.fromOffset(196, 34), REWARD_Z + 15, isVictory and Color3.fromRGB(40, 190, 92) or Color3.fromRGB(204, 204, 204))
+	styleButton(closeBtn, closeBtn.BackgroundColor3, isVictory and Color3.fromRGB(54, 220, 110) or Color3.fromRGB(224, 224, 224), isVictory and Color3.fromRGB(28, 150, 70) or Color3.fromRGB(170, 170, 170), isVictory and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(20, 20, 20))
 	closeBtn.MouseButton1Click:Connect(function() windowRef.Destroy() end)
 	if isVictory then
-		rewardCard.Size = UDim2.new(1, -132, 0, 94)
-		rewardCard.Position = UDim2.fromOffset(66, 183)
-		TweenService:Create(rewardCard, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(1, -112, 0, 104), Position = UDim2.fromOffset(56, 178)}):Play()
+		TweenService:Create(rewardsPanel, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.fromOffset(16, 248)}):Play()
 		task.spawn(function()
 			for i = 0, essence do
-				if not amount.Parent then return end
-				amount.Text = "+" .. tostring(i)
+				if not essenceLabel.Parent then return end
+				essenceLabel.Text = "Bug Essence +" .. tostring(i)
 				task.wait(math.max(0.015, math.min(0.04, 0.5 / math.max(essence, 1))))
 			end
 		end)
@@ -396,7 +483,7 @@ local function showFinalPopup(result)
 				if not frame.Parent then return end
 				local sparkle = Instance.new("Frame")
 				sparkle.Size = UDim2.fromOffset(math.random(4, 9), math.random(4, 9))
-				sparkle.Position = UDim2.new(0.5, math.random(-190, 190), 0, math.random(172, 276))
+				sparkle.Position = UDim2.new(0.5, math.random(-210, 210), 0, math.random(252, 340))
 				sparkle.BorderSizePixel = 0
 				sparkle.BackgroundColor3 = Color3.fromRGB(138, 255, 186)
 				sparkle.ZIndex = REWARD_Z + 22
@@ -408,7 +495,7 @@ local function showFinalPopup(result)
 			end)
 		end
 	else
-		amount.Text = "+0"
+		essenceLabel.Text = "Bug Essence +0"
 	end
 end
 
@@ -500,7 +587,7 @@ local function openTerminalWaiting(enemy)
 	terminalWindow = windowRef
 	local content = windowRef.Content
 	local simPanel = createInsetPanel(content, UDim2.fromOffset(10, 10), UDim2.new(1, -20, 1, -20), MODAL_Z + 12, Color3.fromRGB(5, 10, 12))
-	local infoBar = createInsetPanel(simPanel, UDim2.fromOffset(10, 10), UDim2.new(1, -20, 0, 42), MODAL_Z + 14, Color3.fromRGB(13, 29, 33))
+	local infoBar = createInsetPanel(simPanel, UDim2.fromOffset(10, 10), UDim2.new(1, -20, 0, 42), MODAL_Z + 14, Color3.fromRGB(16, 36, 42))
 	terminalStatusLabel = Instance.new("TextLabel")
 	terminalStatusLabel.Size = UDim2.new(1, -190, 1, 0)
 	terminalStatusLabel.Position = UDim2.fromOffset(10, 0)
@@ -522,8 +609,8 @@ local function openTerminalWaiting(enemy)
 	terminalTurnLabel.Text = "Turn --"
 	terminalTurnLabel.ZIndex = MODAL_Z + 18
 	terminalTurnLabel.Parent = infoBar
-	terminalTeamPanel = createInsetPanel(simPanel, UDim2.fromOffset(10, 62), UDim2.fromOffset(230, 210), MODAL_Z + 14, Color3.fromRGB(10, 20, 24))
-	terminalEnemyPanel = createInsetPanel(simPanel, UDim2.new(1, -240, 0, 62), UDim2.fromOffset(230, 210), MODAL_Z + 14, Color3.fromRGB(24, 12, 14))
+	terminalTeamPanel = createInsetPanel(simPanel, UDim2.fromOffset(10, 62), UDim2.fromOffset(230, 220), MODAL_Z + 14, Color3.fromRGB(10, 20, 24))
+	terminalEnemyPanel = createInsetPanel(simPanel, UDim2.new(1, -240, 0, 62), UDim2.fromOffset(230, 220), MODAL_Z + 14, Color3.fromRGB(24, 12, 14))
 	for _, spec in ipairs({{terminalTeamPanel, "YOUR TEAM"}, {terminalEnemyPanel, "ENEMY"}}) do
 		local label = Instance.new("TextLabel")
 		label.Size = UDim2.new(1, -12, 0, 26)
@@ -552,9 +639,31 @@ local function openTerminalWaiting(enemy)
 	waiting.Text = "Loading equipped combat bugs..."
 	waiting.ZIndex = MODAL_Z + 18
 	waiting.Parent = terminalTeamPanel
+	local simReadout = createInsetPanel(simPanel, UDim2.fromOffset(250, 62), UDim2.new(1, -500, 0, 220), MODAL_Z + 14, Color3.fromRGB(12, 17, 24))
+	local vsLabel = Instance.new("TextLabel")
+	vsLabel.Size = UDim2.new(1, -20, 0, 46)
+	vsLabel.Position = UDim2.fromOffset(10, 18)
+	vsLabel.BackgroundTransparency = 1
+	vsLabel.Font = Enum.Font.ArialBold
+	vsLabel.TextSize = 28
+	vsLabel.TextColor3 = Color3.fromRGB(255, 210, 92)
+	vsLabel.Text = "VS"
+	vsLabel.ZIndex = MODAL_Z + 18
+	vsLabel.Parent = simReadout
+	local readoutText = Instance.new("TextLabel")
+	readoutText.Size = UDim2.new(1, -20, 0, 106)
+	readoutText.Position = UDim2.fromOffset(10, 72)
+	readoutText.BackgroundTransparency = 1
+	readoutText.Font = Enum.Font.Code
+	readoutText.TextSize = 13
+	readoutText.TextWrapped = true
+	readoutText.TextColor3 = Color3.fromRGB(128, 245, 218)
+	readoutText.Text = "AUTO-BATTLE PLAYBACK\nHP telemetry online\nTerminal feed armed"
+	readoutText.ZIndex = MODAL_Z + 18
+	readoutText.Parent = simReadout
 	terminalLinesFrame = Instance.new("ScrollingFrame")
-	terminalLinesFrame.Size = UDim2.new(1, -20, 1, -322)
-	terminalLinesFrame.Position = UDim2.fromOffset(10, 282)
+	terminalLinesFrame.Size = UDim2.new(1, -20, 1, -332)
+	terminalLinesFrame.Position = UDim2.fromOffset(10, 292)
 	terminalLinesFrame.BackgroundColor3 = Color3.fromRGB(1, 5, 4)
 	terminalLinesFrame.BorderSizePixel = 1
 	terminalLinesFrame.BorderColor3 = Color3.fromRGB(40, 115, 80)
@@ -640,15 +749,14 @@ local function makePopup(enemy)
 	sub.Position = UDim2.fromOffset(92, 48)
 	sub.BackgroundTransparency = 1
 	sub.TextXAlignment = Enum.TextXAlignment.Left
-	sub.Font = Enum.Font.Arial
+	sub.Font = Enum.Font.ArialBold
 	sub.TextSize = 15
-	sub.TextColor3 = Color3.fromRGB(52, 52, 52)
-	sub.Text = string.format("%s • %s", tostring(enemy.Tier), tostring(enemy.Rarity or "Unknown"))
+	sub.TextColor3 = Color3.fromRGB(128, 38, 30)
+	sub.Text = enemyTierLabel(enemy.Tier)
 	sub.ZIndex = MODAL_Z + 18
 	sub.Parent = topPanel
 	createInfoRow(content, "Power", tostring(tonumber(enemy.Power) or 0), 12, 118)
-	createInfoRow(content, "Role", tostring(enemy.Role), 158, 118)
-	createInfoRow(content, "Species", tostring(enemy.Species), 304, 118)
+	createInfoRow(content, "Species", tostring(enemy.Species), 158, 118)
 	local rewardPanel = createInsetPanel(content, UDim2.fromOffset(12, 174), UDim2.new(1, -24, 0, 76), MODAL_Z + 12, Color3.fromRGB(22, 38, 32))
 	local rewardTitle = Instance.new("TextLabel")
 	rewardTitle.Size = UDim2.new(1, -18, 0, 22)
@@ -669,7 +777,7 @@ local function makePopup(enemy)
 	rewardText.Font = Enum.Font.ArialBold
 	rewardText.TextSize = 22
 	rewardText.TextColor3 = Color3.fromRGB(120, 255, 175)
-	rewardText.Text = string.format("Bug Essence: +%d", tonumber(enemy.RewardsPreview and enemy.RewardsPreview.BugEssence) or 0)
+	rewardText.Text = string.format("Bug Essence +%d", tonumber(enemy.RewardsPreview and enemy.RewardsPreview.BugEssence) or 0)
 	rewardText.ZIndex = MODAL_Z + 18
 	rewardText.Parent = rewardPanel
 	local status = Instance.new("TextLabel")
@@ -679,25 +787,27 @@ local function makePopup(enemy)
 	status.BackgroundTransparency = 1
 	status.Text = ""
 	status.TextXAlignment = Enum.TextXAlignment.Left
-	status.TextColor3 = Color3.fromRGB(50, 50, 50)
+	status.TextColor3 = Color3.fromRGB(44, 44, 44)
 	status.Font = Enum.Font.Arial
 	status.TextSize = 14
 	status.ZIndex = MODAL_Z + 18
 	status.Parent = content
-	local attack = createButton(content, "Attack", UDim2.fromOffset(12, 296), UDim2.fromOffset(170, 36), MODAL_Z + 18, Color3.fromRGB(230, 94, 80))
-	attack.TextColor3 = Color3.fromRGB(255, 255, 255)
-	local close = createButton(content, "Close", UDim2.new(1, -116, 0, 296), UDim2.fromOffset(104, 36), MODAL_Z + 18, nil)
+	local attack = createButton(content, "Attack", UDim2.fromOffset(12, 296), UDim2.fromOffset(170, 36), MODAL_Z + 18, Color3.fromRGB(196, 52, 30))
+	styleButton(attack, Color3.fromRGB(196, 52, 30), Color3.fromRGB(226, 72, 38), Color3.fromRGB(150, 36, 24), Color3.fromRGB(255, 255, 255))
+	local close = createButton(content, "Close", UDim2.new(1, -116, 0, 296), UDim2.fromOffset(104, 36), MODAL_Z + 18, Color3.fromRGB(210, 210, 210))
+	styleButton(close, Color3.fromRGB(210, 210, 210), Color3.fromRGB(232, 232, 232), Color3.fromRGB(170, 170, 170), Color3.fromRGB(20, 20, 20))
 	local hasTeam = getCombatTeamCount() > 0
 	if hasTeam then
-		attack.Active = true; attack.AutoButtonColor = true; attack.Text = "Attack"; status.Text = "Ready to simulate battle."
+		attack.Active = true; attack.Text = "Attack"; status.Text = "Ready to simulate battle."
 	else
-		attack.Active = false; attack.AutoButtonColor = false; attack.Text = "No Combat Team"; attack.BackgroundColor3 = Color3.fromRGB(160, 128, 128); status.Text = "Equip bugs in Bugs.exe > Combat Team first."
+		attack.Active = false; attack.Text = "No Combat Team"; attack.BackgroundColor3 = Color3.fromRGB(122, 82, 78); status.Text = "Equip bugs in Bugs.exe > Combat Team first."
 	end
 	close.MouseButton1Click:Connect(closePopup)
 	attack.MouseButton1Click:Connect(function()
 		if getCombatTeamCount() <= 0 then status.Text = "Equip bugs in Bugs.exe > Combat Team first."; return end
 		print("[EnemySpawnController] Attack clicked", enemy.EnemyId)
-		attack.Active = false; attack.AutoButtonColor = false; attack.Text = "Preparing..."; awaitingResult = true
+		attack.Active = false; attack.Text = "Preparing..."; awaitingResult = true
+		attack.BackgroundColor3 = Color3.fromRGB(122, 82, 78)
 		print("[EnemySpawnController] Server attack request", enemy.EnemyId)
 		context.Remotes.EnemyBugAttack:FireServer({ EnemyId = enemy.EnemyId })
 		closePopup()
