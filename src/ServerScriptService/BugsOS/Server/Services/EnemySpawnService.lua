@@ -20,7 +20,7 @@ local function spawnForPlayer(player)
  if activeByUserId[player.UserId] then return end
  local cfg=randomBug(); if not cfg then return end; local tierName,tier=tierRoll(); local mult=tonumber(tier.StatMultiplier) or 1
  local bs=cfg.stats or {} local stats={HP=math.max(1,math.floor((bs.HP or 1)*mult)),ATK=math.max(1,math.floor((bs.ATK or 1)*mult)),DEF=math.max(0,math.floor((bs.DEF or 0)*mult)),SPD=math.max(1,math.floor((bs.SPD or 1)*mult)),CritRate=math.floor(bs.CritRate or 0),CritDamage=math.floor(bs.CritDamage or 100),RES=math.floor(bs.RES or 0),ACC=math.floor(bs.ACC or 0)}
- local rewards={BugEssence=math.random(tier.RewardBugEssence.Min,tier.RewardBugEssence.Max),BugDust=math.random(tier.RewardBugDust.Min,tier.RewardBugDust.Max)}
+ local rewards={BugEssence=math.random(tier.RewardBugEssence.Min,tier.RewardBugEssence.Max)}
  local enemyId=HttpService:GenerateGUID(false); local prefix=tierName=="CommonEnemy" and "Enemy" or string.gsub(tierName,"Enemy$","")
  local enemy={EnemyId=enemyId,BugId=cfg.id,DisplayName=string.format("%s %s",prefix,cfg.displayName),Rarity=cfg.rarity,Species=cfg.species,Role=cfg.role,Icon=cfg.icon or cfg.sprite,Tier=tierName,Power=power(stats),Position={XScale=math.random(12,88)/100,YScale=math.random(15,78)/100},RewardsPreview=rewards,Stats=stats,ExpiresAt=os.time()+EnemySpawnConfig.EnemyLifetimeSeconds}
  activeByUserId[player.UserId]=enemy; remotes.Spawned:FireClient(player,enemy)
@@ -51,15 +51,15 @@ function S.Start()
    Turns=res.Turns,
    PlayerRemaining=res.PlayerRemaining,
    EnemyRemaining=res.EnemyRemaining,
-   Rewards={BugEssence=0,BugDust=0},
+   Rewards={BugEssence=0},
    Log=res.Log,
    FinalUnits=res.FinalUnits,
    EnemyName=enemy.DisplayName,
    EnemyIcon=enemy.Icon
   }
   print("[EnemySpawnService] Attack resolved", tostring(res.Winner), enemy.EnemyId)
-  if res.Winner=="Player" then d.Currencies=d.Currencies or {}; d.Currencies.BugEssence=(tonumber(d.Currencies.BugEssence)or 0)+(enemy.RewardsPreview.BugEssence or 0); d.Currencies.BugDust=(tonumber(d.Currencies.BugDust)or 0)+(enemy.RewardsPreview.BugDust or 0); out.Rewards=enemy.RewardsPreview
-   ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence); ProfileService.PatchPlayerState(player,{"Currencies","BugDust"},d.Currencies.BugDust)
+  if res.Winner=="Player" then d.Currencies=d.Currencies or {}; d.Currencies.BugEssence=(tonumber(d.Currencies.BugEssence)or 0)+(enemy.RewardsPreview.BugEssence or 0); out.Rewards={BugEssence=enemy.RewardsPreview.BugEssence or 0}
+   ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
   end
   activeByUserId[player.UserId]=nil
   remotes.AttackResult:FireClient(player,out)

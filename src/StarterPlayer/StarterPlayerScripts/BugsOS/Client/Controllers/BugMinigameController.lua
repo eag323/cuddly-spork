@@ -150,9 +150,9 @@ local function showRewardScreen(payload)
 	local rarity = tostring(payload.Rarity or bug.Rarity or cfg.rarity or "Common")
 	local style = getRarityStyle(rarity)
 	local bonuses = type(payload.BonusStats)=="table" and payload.BonusStats or (type(bug.BonusStats)=="table" and bug.BonusStats or {})
-	local overlay = Instance.new("Frame"); overlay.Size = UDim2.fromScale(1,1); overlay.BackgroundColor3=Color3.new(0,0,0); overlay.BackgroundTransparency=0.35; overlay.ZIndex=90; overlay.Parent=context.UI.HUDLayer; activeRewardGui=overlay
+	local overlay = Instance.new("Frame"); overlay.Size = UDim2.fromScale(1,1); overlay.BackgroundColor3=Color3.new(0,0,0); overlay.BackgroundTransparency=0.35; overlay.ZIndex=300; overlay.Parent=context.UI.HUDLayer; activeRewardGui=overlay
 
-	local card = Instance.new("Frame"); card.AnchorPoint=Vector2.new(0.5,0.5); card.Size=UDim2.fromOffset(560,690); card.Position=UDim2.fromScale(0.5,0.5); card.BackgroundColor3=Color3.fromRGB(9,22,45); card.ZIndex=91; card.Parent=overlay; card.ClipsDescendants=true
+	local card = Instance.new("Frame"); card.AnchorPoint=Vector2.new(0.5,0.5); card.Size=UDim2.fromOffset(560,690); card.Position=UDim2.fromScale(0.5,0.5); card.BackgroundColor3=Color3.fromRGB(9,22,45); card.ZIndex=301; card.Parent=overlay; card.ClipsDescendants=true
 	Instance.new("UICorner",card).CornerRadius=UDim.new(0,16)
 	local cStroke = Instance.new("UIStroke", card); cStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; cStroke.Thickness = (rarity=="Epic" or rarity=="Legendary" or rarity=="Mythic") and 2.8 or 2.2; cStroke.Color = style.Accent
 	local pad = Instance.new("UIPadding", card); pad.PaddingTop=UDim.new(0,20); pad.PaddingBottom=UDim.new(0,16); pad.PaddingLeft=UDim.new(0,20); pad.PaddingRight=UDim.new(0,20)
@@ -170,7 +170,7 @@ local function showRewardScreen(payload)
 	local ringStroke = Instance.new("UIStroke", ring); ringStroke.Color=style.Accent; ringStroke.Thickness=2; ringStroke.Transparency=0.45
 	Instance.new("UICorner",ring).CornerRadius=UDim.new(1,0)
 	local icon = bug.icon or bug.Icon or cfg.icon or cfg.Icon or cfg.sprite or cfg.Sprite or "rbxasset://textures/ui/GuiImagePlaceholder.png"
-	local bugImage = Instance.new("ImageLabel"); bugImage.Size=UDim2.fromOffset(136,136); bugImage.AnchorPoint=Vector2.new(0.5,0.5); bugImage.Position=UDim2.fromScale(0.5,0.5); bugImage.BackgroundTransparency=1; bugImage.ScaleType=Enum.ScaleType.Fit; bugImage.Image=tostring(icon); bugImage.ZIndex=3; bugImage.Parent=iconSection
+	local bugImage = Instance.new("ImageLabel"); bugImage.Size=UDim2.fromOffset(136,136); bugImage.AnchorPoint=Vector2.new(0.5,0.5); bugImage.Position=UDim2.fromScale(0.5,0.5); bugImage.BackgroundTransparency=1; bugImage.ScaleType=Enum.ScaleType.Fit; bugImage.Image=tostring(icon); bugImage.ZIndex=304; bugImage.Parent=iconSection
 
 	local identity = Instance.new("Frame"); identity.Size=UDim2.new(1,0,0,142); identity.BackgroundTransparency=1; identity.Parent=card
 	local idLayout = Instance.new("UIListLayout", identity); idLayout.FillDirection=Enum.FillDirection.Vertical; idLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center; idLayout.Padding=UDim.new(0,5)
@@ -223,7 +223,7 @@ local function showRewardScreen(payload)
 
 	for _, desc in ipairs(card:GetDescendants()) do
 		if desc:IsA("GuiObject") then
-			desc.ZIndex = math.max(desc.ZIndex, 92)
+			desc.ZIndex = math.max(desc.ZIndex, 302)
 		end
 	end
 
@@ -232,7 +232,7 @@ local function showRewardScreen(payload)
 			if activeRewardGui ~= overlay then return end
 			local big = (rarity=="Epic" or rarity=="Legendary" or rarity=="Mythic") and (math.random()<0.25)
 			local size = big and math.random(11,16) or math.random(6,10)
-			local s=Instance.new("Frame"); s.Size=UDim2.fromOffset(size, size); s.BackgroundColor3=style.Accent; s.BackgroundTransparency=0.15; s.BorderSizePixel=0; s.AnchorPoint=Vector2.new(0.5,0.5); s.Position=UDim2.new(0.5, math.random(-22,22), 0.5, math.random(-22,22)); s.Parent=iconSection; s.ZIndex=4; Instance.new("UICorner",s).CornerRadius=UDim.new(1,0)
+			local s=Instance.new("Frame"); s.Size=UDim2.fromOffset(size, size); s.BackgroundColor3=style.Accent; s.BackgroundTransparency=0.15; s.BorderSizePixel=0; s.AnchorPoint=Vector2.new(0.5,0.5); s.Position=UDim2.new(0.5, math.random(-22,22), 0.5, math.random(-22,22)); s.Parent=iconSection; s.ZIndex=305; Instance.new("UICorner",s).CornerRadius=UDim.new(1,0)
 			local dur=math.random(16,24)/10
 			TweenService:Create(s, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position=UDim2.new(0.5, math.random(-150,150), 0.5, math.random(-120,120)), BackgroundTransparency=1}):Play()
 			task.delay(dur + 0.05, function() if s then s:Destroy() end end)
