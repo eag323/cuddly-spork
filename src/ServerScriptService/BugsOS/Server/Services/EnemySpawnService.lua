@@ -53,6 +53,7 @@ function S.Start()
    EnemyRemaining=res.EnemyRemaining,
    Rewards={BugEssence=0},
    Log=res.Log,
+   Events=res.Events,
    FinalUnits=res.FinalUnits,
    EnemyName=enemy.DisplayName,
    EnemyIcon=enemy.Icon
