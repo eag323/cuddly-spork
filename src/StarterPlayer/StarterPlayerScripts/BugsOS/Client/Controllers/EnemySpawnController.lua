@@ -19,9 +19,13 @@ local terminalTopCenterLabel
 local terminalTurnLabel
 local terminalCenterPanel
 local terminalPhaseLabel
-local terminalActionLabel
-local terminalDamageLabel
-local terminalResultLabel
+local terminalCenterDetailLabel
+local terminalMomentumLabel
+local terminalTeamHpLabel
+local terminalEnemyHpLabel
+local terminalMomentumPlayerFill
+local terminalMomentumEnemyFill
+local terminalEventBadgeLabel
 local terminalTeamPanel
 local terminalEnemyPanel
 local terminalUnitPanels = {}
@@ -194,9 +198,13 @@ local function closeTerminal()
 	terminalTurnLabel = nil
 	terminalCenterPanel = nil
 	terminalPhaseLabel = nil
-	terminalActionLabel = nil
-	terminalDamageLabel = nil
-	terminalResultLabel = nil
+	terminalCenterDetailLabel = nil
+	terminalMomentumLabel = nil
+	terminalTeamHpLabel = nil
+	terminalEnemyHpLabel = nil
+	terminalMomentumPlayerFill = nil
+	terminalMomentumEnemyFill = nil
+	terminalEventBadgeLabel = nil
 	terminalTeamPanel = nil
 	terminalEnemyPanel = nil
 	terminalUnitPanels = {}
@@ -289,7 +297,8 @@ local function createCombatantCard(parent: Instance, unit, y: number)
 	bar.ZIndex = MODAL_Z + 20
 	bar.Parent = barBack
 	local maxHp = math.max(1, tonumber(unit.Stats and unit.Stats.HP) or tonumber(unit.CurrentHP) or 1)
-	terminalUnitState[name] = {CurrentHP = maxHp, MaxHP = maxHp}
+	local team = unit.Team and tostring(unit.Team) or nil
+	terminalUnitState[name] = {CurrentHP = maxHp, MaxHP = maxHp, Team = team}
 	terminalUnitPanels[name] = {Root = card, Status = status, Bar = bar, Stroke = stroke}
 	updateUnitPanel(name)
 end
@@ -326,11 +335,80 @@ local function flashCenterPanel(color: Color3)
 	TweenService:Create(terminalCenterPanel, TweenInfo.new(0.45), {BackgroundColor3 = original}):Play()
 end
 
-local function updateCenterStatus(phase: string, action: string?, damageText: string?, resultText: string?)
-	if terminalPhaseLabel then terminalPhaseLabel.Text = phase end
-	if terminalActionLabel then terminalActionLabel.Text = action or "Awaiting combat telemetry..." end
-	if terminalDamageLabel then terminalDamageLabel.Text = damageText or "-- DMG" end
-	if terminalResultLabel then terminalResultLabel.Text = resultText or "" end
+local function getTeamHpTotals(teamName: string): (number, number)
+	local currentHp = 0
+	local maxHp = 0
+	for _, state in pairs(terminalUnitState) do
+		if state.Team == teamName then
+			currentHp += math.max(0, tonumber(state.CurrentHP) or 0)
+			maxHp += math.max(0, tonumber(state.MaxHP) or 0)
+		end
+	end
+	return currentHp, maxHp
+end
+
+local function updateMomentumMeter()
+	local playerCurrentHp, playerMaxHp = getTeamHpTotals("Player")
+	local enemyCurrentHp, enemyMaxHp = getTeamHpTotals("Enemy")
+	local playerHpPct = playerMaxHp > 0 and (playerCurrentHp / playerMaxHp) or 0
+	local enemyHpPct = enemyMaxHp > 0 and (enemyCurrentHp / enemyMaxHp) or 0
+	local totalPct = playerHpPct + enemyHpPct
+	local playerShare = totalPct > 0 and (playerHpPct / totalPct) or 0.5
+	playerShare = math.clamp(playerShare, 0, 1)
+
+	if terminalMomentumLabel then
+		if playerHpPct > enemyHpPct + 0.10 then
+			terminalMomentumLabel.Text = "Your Team Advantage"
+			terminalMomentumLabel.TextColor3 = Color3.fromRGB(128, 255, 188)
+		elseif enemyHpPct > playerHpPct + 0.10 then
+			terminalMomentumLabel.Text = "Enemy Advantage"
+			terminalMomentumLabel.TextColor3 = Color3.fromRGB(255, 146, 94)
+		else
+			terminalMomentumLabel.Text = "Even Match"
+			terminalMomentumLabel.TextColor3 = Color3.fromRGB(255, 218, 112)
+		end
+	end
+	if terminalTeamHpLabel then terminalTeamHpLabel.Text = string.format("Team HP: %d / %d", playerCurrentHp, playerMaxHp) end
+	if terminalEnemyHpLabel then terminalEnemyHpLabel.Text = string.format("Enemy HP: %d / %d", enemyCurrentHp, enemyMaxHp) end
+	if terminalMomentumPlayerFill then terminalMomentumPlayerFill.Size = UDim2.new(playerShare, 0, 1, 0) end
+	if terminalMomentumEnemyFill then terminalMomentumEnemyFill.Size = UDim2.new(1 - playerShare, 0, 1, 0) end
+end
+
+local function updateCenterStatus(phase: string, detailText: string?, badgeText: string?)
+	if terminalPhaseLabel then terminalPhaseLabel.Text = string.upper(phase) end
+	if terminalCenterDetailLabel then terminalCenterDetailLabel.Text = detailText or "Combat link established" end
+	if terminalEventBadgeLabel then
+		terminalEventBadgeLabel.Text = badgeText or ""
+		terminalEventBadgeLabel.Visible = badgeText ~= nil and badgeText ~= ""
+		if badgeText == "CRIT" then
+			terminalEventBadgeLabel.TextColor3 = Color3.fromRGB(255, 242, 130)
+			terminalEventBadgeLabel.BorderColor3 = Color3.fromRGB(255, 242, 130)
+		elseif badgeText == "KO" or badgeText == "DEFEAT" then
+			terminalEventBadgeLabel.TextColor3 = Color3.fromRGB(255, 132, 90)
+			terminalEventBadgeLabel.BorderColor3 = Color3.fromRGB(255, 132, 90)
+		elseif badgeText == "VICTORY" then
+			terminalEventBadgeLabel.TextColor3 = Color3.fromRGB(128, 255, 164)
+			terminalEventBadgeLabel.BorderColor3 = Color3.fromRGB(128, 255, 164)
+		else
+			terminalEventBadgeLabel.TextColor3 = Color3.fromRGB(128, 245, 218)
+			terminalEventBadgeLabel.BorderColor3 = Color3.fromRGB(104, 232, 255)
+		end
+	end
+	updateMomentumMeter()
+end
+
+local function applyFinalUnitHealth(result)
+	for _, unit in ipairs(result.FinalUnits or {}) do
+		local name = tostring(unit.Name or unit.Id or "Unit")
+		local state = terminalUnitState[name]
+		if state then
+			state.CurrentHP = math.max(0, tonumber(unit.CurrentHP) or 0)
+			state.MaxHP = math.max(1, tonumber(unit.Stats and unit.Stats.HP) or tonumber(state.MaxHP) or 1)
+			state.Team = unit.Team and tostring(unit.Team) or state.Team
+			updateUnitPanel(name)
+		end
+	end
+	updateMomentumMeter()
 end
 
 local function applyEventState(logLine: string, event)
@@ -348,10 +426,9 @@ local function applyEventState(logLine: string, event)
 
 	if actor and target and damage then
 		local damageNumber = tonumber(damage) or 0
-		local phase = isCrit and "Critical Hit" or "Attacking"
-		local damageText = isCrit and string.format("CRIT %d DMG", damageNumber) or string.format("%d DMG", damageNumber)
-		updateTopStatus("Simulating battle...", phase, nil)
-		updateCenterStatus(phase, string.format("%s attacks %s", actor, target), damageText, nil)
+		local badgeText = isCrit and "CRIT" or "HIT"
+		updateTopStatus("Simulating battle...", nil, nil)
+		updateCenterStatus("SIMULATING", "Tactical telemetry updating", badgeText)
 		highlightUnit(tostring(actor), Color3.fromRGB(95, 255, 205))
 		highlightUnit(tostring(target), Color3.fromRGB(255, 128, 70))
 		local state = terminalUnitState[tostring(target)]
@@ -364,16 +441,18 @@ local function applyEventState(logLine: string, event)
 			end
 			updateUnitPanel(tostring(target))
 		end
+		updateMomentumMeter()
 		return
 	end
 
 	local defeatedName = (event and event.Defeated and event.TargetName) or string.match(logLine, "^(.-) is defeated%.")
 	if defeatedName or string.find(lowerLine, "defeated", 1, true) then
 		defeatedName = defeatedName or "Unit"
-		updateTopStatus("Simulating battle...", "Unit Defeated", nil)
-		updateCenterStatus("Unit Defeated", "Defense grid collapsed", nil, tostring(defeatedName) .. " defeated")
+		updateTopStatus("Simulating battle...", nil, nil)
+		updateCenterStatus("SIMULATING", "Unit count changed", "KO")
 		local state = terminalUnitState[tostring(defeatedName)]
 		if state then state.CurrentHP = 0; updateUnitPanel(tostring(defeatedName)) end
+		updateMomentumMeter()
 		highlightUnit(tostring(defeatedName), Color3.fromRGB(255, 86, 86))
 	end
 end
@@ -606,7 +685,7 @@ local function startTerminalPlayback(result)
 			"> --- COMBAT LOG ---",
 		}
 		updateTopStatus("Awaiting server result...", tostring(result.EnemyName or "Enemy"), "Action 0 / " .. tostring(#logs))
-		updateCenterStatus("Initializing", "Combat link established", nil, nil)
+		updateCenterStatus("INITIALIZING", "Combat link established", nil)
 		for _, bootLine in ipairs(bootLines) do
 			if not terminalOpen or myToken ~= playbackToken then return end
 			createTerminalLine(bootLine, Color3.fromRGB(104, 232, 255))
@@ -629,8 +708,7 @@ local function startTerminalPlayback(result)
 			end
 			playbackIndex += 1
 			local event = events[playbackIndex]
-			local turn = event and event.Turn or math.max(1, math.ceil(playbackIndex / 2))
-			updateTopStatus("Simulating battle...", "Turn " .. tostring(turn), string.format("Action %d / %d", playbackIndex, #logs))
+			updateTopStatus("Simulating battle...", tostring(result.EnemyName or "Enemy"), string.format("Action %d / %d", playbackIndex, #logs))
 			local logLine = tostring(logs[playbackIndex])
 			local lowerLine = string.lower(logLine)
 			local lineColor = Color3.fromRGB(80, 245, 140)
@@ -648,8 +726,9 @@ local function startTerminalPlayback(result)
 		local resultColor = Color3.fromRGB(255, 176, 120)
 		if winner == "player" then resultColor = Color3.fromRGB(128, 255, 164) elseif winner == "enemy" then resultColor = Color3.fromRGB(255, 120, 120) end
 		local resultWord = winner == "player" and "VICTORY" or (winner == "enemy" and "DEFEAT" or "DRAW")
-		updateTopStatus("Battle complete", "Battle Complete", string.format("Action %d / %d", #logs, #logs))
-		updateCenterStatus("Battle Complete", "Simulation resolved", nil, resultWord)
+		applyFinalUnitHealth(result)
+		updateTopStatus("Battle complete", tostring(result.EnemyName or "Enemy"), string.format("Action %d / %d", #logs, #logs))
+		updateCenterStatus("BATTLE COMPLETE", "Final battle state locked", resultWord)
 		createTerminalLine("> RESULT: " .. resultWord, resultColor)
 		if not playbackSkipped then
 			local elapsed = os.clock() - playbackStartedAt
@@ -717,7 +796,7 @@ local function openTerminalWaiting(enemy)
 		label.ZIndex = MODAL_Z + 18
 		label.Parent = spec[1]
 	end
-	createCombatantCard(terminalEnemyPanel, {Name = enemy.DisplayName, Icon = enemy.Icon, Stats = enemy.Stats}, 34)
+	createCombatantCard(terminalEnemyPanel, {Name = enemy.DisplayName, Icon = enemy.Icon, Stats = enemy.Stats, Team = "Enemy"}, 34)
 	local waiting = Instance.new("TextLabel")
 	waiting.Name = "WaitingTeamLabel"
 	waiting.Size = UDim2.new(1, -12, 0, 70)
@@ -753,37 +832,85 @@ local function openTerminalWaiting(enemy)
 	terminalPhaseLabel.Text = "Initializing"
 	terminalPhaseLabel.ZIndex = MODAL_Z + 18
 	terminalPhaseLabel.Parent = terminalCenterPanel
-	terminalActionLabel = Instance.new("TextLabel")
-	terminalActionLabel.Size = UDim2.new(1, -20, 0, 54)
-	terminalActionLabel.Position = UDim2.fromOffset(10, 84)
-	terminalActionLabel.BackgroundTransparency = 1
-	terminalActionLabel.Font = Enum.Font.Code
-	terminalActionLabel.TextSize = 13
-	terminalActionLabel.TextWrapped = true
-	terminalActionLabel.TextColor3 = Color3.fromRGB(128, 245, 218)
-	terminalActionLabel.Text = "Awaiting combat telemetry..."
-	terminalActionLabel.ZIndex = MODAL_Z + 18
-	terminalActionLabel.Parent = terminalCenterPanel
-	terminalDamageLabel = Instance.new("TextLabel")
-	terminalDamageLabel.Size = UDim2.new(1, -20, 0, 30)
-	terminalDamageLabel.Position = UDim2.fromOffset(10, 142)
-	terminalDamageLabel.BackgroundTransparency = 1
-	terminalDamageLabel.Font = Enum.Font.ArialBold
-	terminalDamageLabel.TextSize = 20
-	terminalDamageLabel.TextColor3 = Color3.fromRGB(255, 238, 128)
-	terminalDamageLabel.Text = "-- DMG"
-	terminalDamageLabel.ZIndex = MODAL_Z + 18
-	terminalDamageLabel.Parent = terminalCenterPanel
-	terminalResultLabel = Instance.new("TextLabel")
-	terminalResultLabel.Size = UDim2.new(1, -20, 0, 28)
-	terminalResultLabel.Position = UDim2.fromOffset(10, 178)
-	terminalResultLabel.BackgroundTransparency = 1
-	terminalResultLabel.Font = Enum.Font.Code
-	terminalResultLabel.TextSize = 13
-	terminalResultLabel.TextColor3 = Color3.fromRGB(255, 146, 94)
-	terminalResultLabel.Text = ""
-	terminalResultLabel.ZIndex = MODAL_Z + 18
-	terminalResultLabel.Parent = terminalCenterPanel
+	terminalMomentumLabel = Instance.new("TextLabel")
+	terminalMomentumLabel.Size = UDim2.new(1, -20, 0, 20)
+	terminalMomentumLabel.Position = UDim2.fromOffset(10, 80)
+	terminalMomentumLabel.BackgroundTransparency = 1
+	terminalMomentumLabel.Font = Enum.Font.ArialBold
+	terminalMomentumLabel.TextSize = 15
+	terminalMomentumLabel.TextColor3 = Color3.fromRGB(255, 218, 112)
+	terminalMomentumLabel.Text = "Even Match"
+	terminalMomentumLabel.ZIndex = MODAL_Z + 18
+	terminalMomentumLabel.Parent = terminalCenterPanel
+	local meterBack = Instance.new("Frame")
+	meterBack.Size = UDim2.new(1, -24, 0, 12)
+	meterBack.Position = UDim2.fromOffset(12, 106)
+	meterBack.BackgroundColor3 = Color3.fromRGB(48, 56, 58)
+	meterBack.BorderSizePixel = 1
+	meterBack.BorderColor3 = Color3.fromRGB(96, 96, 96)
+	meterBack.ZIndex = MODAL_Z + 18
+	meterBack.Parent = terminalCenterPanel
+	terminalMomentumEnemyFill = Instance.new("Frame")
+	terminalMomentumEnemyFill.AnchorPoint = Vector2.new(1, 0)
+	terminalMomentumEnemyFill.Position = UDim2.fromScale(1, 0)
+	terminalMomentumEnemyFill.Size = UDim2.new(0.5, 0, 1, 0)
+	terminalMomentumEnemyFill.BackgroundColor3 = Color3.fromRGB(196, 74, 50)
+	terminalMomentumEnemyFill.BorderSizePixel = 0
+	terminalMomentumEnemyFill.ZIndex = MODAL_Z + 19
+	terminalMomentumEnemyFill.Parent = meterBack
+	terminalMomentumPlayerFill = Instance.new("Frame")
+	terminalMomentumPlayerFill.Size = UDim2.new(0.5, 0, 1, 0)
+	terminalMomentumPlayerFill.BackgroundColor3 = Color3.fromRGB(80, 220, 168)
+	terminalMomentumPlayerFill.BorderSizePixel = 0
+	terminalMomentumPlayerFill.ZIndex = MODAL_Z + 20
+	terminalMomentumPlayerFill.Parent = meterBack
+	terminalTeamHpLabel = Instance.new("TextLabel")
+	terminalTeamHpLabel.Size = UDim2.new(1, -20, 0, 20)
+	terminalTeamHpLabel.Position = UDim2.fromOffset(10, 126)
+	terminalTeamHpLabel.BackgroundTransparency = 1
+	terminalTeamHpLabel.Font = Enum.Font.Code
+	terminalTeamHpLabel.TextSize = 12
+	terminalTeamHpLabel.TextXAlignment = Enum.TextXAlignment.Left
+	terminalTeamHpLabel.TextColor3 = Color3.fromRGB(128, 255, 188)
+	terminalTeamHpLabel.Text = "Team HP: 0 / 0"
+	terminalTeamHpLabel.ZIndex = MODAL_Z + 18
+	terminalTeamHpLabel.Parent = terminalCenterPanel
+	terminalEnemyHpLabel = Instance.new("TextLabel")
+	terminalEnemyHpLabel.Size = UDim2.new(1, -20, 0, 20)
+	terminalEnemyHpLabel.Position = UDim2.fromOffset(10, 146)
+	terminalEnemyHpLabel.BackgroundTransparency = 1
+	terminalEnemyHpLabel.Font = Enum.Font.Code
+	terminalEnemyHpLabel.TextSize = 12
+	terminalEnemyHpLabel.TextXAlignment = Enum.TextXAlignment.Left
+	terminalEnemyHpLabel.TextColor3 = Color3.fromRGB(255, 150, 106)
+	terminalEnemyHpLabel.Text = "Enemy HP: 0 / 0"
+	terminalEnemyHpLabel.ZIndex = MODAL_Z + 18
+	terminalEnemyHpLabel.Parent = terminalCenterPanel
+	terminalCenterDetailLabel = Instance.new("TextLabel")
+	terminalCenterDetailLabel.Size = UDim2.new(1, -20, 0, 18)
+	terminalCenterDetailLabel.Position = UDim2.fromOffset(10, 168)
+	terminalCenterDetailLabel.BackgroundTransparency = 1
+	terminalCenterDetailLabel.Font = Enum.Font.Code
+	terminalCenterDetailLabel.TextSize = 11
+	terminalCenterDetailLabel.TextWrapped = true
+	terminalCenterDetailLabel.TextColor3 = Color3.fromRGB(128, 245, 218)
+	terminalCenterDetailLabel.Text = "Combat link established"
+	terminalCenterDetailLabel.ZIndex = MODAL_Z + 18
+	terminalCenterDetailLabel.Parent = terminalCenterPanel
+	terminalEventBadgeLabel = Instance.new("TextLabel")
+	terminalEventBadgeLabel.Size = UDim2.new(0, 82, 0, 24)
+	terminalEventBadgeLabel.Position = UDim2.new(0.5, -41, 1, -30)
+	terminalEventBadgeLabel.BackgroundColor3 = Color3.fromRGB(8, 20, 24)
+	terminalEventBadgeLabel.BorderSizePixel = 1
+	terminalEventBadgeLabel.BorderColor3 = Color3.fromRGB(104, 232, 255)
+	terminalEventBadgeLabel.Font = Enum.Font.ArialBold
+	terminalEventBadgeLabel.TextSize = 15
+	terminalEventBadgeLabel.TextColor3 = Color3.fromRGB(128, 245, 218)
+	terminalEventBadgeLabel.Text = ""
+	terminalEventBadgeLabel.Visible = false
+	terminalEventBadgeLabel.ZIndex = MODAL_Z + 18
+	terminalEventBadgeLabel.Parent = terminalCenterPanel
+	updateCenterStatus("INITIALIZING", "Combat link established", nil)
 	local feedLabel = Instance.new("TextLabel")
 	feedLabel.Size = UDim2.new(1, -20, 0, 20)
 	feedLabel.Position = UDim2.fromOffset(10, 286)
