@@ -516,6 +516,16 @@ local function formatStars(stars: any): string
 	return string.rep("★", starCount) .. string.rep("☆", 6 - starCount)
 end
 
+local function getSlotFallbackIcon(slot: any): string
+	local slotName = tostring(slot or "")
+	if slotName == "Weapon" then return "⚔" end
+	if slotName == "Helmet" then return "⛑" end
+	if slotName == "Chestplate" then return "🛡" end
+	if slotName == "Boots" then return "👢" end
+	if slotName == "Charm" then return "✦" end
+	return "✦"
+end
+
 local function formatSubStats(subStats: any): string
 	if type(subStats) ~= "table" or #subStats == 0 then
 		return "Sub stats: None"
@@ -548,13 +558,27 @@ local function createEquipmentDropCard(parent: Instance, item: any, pos: UDim2, 
 	iconBack.ZIndex = z + 4
 	iconBack.Parent = card
 
-	local icon = Instance.new("ImageLabel")
-	icon.Size = UDim2.fromOffset(56, 56)
-	icon.Position = UDim2.fromOffset(8, 8)
-	icon.BackgroundTransparency = 1
-	icon.Image = tostring(item.Icon or "")
-	icon.ZIndex = z + 5
-	icon.Parent = iconBack
+	local fallbackIcon = Instance.new("TextLabel")
+	fallbackIcon.Size = UDim2.fromOffset(56, 56)
+	fallbackIcon.Position = UDim2.fromOffset(8, 8)
+	fallbackIcon.BackgroundTransparency = 1
+	fallbackIcon.Font = Enum.Font.ArialBold
+	fallbackIcon.TextSize = 34
+	fallbackIcon.TextColor3 = rarityColor
+	fallbackIcon.Text = getSlotFallbackIcon(item.Slot)
+	fallbackIcon.ZIndex = z + 5
+	fallbackIcon.Parent = iconBack
+
+	local iconAsset = tostring(item.Icon or "")
+	if iconAsset ~= "" then
+		local icon = Instance.new("ImageLabel")
+		icon.Size = UDim2.fromOffset(56, 56)
+		icon.Position = UDim2.fromOffset(8, 8)
+		icon.BackgroundTransparency = 1
+		icon.Image = iconAsset
+		icon.ZIndex = z + 6
+		icon.Parent = iconBack
+	end
 
 	local header = Instance.new("TextLabel")
 	header.Size = UDim2.new(1, -102, 0, 20)
@@ -632,6 +656,16 @@ local function showFinalPopup(result)
 	local rewards = (isVictory and result.Rewards) or {BugEssence = 0}
 	local essence = tonumber(rewards and rewards.BugEssence) or 0
 	local droppedEquipment = (isVictory and type(rewards) == "table") and rewards.Equipment or nil
+	if type(droppedEquipment) == "table" then
+		print(
+			"[EnemySpawnController] Showing equipment drop",
+			getEquipmentDisplayName(droppedEquipment),
+			tostring(droppedEquipment.Rarity or "Common"),
+			tostring(droppedEquipment.Stars or 1)
+		)
+	else
+		print("[EnemySpawnController] No equipment drop in result")
+	end
 
 	local banner = createInsetPanel(frame, UDim2.fromOffset(16, 12), UDim2.new(1, -32, 0, 64), REWARD_Z + 12, isVictory and Color3.fromRGB(5, 54, 32) or (isDefeat and Color3.fromRGB(58, 22, 22) or Color3.fromRGB(62, 42, 12)))
 	local title = Instance.new("TextLabel")

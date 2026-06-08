@@ -27,6 +27,14 @@ local EconomyConfig = {
 	DEV_TEST_BUG_ESSENCE = 10000000000,
 	-- DEVELOPMENT ONLY: Minimum random bug inventory count when ascension test kit is granted.
 	DEV_TEST_RANDOM_BUG_COUNT = 100,
+	-- DEVELOPMENT ONLY: Force equipment drops from desktop enemy victories while validating Equipment Drops v1.
+	DEV_FORCE_EQUIPMENT_DROPS = true,
+	-- DEVELOPMENT ONLY: Drop chance used when forced equipment drops are enabled.
+	DEV_EQUIPMENT_DROP_CHANCE = 1.0,
+	-- DEVELOPMENT ONLY: Optional minimum equipment rarity override for drop testing. Example: "Rare".
+	DEV_EQUIPMENT_DROP_MIN_RARITY = nil,
+	-- DEVELOPMENT ONLY: Optional minimum equipment stars override for drop testing. Example: 3.
+	DEV_EQUIPMENT_DROP_MIN_STARS = nil,
 }
 
 return EconomyConfig
