@@ -757,48 +757,160 @@ local function createEquipmentDropCard(parent: Instance, item: any, pos: UDim2, 
 	return card
 end
 
-local function createEssenceRewardChip(parent: Instance, pos: UDim2, size: UDim2, z: number, essence: number, isVictory: boolean, isPrimary: boolean): (Frame, TextLabel)
-	local chip = createInsetPanel(parent, pos, size, z, isPrimary and Color3.fromRGB(8, 86, 64) or Color3.fromRGB(10, 72, 60))
-	chip.BorderColor3 = Color3.fromRGB(90, 235, 210)
+local function createEssenceLootCard(parent: Instance, pos: UDim2, z: number, essence: number, isVictory: boolean): (Frame, TextLabel)
+	local card = createInsetPanel(parent, pos, UDim2.fromOffset(82, 98), z, Color3.fromRGB(8, 76, 66))
+	card.BorderColor3 = Color3.fromRGB(90, 235, 210)
+
+	local icon = createInsetPanel(card, UDim2.fromOffset(10, 8), UDim2.fromOffset(62, 62), z + 2, Color3.fromRGB(10, 36, 42))
+	icon.BorderColor3 = Color3.fromRGB(92, 255, 210)
+
+	local symbol = Instance.new("TextLabel")
+	symbol.Size = UDim2.new(1, 0, 0, 34)
+	symbol.Position = UDim2.fromOffset(0, 9)
+	symbol.BackgroundTransparency = 1
+	symbol.Font = Enum.Font.ArialBold
+	symbol.TextSize = 24
+	symbol.TextColor3 = Color3.fromRGB(154, 255, 232)
+	symbol.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	symbol.TextStrokeTransparency = 0.35
+	symbol.Text = "BE"
+	symbol.ZIndex = z + 5
+	symbol.Parent = icon
+
+	local amount = Instance.new("TextLabel")
+	amount.Size = UDim2.new(1, -8, 0, 18)
+	amount.Position = UDim2.fromOffset(4, 43)
+	amount.BackgroundTransparency = 1
+	amount.Font = Enum.Font.ArialBold
+	amount.TextSize = 14
+	amount.TextColor3 = isVictory and Color3.fromRGB(120, 255, 178) or Color3.fromRGB(255, 150, 150)
+	amount.Text = "+" .. tostring(essence)
+	amount.ZIndex = z + 5
+	amount.Parent = icon
+
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.64, -12, 1, 0)
-	label.Position = UDim2.fromOffset(10, 0)
+	label.Size = UDim2.new(1, -8, 0, 18)
+	label.Position = UDim2.fromOffset(4, 74)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.ArialBold
-	label.TextSize = isPrimary and 18 or 14
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.TextColor3 = Color3.fromRGB(196, 255, 246)
-	label.Text = "Bug Essence"
-	label.ZIndex = z + 3
-	label.Parent = chip
-	local value = Instance.new("TextLabel")
-	value.Size = UDim2.new(0.36, -12, 1, 0)
-	value.Position = UDim2.new(0.64, 2, 0, 0)
-	value.BackgroundTransparency = 1
-	value.Font = Enum.Font.ArialBold
-	value.TextSize = isPrimary and 28 or 20
-	value.TextXAlignment = Enum.TextXAlignment.Right
-	value.TextColor3 = isVictory and Color3.fromRGB(120, 255, 178) or Color3.fromRGB(255, 150, 150)
-	value.Text = "+" .. tostring(essence)
-	value.ZIndex = z + 3
-	value.Parent = chip
-	return chip, value
+	label.TextSize = 11
+	label.TextColor3 = Color3.fromRGB(210, 250, 242)
+	label.TextTruncate = Enum.TextTruncate.AtEnd
+	label.Text = "Essence"
+	label.ZIndex = z + 4
+	label.Parent = card
+	return card, amount
 end
 
-local function createNoEquipmentCard(parent: Instance, pos: UDim2, size: UDim2, z: number, isVictory: boolean): Frame
-	local card = createInsetPanel(parent, pos, size, z, isVictory and Color3.fromRGB(216, 216, 216) or Color3.fromRGB(206, 198, 190))
-	local equipmentText = Instance.new("TextLabel")
-	equipmentText.Size = UDim2.new(1, -20, 1, 0)
-	equipmentText.Position = UDim2.fromOffset(10, 0)
-	equipmentText.BackgroundTransparency = 1
-	equipmentText.TextXAlignment = Enum.TextXAlignment.Left
-	equipmentText.Font = Enum.Font.ArialBold
-	equipmentText.TextSize = 14
-	equipmentText.TextColor3 = Color3.fromRGB(55, 55, 55)
-	equipmentText.Text = "Equipment Drop: None"
-	equipmentText.ZIndex = z + 3
-	equipmentText.Parent = card
+local function createEquipmentLootCard(parent: Instance, item: any, pos: UDim2, z: number): Frame
+	local rarity = tostring(item.Rarity or "Common")
+	local rarityColor = getEquipmentRarityColor(rarity)
+	local card = createInsetPanel(parent, pos, UDim2.fromOffset(96, 112), z, Color3.fromRGB(28, 29, 38))
+	card.BorderColor3 = rarityColor
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = rarityColor
+	stroke.Thickness = rarity == "Common" and 2 or 3
+	stroke.Transparency = rarity == "Common" and 0.14 or 0
+	stroke.Parent = card
+
+	renderEquipmentSlotVisual(card, item, UDim2.fromOffset(11, 8), UDim2.fromOffset(74, 74), z + 2, rarityColor)
+
+	local stars = Instance.new("TextLabel")
+	stars.Size = UDim2.fromOffset(42, 16)
+	stars.Position = UDim2.fromOffset(4, 4)
+	stars.BackgroundColor3 = Color3.fromRGB(42, 42, 50)
+	stars.BorderSizePixel = 1
+	stars.BorderColor3 = rarityColor
+	stars.Font = Enum.Font.ArialBold
+	stars.TextSize = 10
+	stars.TextColor3 = Color3.fromRGB(255, 232, 120)
+	stars.Text = formatStars(item.Stars)
+	stars.ZIndex = z + 9
+	stars.Parent = card
+
+	local rarityTag = Instance.new("TextLabel")
+	rarityTag.Size = UDim2.fromOffset(58, 16)
+	rarityTag.Position = UDim2.new(0.5, -29, 0, 72)
+	rarityTag.BackgroundColor3 = rarityColor
+	rarityTag.BorderSizePixel = 1
+	rarityTag.BorderColor3 = Color3.fromRGB(255, 255, 255)
+	rarityTag.Font = Enum.Font.ArialBold
+	rarityTag.TextSize = 9
+	rarityTag.TextColor3 = Color3.fromRGB(12, 12, 14)
+	rarityTag.TextTruncate = Enum.TextTruncate.AtEnd
+	rarityTag.Text = string.upper(rarity)
+	rarityTag.ZIndex = z + 9
+	rarityTag.Parent = card
+
+	local name = Instance.new("TextLabel")
+	name.Size = UDim2.new(1, -8, 0, 18)
+	name.Position = UDim2.fromOffset(4, 90)
+	name.BackgroundTransparency = 1
+	name.Font = Enum.Font.ArialBold
+	name.TextSize = 10
+	name.TextColor3 = rarity == "Common" and Color3.fromRGB(238, 238, 238) or rarityColor
+	name.TextTruncate = Enum.TextTruncate.AtEnd
+	name.Text = getEquipmentDisplayName(item)
+	name.ZIndex = z + 5
+	name.Parent = card
+
+	if rarity ~= "Common" then
+		TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 1, true), {Transparency = 0.2}):Play()
+	end
 	return card
+end
+
+local function createNoGearLootCard(parent: Instance, pos: UDim2, z: number): Frame
+	local card = createInsetPanel(parent, pos, UDim2.fromOffset(82, 98), z, Color3.fromRGB(64, 60, 58))
+	card.BorderColor3 = Color3.fromRGB(150, 140, 130)
+
+	local icon = createInsetPanel(card, UDim2.fromOffset(10, 8), UDim2.fromOffset(62, 62), z + 2, Color3.fromRGB(36, 34, 34))
+	icon.BorderColor3 = Color3.fromRGB(120, 112, 108)
+
+	local dash = Instance.new("TextLabel")
+	dash.Size = UDim2.new(1, 0, 1, 0)
+	dash.BackgroundTransparency = 1
+	dash.Font = Enum.Font.ArialBold
+	dash.TextSize = 28
+	dash.TextColor3 = Color3.fromRGB(170, 162, 154)
+	dash.Text = "—"
+	dash.ZIndex = z + 5
+	dash.Parent = icon
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -8, 0, 18)
+	label.Position = UDim2.fromOffset(4, 74)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.ArialBold
+	label.TextSize = 11
+	label.TextColor3 = Color3.fromRGB(202, 194, 186)
+	label.Text = "No Gear"
+	label.ZIndex = z + 4
+	label.Parent = card
+	return card
+end
+
+local function showEquipmentDetailsPopup(item: any)
+	local detailRef = createOsWindow("Equipment Details", UDim2.fromOffset(480, 300), REWARD_Z + 30, nil)
+	if not detailRef then return end
+	local frame = detailRef.Content
+	createEquipmentDropCard(frame, item, UDim2.fromOffset(14, 12), UDim2.new(1, -28, 0, 178), REWARD_Z + 34)
+
+	local hint = Instance.new("TextLabel")
+	hint.Size = UDim2.new(1, -28, 0, 22)
+	hint.Position = UDim2.fromOffset(14, 198)
+	hint.BackgroundTransparency = 1
+	hint.Font = Enum.Font.Code
+	hint.TextSize = 12
+	hint.TextColor3 = Color3.fromRGB(45, 45, 45)
+	hint.TextXAlignment = Enum.TextXAlignment.Center
+	hint.Text = "Full stats are shown here. Equipment was added to your inventory."
+	hint.ZIndex = REWARD_Z + 36
+	hint.Parent = frame
+
+	local close = createButton(frame, "Close", UDim2.new(0.5, -70, 1, -42), UDim2.fromOffset(140, 32), REWARD_Z + 36, Color3.fromRGB(204, 204, 204))
+	styleButton(close, Color3.fromRGB(204, 204, 204), Color3.fromRGB(224, 224, 224), Color3.fromRGB(170, 170, 170), Color3.fromRGB(20, 20, 20))
+	close.MouseButton1Click:Connect(function() detailRef.Destroy() end)
 end
 
 local function findXpResult(xpResults, uid: any)
@@ -812,51 +924,61 @@ local function findXpResult(xpResults, uid: any)
 	return nil
 end
 
-local function createTeamXpCard(parent: Instance, unit, xpResult, index: number, isVictory: boolean)
-	local cardWidth = 118
-	local card = createInsetPanel(parent, UDim2.fromOffset(10 + ((index - 1) * (cardWidth + 8)), 34), UDim2.fromOffset(cardWidth, 132), REWARD_Z + 14, Color3.fromRGB(20, 38, 58))
+local function createTeamXpCard(parent: Instance, unit, xpResult, index: number, totalCards: number, isVictory: boolean)
+	local cardWidth = 82
+	local cardHeight = 92
+	local gap = 16
+	local panelWidth = 652
+	local rowWidth = (math.max(totalCards, 1) * cardWidth) + (math.max(totalCards - 1, 0) * gap)
+	local startX = math.floor((panelWidth - rowWidth) / 2)
+	local card = createInsetPanel(parent, UDim2.fromOffset(startX + ((index - 1) * (cardWidth + gap)), 42), UDim2.fromOffset(cardWidth, cardHeight), REWARD_Z + 14, Color3.fromRGB(20, 38, 58))
 	card.BorderColor3 = isVictory and Color3.fromRGB(90, 235, 190) or Color3.fromRGB(150, 132, 118)
-
-	local icon = Instance.new("ImageLabel")
-	icon.Size = UDim2.fromOffset(44, 44)
-	icon.Position = UDim2.fromOffset(37, 8)
-	icon.BackgroundTransparency = 1
-	icon.Image = tostring((unit and unit.Icon) or "")
-	icon.ZIndex = REWARD_Z + 18
-	icon.Parent = card
-
-	local name = Instance.new("TextLabel")
-	name.Size = UDim2.new(1, -12, 0, 20)
-	name.Position = UDim2.fromOffset(6, 52)
-	name.BackgroundTransparency = 1
-	name.Font = Enum.Font.ArialBold
-	name.TextSize = 12
-	name.TextTruncate = Enum.TextTruncate.AtEnd
-	name.TextColor3 = Color3.fromRGB(244, 248, 255)
-	name.Text = tostring((unit and unit.Name) or "Bug")
-	name.ZIndex = REWARD_Z + 18
-	name.Parent = card
 
 	local oldLevel = tonumber(xpResult and xpResult.OldLevel) or tonumber(unit and unit.Level) or 1
 	local newLevel = tonumber(xpResult and xpResult.NewLevel) or oldLevel
+	local leveledUp = newLevel > oldLevel
+
+	local iconInset = createInsetPanel(card, UDim2.fromOffset(11, 7), UDim2.fromOffset(60, 52), REWARD_Z + 15, Color3.fromRGB(8, 16, 28))
+	iconInset.BorderColor3 = leveledUp and Color3.fromRGB(255, 210, 72) or (isVictory and Color3.fromRGB(72, 184, 160) or Color3.fromRGB(120, 112, 108))
+
+	local icon = Instance.new("ImageLabel")
+	icon.Size = UDim2.fromOffset(46, 46)
+	icon.Position = UDim2.fromOffset(7, 3)
+	icon.BackgroundTransparency = 1
+	icon.Image = tostring((unit and unit.Icon) or "")
+	icon.ZIndex = REWARD_Z + 18
+	icon.Parent = iconInset
+
 	local levelBadge = Instance.new("TextLabel")
-	levelBadge.Size = UDim2.fromOffset(70, 20)
-	levelBadge.Position = UDim2.fromOffset(24, 73)
-	levelBadge.BackgroundColor3 = (newLevel > oldLevel) and Color3.fromRGB(255, 188, 58) or Color3.fromRGB(12, 76, 70)
+	levelBadge.Size = UDim2.fromOffset(26, 20)
+	levelBadge.Position = UDim2.new(1, -29, 0, 3)
+	levelBadge.BackgroundColor3 = leveledUp and Color3.fromRGB(255, 188, 58) or Color3.fromRGB(12, 76, 70)
 	levelBadge.BorderSizePixel = 1
 	levelBadge.BorderColor3 = Color3.fromRGB(255, 238, 160)
 	levelBadge.Font = Enum.Font.ArialBold
 	levelBadge.TextSize = 12
-	levelBadge.TextColor3 = (newLevel > oldLevel) and Color3.fromRGB(32, 22, 8) or Color3.fromRGB(210, 255, 242)
-	levelBadge.Text = (newLevel > oldLevel) and string.format("LV %d!", newLevel) or string.format("LV %d", newLevel)
-	levelBadge.ZIndex = REWARD_Z + 19
+	levelBadge.TextColor3 = leveledUp and Color3.fromRGB(32, 22, 8) or Color3.fromRGB(210, 255, 242)
+	levelBadge.Text = tostring(newLevel)
+	levelBadge.ZIndex = REWARD_Z + 20
 	levelBadge.Parent = card
+
+	local name = Instance.new("TextLabel")
+	name.Size = UDim2.new(1, -8, 0, 13)
+	name.Position = UDim2.fromOffset(4, 57)
+	name.BackgroundTransparency = 1
+	name.Font = Enum.Font.ArialBold
+	name.TextSize = 9
+	name.TextTruncate = Enum.TextTruncate.AtEnd
+	name.TextColor3 = Color3.fromRGB(224, 232, 244)
+	name.Text = tostring((unit and unit.Name) or "Bug")
+	name.ZIndex = REWARD_Z + 18
+	name.Parent = card
 
 	local progress = xpResult and xpResult.Progress
 	local percent = math.clamp(tonumber(progress and progress.Percent) or 0, 0, 1)
 	local barBg = Instance.new("Frame")
-	barBg.Size = UDim2.new(1, -20, 0, 10)
-	barBg.Position = UDim2.fromOffset(10, 98)
+	barBg.Size = UDim2.new(1, -14, 0, 8)
+	barBg.Position = UDim2.fromOffset(7, 70)
 	barBg.BackgroundColor3 = Color3.fromRGB(7, 16, 28)
 	barBg.BorderSizePixel = 1
 	barBg.BorderColor3 = Color3.fromRGB(92, 126, 154)
@@ -864,32 +986,50 @@ local function createTeamXpCard(parent: Instance, unit, xpResult, index: number,
 	barBg.Parent = card
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.new(isVictory and percent or 0, 0, 1, 0)
-	fill.BackgroundColor3 = Color3.fromRGB(100, 255, 180)
+	fill.BackgroundColor3 = leveledUp and Color3.fromRGB(255, 210, 72) or Color3.fromRGB(100, 255, 180)
 	fill.BorderSizePixel = 0
 	fill.ZIndex = REWARD_Z + 19
 	fill.Parent = barBg
 
 	local xpText = Instance.new("TextLabel")
-	xpText.Size = UDim2.new(1, -12, 0, 16)
-	xpText.Position = UDim2.fromOffset(6, 111)
+	xpText.Size = UDim2.new(1, -8, 0, 13)
+	xpText.Position = UDim2.fromOffset(4, 78)
 	xpText.BackgroundTransparency = 1
 	xpText.Font = Enum.Font.Code
-	xpText.TextSize = 11
+	xpText.TextSize = 10
 	xpText.TextColor3 = isVictory and Color3.fromRGB(150, 255, 195) or Color3.fromRGB(210, 194, 176)
 	xpText.Text = isVictory and string.format("+%d XP", tonumber(xpResult and xpResult.XpGained) or 0) or "+0 XP"
 	xpText.ZIndex = REWARD_Z + 18
 	xpText.Parent = card
 
+	if leveledUp then
+		local tag = Instance.new("TextLabel")
+		tag.Size = UDim2.fromOffset(58, 15)
+		tag.Position = UDim2.new(0.5, -29, 0, -8)
+		tag.BackgroundColor3 = Color3.fromRGB(255, 188, 58)
+		tag.BorderSizePixel = 1
+		tag.BorderColor3 = Color3.fromRGB(255, 238, 160)
+		tag.Font = Enum.Font.ArialBold
+		tag.TextSize = 9
+		tag.TextColor3 = Color3.fromRGB(32, 22, 8)
+		tag.Text = "LEVEL UP"
+		tag.ZIndex = REWARD_Z + 21
+		tag.Parent = card
+	end
+
 	if isVictory then
+		card.BackgroundTransparency = 1
+		card.Position = UDim2.fromOffset(startX + ((index - 1) * (cardWidth + gap)), 50)
 		fill.Size = UDim2.new(0, 0, 1, 0)
-		TweenService:Create(fill, TweenInfo.new(0.5 + (index * 0.08), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(percent, 0, 1, 0)}):Play()
+		TweenService:Create(card, TweenInfo.new(0.18 + (index * 0.04), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0, Position = UDim2.fromOffset(startX + ((index - 1) * (cardWidth + gap)), 42)}):Play()
+		TweenService:Create(fill, TweenInfo.new(0.45 + (index * 0.07), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(percent, 0, 1, 0)}):Play()
 	end
 	return card
 end
 
 local function showFinalPopup(result)
 	print("[EnemySpawnController] Final result popup", tostring(result and result.Winner))
-	local windowRef = createOsWindow("Battle Results", UDim2.fromOffset(650, 560), REWARD_Z, nil)
+	local windowRef = createOsWindow("Battle Results", UDim2.fromOffset(680, 480), REWARD_Z, nil)
 	if not windowRef then return end
 	local frame = windowRef.Content
 	local winner = tostring(result.Winner or "Draw")
@@ -903,9 +1043,9 @@ local function showFinalPopup(result)
 	local droppedEquipment = (isVictory and type(rewards) == "table") and rewards.Equipment or nil
 
 	local bannerBg = isVictory and Color3.fromRGB(4, 72, 42) or (isDefeat and Color3.fromRGB(70, 22, 22) or Color3.fromRGB(72, 48, 16))
-	local banner = createInsetPanel(frame, UDim2.fromOffset(14, 8), UDim2.new(1, -28, 0, 64), REWARD_Z + 12, bannerBg)
+	local banner = createInsetPanel(frame, UDim2.fromOffset(14, 8), UDim2.new(1, -28, 0, 62), REWARD_Z + 12, bannerBg)
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -24, 0, 38)
+	title.Size = UDim2.new(1, -24, 0, 36)
 	title.Position = UDim2.fromOffset(12, 2)
 	title.BackgroundTransparency = 1
 	title.Font = Enum.Font.ArialBold
@@ -919,33 +1059,35 @@ local function showFinalPopup(result)
 	title.Parent = banner
 	local subtitle = Instance.new("TextLabel")
 	subtitle.Size = UDim2.new(1, -24, 0, 18)
-	subtitle.Position = UDim2.fromOffset(12, 41)
+	subtitle.Position = UDim2.fromOffset(12, 39)
 	subtitle.BackgroundTransparency = 1
 	subtitle.Font = Enum.Font.Code
 	subtitle.TextSize = 12
 	subtitle.TextXAlignment = Enum.TextXAlignment.Center
 	subtitle.TextColor3 = Color3.fromRGB(235, 238, 242)
+	subtitle.TextTruncate = Enum.TextTruncate.AtEnd
 	subtitle.Text = string.format("%s • %s turns", tostring(result.EnemyName or "Enemy"), tostring(result.Turns or "?"))
 	subtitle.ZIndex = REWARD_Z + 18
 	subtitle.Parent = banner
 
-	local teamPanel = createInsetPanel(frame, UDim2.fromOffset(14, 82), UDim2.new(1, -28, 0, 176), REWARD_Z + 12, Color3.fromRGB(12, 26, 44))
+	local teamPanel = createInsetPanel(frame, UDim2.fromOffset(14, 80), UDim2.new(1, -28, 0, 150), REWARD_Z + 12, Color3.fromRGB(12, 26, 44))
 	local teamHeader = Instance.new("TextLabel")
 	teamHeader.Size = UDim2.new(1, -24, 0, 22)
 	teamHeader.Position = UDim2.fromOffset(12, 8)
 	teamHeader.BackgroundTransparency = 1
 	teamHeader.Font = Enum.Font.ArialBold
 	teamHeader.TextSize = 16
-	teamHeader.TextXAlignment = Enum.TextXAlignment.Left
+	teamHeader.TextXAlignment = Enum.TextXAlignment.Center
 	teamHeader.TextColor3 = Color3.fromRGB(236, 252, 244)
-	teamHeader.Text = isVictory and string.format("Team XP  •  +%d XP each", combatXp) or "Team XP  •  No XP gained"
+	teamHeader.Text = isVictory and string.format("Combat Team XP  •  +%d XP", combatXp) or "Combat Team XP  •  +0 XP"
 	teamHeader.ZIndex = REWARD_Z + 16
 	teamHeader.Parent = teamPanel
 
 	local team = type(result.Team) == "table" and result.Team or {}
+	local visibleTeamCount = math.min(#team, 5)
 	for index, unit in ipairs(team) do
-		if index > 5 then break end
-		createTeamXpCard(teamPanel, unit, findXpResult(result.BugXpResults, unit.Id), index, isVictory)
+		if index > visibleTeamCount then break end
+		createTeamXpCard(teamPanel, unit, findXpResult(result.BugXpResults, unit.Id), index, visibleTeamCount, isVictory)
 	end
 	if #team == 0 then
 		local empty = Instance.new("TextLabel")
@@ -960,67 +1102,78 @@ local function showFinalPopup(result)
 		empty.Parent = teamPanel
 	end
 
-	local lootPanel = createInsetPanel(frame, UDim2.fromOffset(14, 268), UDim2.new(1, -28, 0, 204), REWARD_Z + 12, isVictory and Color3.fromRGB(15, 58, 42) or Color3.fromRGB(54, 36, 36))
+	local lootPanel = createInsetPanel(frame, UDim2.fromOffset(14, 240), UDim2.new(1, -28, 0, 142), REWARD_Z + 12, isVictory and Color3.fromRGB(15, 58, 42) or Color3.fromRGB(54, 36, 36))
 	local lootHeader = Instance.new("TextLabel")
 	lootHeader.Size = UDim2.new(1, -24, 0, 24)
 	lootHeader.Position = UDim2.fromOffset(12, 8)
 	lootHeader.BackgroundTransparency = 1
 	lootHeader.Font = Enum.Font.ArialBold
 	lootHeader.TextSize = 18
-	lootHeader.TextXAlignment = Enum.TextXAlignment.Left
+	lootHeader.TextXAlignment = Enum.TextXAlignment.Center
 	lootHeader.TextColor3 = Color3.fromRGB(236, 252, 244)
-	lootHeader.Text = isVictory and "Loot Reveal" or "Loot"
+	lootHeader.Text = "Your Loot"
 	lootHeader.ZIndex = REWARD_Z + 16
 	lootHeader.Parent = lootPanel
 
-	local essenceChip, essenceLabel = createEssenceRewardChip(lootPanel, UDim2.fromOffset(16, 44), UDim2.fromOffset(220, 56), REWARD_Z + 14, isVictory and 0 or essence, isVictory, true)
-	essenceChip.BorderColor3 = Color3.fromRGB(92, 255, 210)
+	local lootStartX = type(droppedEquipment) == "table" and 232 or 285
+	local _, essenceLabel = createEssenceLootCard(lootPanel, UDim2.fromOffset(lootStartX, 34), REWARD_Z + 14, isVictory and 0 or essence, isVictory)
+	local gearCard: Frame? = nil
 	if type(droppedEquipment) == "table" then
-		createEquipmentDropCard(lootPanel, droppedEquipment, UDim2.fromOffset(252, 36), UDim2.fromOffset(350, 148), REWARD_Z + 14)
+		gearCard = createEquipmentLootCard(lootPanel, droppedEquipment, UDim2.fromOffset(lootStartX + 110, 28), REWARD_Z + 14)
 	else
-		createNoEquipmentCard(lootPanel, UDim2.fromOffset(252, 62), UDim2.fromOffset(250, 48), REWARD_Z + 14, isVictory)
-		local note = Instance.new("TextLabel")
-		note.Size = UDim2.fromOffset(250, 24)
-		note.Position = UDim2.fromOffset(252, 118)
-		note.BackgroundTransparency = 1
-		note.Font = Enum.Font.Code
-		note.TextSize = 12
-		note.TextColor3 = Color3.fromRGB(210, 235, 220)
-		note.Text = isVictory and "Team XP still advanced every bug." or "Win battles to reveal loot."
-		note.ZIndex = REWARD_Z + 16
-		note.Parent = lootPanel
+		gearCard = createNoGearLootCard(lootPanel, UDim2.fromOffset(lootStartX + 104, 34), REWARD_Z + 14)
 	end
 
-	local closeBtn = createButton(frame, isVictory and "Claim Rewards" or "Close", UDim2.new(0.5, -120, 1, -42), UDim2.fromOffset(240, 36), REWARD_Z + 15, isVictory and Color3.fromRGB(40, 190, 92) or Color3.fromRGB(204, 204, 204))
+	local detailsBtn = createButton(frame, "Details", UDim2.new(0.5, -206, 1, -42), UDim2.fromOffset(156, 34), REWARD_Z + 15, Color3.fromRGB(204, 204, 204))
+	styleButton(detailsBtn, Color3.fromRGB(204, 204, 204), Color3.fromRGB(224, 224, 224), Color3.fromRGB(170, 170, 170), Color3.fromRGB(20, 20, 20))
+	if type(droppedEquipment) == "table" then
+		detailsBtn.MouseButton1Click:Connect(function() showEquipmentDetailsPopup(droppedEquipment) end)
+	else
+		detailsBtn.Active = false
+		detailsBtn.AutoButtonColor = false
+		detailsBtn.TextColor3 = Color3.fromRGB(112, 112, 112)
+		detailsBtn.BackgroundColor3 = Color3.fromRGB(174, 174, 174)
+		detailsBtn.Text = "Details"
+	end
+
+	local closeBtn = createButton(frame, isVictory and "Claim" or "Close", UDim2.new(0.5, 50, 1, -42), UDim2.fromOffset(156, 34), REWARD_Z + 15, isVictory and Color3.fromRGB(40, 190, 92) or Color3.fromRGB(204, 204, 204))
 	styleButton(closeBtn, closeBtn.BackgroundColor3, isVictory and Color3.fromRGB(54, 220, 110) or Color3.fromRGB(224, 224, 224), isVictory and Color3.fromRGB(28, 150, 70) or Color3.fromRGB(170, 170, 170), isVictory and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(20, 20, 20))
 	closeBtn.MouseButton1Click:Connect(function() windowRef.Destroy() end)
 
 	if isVictory then
-		teamPanel.Position = UDim2.fromOffset(14, 92)
-		lootPanel.Position = UDim2.fromOffset(14, 282)
-		TweenService:Create(teamPanel, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.fromOffset(14, 82)}):Play()
-		TweenService:Create(lootPanel, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.fromOffset(14, 268)}):Play()
+		teamPanel.Position = UDim2.fromOffset(14, 90)
+		lootPanel.Position = UDim2.fromOffset(14, 250)
+		lootPanel.BackgroundTransparency = 1
+		if gearCard then gearCard.Size = UDim2.fromOffset(72, 88) end
+		TweenService:Create(teamPanel, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.fromOffset(14, 80)}):Play()
+		TweenService:Create(lootPanel, TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0, Position = UDim2.fromOffset(14, 240)}):Play()
+		if gearCard then
+			task.delay(0.18, function()
+				if not gearCard or not gearCard.Parent then return end
+				TweenService:Create(gearCard, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = type(droppedEquipment) == "table" and UDim2.fromOffset(96, 112) or UDim2.fromOffset(82, 98)}):Play()
+			end)
+		end
 		task.spawn(function()
 			for i = 0, essence do
 				if not essenceLabel.Parent then return end
 				essenceLabel.Text = "+" .. tostring(i)
-				task.wait(math.max(0.015, math.min(0.04, 0.5 / math.max(essence, 1))))
+				task.wait(math.max(0.015, math.min(0.04, 0.45 / math.max(essence, 1))))
 			end
 		end)
-		for i = 1, 10 do
+		for i = 1, 8 do
 			task.delay(i * 0.05, function()
 				if not frame.Parent then return end
 				local sparkle = Instance.new("Frame")
-				sparkle.Size = UDim2.fromOffset(math.random(3, 7), math.random(3, 7))
-				sparkle.Position = UDim2.new(0.5, math.random(-270, 270), 0, math.random(100, 430))
+				sparkle.Size = UDim2.fromOffset(math.random(3, 6), math.random(3, 6))
+				sparkle.Position = UDim2.new(0.5, math.random(-260, 260), 0, math.random(88, 350))
 				sparkle.BorderSizePixel = 0
 				sparkle.BackgroundColor3 = type(droppedEquipment) == "table" and getEquipmentRarityColor(droppedEquipment.Rarity) or Color3.fromRGB(138, 255, 186)
 				sparkle.ZIndex = REWARD_Z + 22
 				sparkle.Parent = frame
 				Instance.new("UICorner", sparkle).CornerRadius = UDim.new(1, 0)
 				local startPos = sparkle.Position
-				TweenService:Create(sparkle, TweenInfo.new(0.55), {BackgroundTransparency = 1, Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + math.random(-28, 28), startPos.Y.Scale, startPos.Y.Offset + math.random(-36, 8))}):Play()
-				task.delay(0.6, function() if sparkle then sparkle:Destroy() end end)
+				TweenService:Create(sparkle, TweenInfo.new(0.5), {BackgroundTransparency = 1, Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + math.random(-24, 24), startPos.Y.Scale, startPos.Y.Offset + math.random(-32, 8))}):Play()
+				task.delay(0.55, function() if sparkle then sparkle:Destroy() end end)
 			end)
 		end
 	else
