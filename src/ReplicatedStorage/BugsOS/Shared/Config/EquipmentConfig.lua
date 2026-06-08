@@ -86,11 +86,11 @@ EquipmentConfig.DefaultIconsBySlot = {
 }
 
 EquipmentConfig.PlaceholderVisualsBySlot = {
-	Weapon = { PlaceholderSymbol = "⚔", PlaceholderLabel = "Weapon" },
-	Helmet = { PlaceholderSymbol = "🪖", PlaceholderLabel = "Helmet" },
-	Chestplate = { PlaceholderSymbol = "🛡", PlaceholderLabel = "Chestplate" },
-	Boots = { PlaceholderSymbol = "👢", PlaceholderLabel = "Boots" },
-	Charm = { PlaceholderSymbol = "✦", PlaceholderLabel = "Charm" },
+	Weapon = { PlaceholderSymbol = "WPN", PlaceholderLabel = "Weapon" },
+	Helmet = { PlaceholderSymbol = "HELM", PlaceholderLabel = "Helmet" },
+	Chestplate = { PlaceholderSymbol = "CHEST", PlaceholderLabel = "Chestplate" },
+	Boots = { PlaceholderSymbol = "BOOTS", PlaceholderLabel = "Boots" },
+	Charm = { PlaceholderSymbol = "CHARM", PlaceholderLabel = "Charm" },
 }
 
 -- Legacy aliases kept for current UI and older saved/generated equipment.
