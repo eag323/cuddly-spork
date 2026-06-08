@@ -77,6 +77,19 @@ EquipmentConfig.SetBonusMetadata = {
 	Fortune = { Theme = "Drops" },
 }
 
+EquipmentConfig.SetIcons = {
+	Power = { Text = "PWR", Color = Color3.fromRGB(255, 92, 92) },
+	Guard = { Text = "GRD", Color = Color3.fromRGB(112, 176, 255) },
+	Speed = { Text = "SPD", Color = Color3.fromRGB(90, 235, 190) },
+	Precision = { Text = "ACC", Color = Color3.fromRGB(255, 204, 84) },
+	Resistance = { Text = "RES", Color = Color3.fromRGB(180, 146, 255) },
+	Critical = { Text = "CRT", Color = Color3.fromRGB(255, 118, 188) },
+	Vitality = { Text = "HP", Color = Color3.fromRGB(110, 235, 118) },
+	Hunter = { Text = "HNT", Color = Color3.fromRGB(232, 146, 76) },
+	Essence = { Text = "ESS", Color = Color3.fromRGB(94, 226, 216) },
+	Fortune = { Text = "LCK", Color = Color3.fromRGB(255, 226, 104) },
+}
+
 EquipmentConfig.DefaultIconsBySlot = {
 	Weapon = "",
 	Helmet = "",
@@ -246,6 +259,21 @@ function EquipmentConfig.GetPlaceholderVisual(slot: string?): { PlaceholderSymbo
 	}
 end
 
+function EquipmentConfig.GetSetIcon(setName: string?): { Text: string, Color: Color3 }
+	local normalizedSetName = tostring(setName or "")
+	local icon = EquipmentConfig.SetIcons[normalizedSetName]
+	if icon then
+		return icon
+	end
+	if normalizedSetName == "" then
+		normalizedSetName = "Set"
+	end
+	return {
+		Text = string.upper(string.sub(normalizedSetName, 1, 3)),
+		Color = Color3.fromRGB(198, 204, 216),
+	}
+end
+
 function EquipmentConfig.GetIcon(setName: string?, slot: string?): string
 	local setIcons = EquipmentConfig.IconsBySetAndSlot[setName or ""]
 	if setIcons then
@@ -312,6 +340,7 @@ function EquipmentConfig.RollEquipment(rng: any, enemyTier: string?): { [string]
 		},
 		SubStats = subStats,
 		Icon = EquipmentConfig.GetIcon(setName, slot),
+		ItemLevel = 0,
 		CreatedAt = os.time(),
 	}
 end
