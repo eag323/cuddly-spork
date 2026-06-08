@@ -46,6 +46,8 @@ PlayerData = {
     Bugs = {
         Inventory = {
             -- [uid] = BugInstance
+            -- BugInstance.Level = 1 -- combat-only level, does not affect farmer bonuses
+            -- BugInstance.Xp = 0 -- total combat XP earned from enemy battles
         },
         Equipped = {
             -- [slotIndex] = bugUid

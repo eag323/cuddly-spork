@@ -11,6 +11,9 @@ local BugConfig = {}
 
 BugConfig.MaxOwnedBugs = 1000
 
+-- Bug combat levels are stored on owned bug instances (Level/Xp) and intentionally
+-- do not modify idleBonuses/farmer economy bonuses. See BugLevelConfig for combat scaling.
+
 BugConfig.RarityOrder = {
     Common = 1,
     Uncommon = 2,

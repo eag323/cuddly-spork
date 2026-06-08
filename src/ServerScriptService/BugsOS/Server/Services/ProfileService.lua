@@ -11,6 +11,7 @@ local ConfigFolder = SharedFolder:WaitForChild("Config")
 local RemoteNames = require(RemotesFolder:WaitForChild("RemoteNames"))
 local EconomyConfig = require(ConfigFolder:WaitForChild("EconomyConfig"))
 local BugConfig = require(ConfigFolder:WaitForChild("BugConfig"))
+local BugLevelConfig = require(ConfigFolder:WaitForChild("BugLevelConfig"))
 
 type PlayerData = { [string]: any }
 
@@ -248,7 +249,30 @@ local function maybeGrantAscensionTestKit(playerData: PlayerData): ()
 			BugId = bugId,
 			Locked = false,
 			Ascension = 0,
+			Level = 1,
+			Xp = 0,
 		}
+	end
+end
+
+local function normalizeBugData(playerData: PlayerData): ()
+	playerData.Bugs = playerData.Bugs or {}
+	playerData.Bugs.Inventory = playerData.Bugs.Inventory or {}
+	playerData.Bugs.FarmerSlots = playerData.Bugs.FarmerSlots or {}
+	playerData.Bugs.CombatSlots = playerData.Bugs.CombatSlots or {}
+	playerData.Bugs.ExtraFarmerSlotsPurchased = math.max(0, tonumber(playerData.Bugs.ExtraFarmerSlotsPurchased) or 0)
+
+	for uid, bug in playerData.Bugs.Inventory do
+		if type(bug) == "table" then
+			bug.Uid = bug.Uid or uid
+			bug.Level = math.max(1, math.min(BugLevelConfig.MaxLevel, math.floor(tonumber(bug.Level) or 1)))
+			bug.Xp = math.max(0, math.floor(tonumber(bug.Xp) or tonumber(bug.XP) or 0))
+			bug.XP = nil
+			local levelFromXp = BugLevelConfig.GetLevelFromXp(bug.Xp)
+			if levelFromXp ~= bug.Level then
+				bug.Level = levelFromXp
+			end
+		end
 	end
 end
 
@@ -304,6 +328,7 @@ end
 
 local function syncPlayer(player: Player): ()
 	local playerData = loadDefaultPlayerData(player)
+	normalizeBugData(playerData)
 	normalizeEquipment(playerData)
 	normalizeCosmetics(playerData)
 	maybeGrantAscensionTestKit(playerData)

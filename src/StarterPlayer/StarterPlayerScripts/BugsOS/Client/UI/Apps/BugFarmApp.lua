@@ -7,6 +7,7 @@ local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
 local BugConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugConfig"))
 local BugBonusConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugBonusConfig"))
 local BugAscensionConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugAscensionConfig"))
+local BugLevelConfig = require(Shared:WaitForChild("Config"):WaitForChild("BugLevelConfig"))
 local Window = require(script.Parent.Parent:WaitForChild("Components"):WaitForChild("Window"))
 local BugdexView = require(script.Parent:WaitForChild("Views"):WaitForChild("BugdexView"))
 
@@ -27,7 +28,7 @@ local farmerStatFilter = "All"
 local farmerSortMode = "Rarity"
 local renameTargetUid = nil
 local rarityFilter = "All"
-local sortModes = {"Rarity","Name","Species","Newest","Locked First","Farmer Equipped","Combat Equipped","Power"}
+local sortModes = {"Rarity","Name","Species","Newest","Locked First","Farmer Equipped","Combat Equipped","Power","Level"}
 local rarityTabs = {"All","Common","Uncommon","Rare","Epic","Legendary","Mythic"}
 local FARMER_HABITAT_BACKGROUND_IMAGE = ""
 
@@ -230,6 +231,11 @@ local function getBugAscension(ownedBug)
 	return math.max(0, math.min(BugAscensionConfig.GetMaxRank(), tonumber(ownedBug.Ascension) or 0))
 end
 
+local function getBugLevel(ownedBug)
+	if type(ownedBug) ~= "table" then return 1 end
+	return math.max(1, math.min(BugLevelConfig.MaxLevel, math.floor(tonumber(ownedBug.Level) or BugLevelConfig.GetLevelFromXp(tonumber(ownedBug.Xp) or 0))))
+end
+
 local function styleLabel(label, bold)
 	label.BackgroundTransparency = 1
 	label.TextColor3 = COLORS.text
@@ -266,9 +272,9 @@ local function renderAscensionStars(parent, rank, position, size)
 end
 
 
-local function getAscendedCombatStatValue(baseValue, rank)
+local function getAscendedCombatStatValue(baseValue, rank, level)
 	local numericBase = tonumber(baseValue) or 0
-	local multiplier = BugAscensionConfig.GetCombatMultiplier(rank)
+	local multiplier = BugAscensionConfig.GetCombatMultiplier(rank) * BugLevelConfig.GetCombatLevelMultiplier(level or 1)
 	return math.floor(numericBase * multiplier + 0.5)
 end
 
@@ -373,15 +379,16 @@ end
 local function getBugCombatStats(bug, cfg)
 	local stats = (cfg and cfg.stats) or {}
 	local rank = getBugAscension(bug)
+	local level = getBugLevel(bug)
 	return {
-		HP = getAscendedCombatStatValue(stats.HP, rank),
-		ATK = getAscendedCombatStatValue(stats.ATK, rank),
-		DEF = getAscendedCombatStatValue(stats.DEF, rank),
-		SPD = getAscendedCombatStatValue(stats.SPD, rank),
-		CritRate = getAscendedCombatStatValue(stats.CritRate, rank),
-		CritDamage = getAscendedCombatStatValue(stats.CritDamage, rank),
-		RES = getAscendedCombatStatValue(stats.RES, rank),
-		ACC = getAscendedCombatStatValue(stats.ACC, rank),
+		HP = getAscendedCombatStatValue(stats.HP, rank, level),
+		ATK = getAscendedCombatStatValue(stats.ATK, rank, level),
+		DEF = getAscendedCombatStatValue(stats.DEF, rank, level),
+		SPD = getAscendedCombatStatValue(stats.SPD, rank, level),
+		CritRate = getAscendedCombatStatValue(stats.CritRate, rank, level),
+		CritDamage = getAscendedCombatStatValue(stats.CritDamage, rank, level),
+		RES = getAscendedCombatStatValue(stats.RES, rank, level),
+		ACC = getAscendedCombatStatValue(stats.ACC, rank, level),
 	}
 end
 
@@ -971,7 +978,7 @@ end
 
 
 local function renderCombatTeamTab(context, scroll, bugs, inventory, owned, farmerSlots, combatSlots)
-	local modes = {"Power","Rarity","Rank","HP","ATK","DEF","SPD","Name"}
+	local modes = {"Power","Rarity","Rank","Level","HP","ATK","DEF","SPD","Name"}
 	local filled,totalPower,totalRank,totalHP,totalATK,totalDEF,totalSPD = 0,0,0,0,0,0,0
 	local slotCard = makeCard(scroll, UDim2.new(1,-20,0,126)); slotCard.BackgroundColor3=Color3.fromRGB(12,30,50)
 	local title=Instance.new("TextLabel"); title.BackgroundTransparency=1; title.Size=UDim2.new(1,-20,0,28); title.Position=UDim2.fromOffset(10,8); title.TextXAlignment=Enum.TextXAlignment.Left; title.Text="COMBAT TEAM"; title.TextSize=20; styleLabel(title,true); title.Parent=slotCard
@@ -988,7 +995,7 @@ local function renderCombatTeamTab(context, scroll, bugs, inventory, owned, farm
 
 	local slotsWrap=Instance.new("Frame"); slotsWrap.Size=UDim2.new(1,-20,0,342); slotsWrap.BackgroundTransparency=1; slotsWrap.Parent=scroll
 	local gl=Instance.new("UIGridLayout", slotsWrap); gl.CellSize=UDim2.new(0.5,-6,0,114); gl.CellPadding=UDim2.fromOffset(8,10)
-	for i=1,5 do local uid=getSlotUid(combatSlots[i]); local bug=uid and inventory[tostring(uid)] or nil; local card=makeCard(slotsWrap, UDim2.fromOffset(0,114)); card.BackgroundColor3=bug and Color3.fromRGB(14,33,55) or Color3.fromRGB(10,24,40); local t=Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.new(1,-16,0,18); t.Position=UDim2.fromOffset(8,6); t.TextXAlignment=Enum.TextXAlignment.Left; t.Text="Slot "..i; t.TextSize=12; styleLabel(t,true); t.Parent=card; if not bug then local e=Instance.new("TextLabel"); e.BackgroundTransparency=1; e.Size=UDim2.new(1,-16,0,42); e.Position=UDim2.fromOffset(8,36); e.TextXAlignment=Enum.TextXAlignment.Left; e.Text="Empty\nChoose a bug below"; e.TextColor3=Color3.fromRGB(115,137,160); e.TextSize=12; styleLabel(e,false); e.Parent=card else local cfg=getBugConfig(bug) or {}; local st=getBugCombatStats(bug,cfg); local icon=Instance.new("ImageLabel"); icon.Size=UDim2.fromOffset(44,44); icon.Position=UDim2.fromOffset(8,26); icon.BackgroundTransparency=1; icon.Image=getBugIcon(bug,cfg); icon.Parent=card; local n=Instance.new("TextLabel"); n.BackgroundTransparency=1; n.Size=UDim2.new(1,-142,0,20); n.Position=UDim2.fromOffset(58,26); n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(bug,cfg); n.TextSize=14; styleLabel(n,true); n.Parent=card; makeBadge(card,tostring(cfg.rarity or bug.Rarity or "Common"),getRarityColor(tostring(cfg.rarity or bug.Rarity or "Common"))).Position=UDim2.new(1,-104,0,8); renderAscensionStars(card,getBugAscension(bug),UDim2.fromOffset(58,48),UDim2.fromOffset(84,16)); local line=Instance.new("TextLabel"); line.BackgroundTransparency=1; line.Size=UDim2.new(1,-16,0,30); line.Position=UDim2.fromOffset(8,72); line.TextXAlignment=Enum.TextXAlignment.Left; line.Text=string.format("PWR %d | HP %d ATK %d DEF %d SPD %d", getBugCombatPower(bug,cfg),st.HP,st.ATK,st.DEF,st.SPD); line.TextSize=11; styleLabel(line,false); line.Parent=card; local inFlightKey="slot:"..i; local removing = combatActionInFlight[inFlightKey] == true; local rm=makeButton(card,removing and "Removing..." or "Remove",Color3.fromRGB(148,52,52),UDim2.fromOffset(96,26)); rm.Position=UDim2.new(1,-104,1,-32); rm.AutoButtonColor=not removing; rm.Active=not removing; if not removing then rm.Activated:Connect(function() if combatActionInFlight[inFlightKey] then return end combatActionInFlight[inFlightKey]=true; render(context); context.Controllers.BugFarm.UnequipCombat(i) end) end end end
+	for i=1,5 do local uid=getSlotUid(combatSlots[i]); local bug=uid and inventory[tostring(uid)] or nil; local card=makeCard(slotsWrap, UDim2.fromOffset(0,114)); card.BackgroundColor3=bug and Color3.fromRGB(14,33,55) or Color3.fromRGB(10,24,40); local t=Instance.new("TextLabel"); t.BackgroundTransparency=1; t.Size=UDim2.new(1,-16,0,18); t.Position=UDim2.fromOffset(8,6); t.TextXAlignment=Enum.TextXAlignment.Left; t.Text="Slot "..i; t.TextSize=12; styleLabel(t,true); t.Parent=card; if not bug then local e=Instance.new("TextLabel"); e.BackgroundTransparency=1; e.Size=UDim2.new(1,-16,0,42); e.Position=UDim2.fromOffset(8,36); e.TextXAlignment=Enum.TextXAlignment.Left; e.Text="Empty\nChoose a bug below"; e.TextColor3=Color3.fromRGB(115,137,160); e.TextSize=12; styleLabel(e,false); e.Parent=card else local cfg=getBugConfig(bug) or {}; local st=getBugCombatStats(bug,cfg); local icon=Instance.new("ImageLabel"); icon.Size=UDim2.fromOffset(44,44); icon.Position=UDim2.fromOffset(8,26); icon.BackgroundTransparency=1; icon.Image=getBugIcon(bug,cfg); icon.Parent=card; local n=Instance.new("TextLabel"); n.BackgroundTransparency=1; n.Size=UDim2.new(1,-142,0,20); n.Position=UDim2.fromOffset(58,26); n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(bug,cfg); n.TextSize=14; styleLabel(n,true); n.Parent=card; makeBadge(card,tostring(cfg.rarity or bug.Rarity or "Common"),getRarityColor(tostring(cfg.rarity or bug.Rarity or "Common"))).Position=UDim2.new(1,-104,0,8); renderAscensionStars(card,getBugAscension(bug),UDim2.fromOffset(58,48),UDim2.fromOffset(84,16)); makeBadge(card,"Lv "..tostring(getBugLevel(bug)),COLORS.gold).Position=UDim2.fromOffset(8,48); local line=Instance.new("TextLabel"); line.BackgroundTransparency=1; line.Size=UDim2.new(1,-16,0,30); line.Position=UDim2.fromOffset(8,72); line.TextXAlignment=Enum.TextXAlignment.Left; line.Text=string.format("PWR %d | HP %d ATK %d DEF %d SPD %d", getBugCombatPower(bug,cfg),st.HP,st.ATK,st.DEF,st.SPD); line.TextSize=11; styleLabel(line,false); line.Parent=card; local inFlightKey="slot:"..i; local removing = combatActionInFlight[inFlightKey] == true; local rm=makeButton(card,removing and "Removing..." or "Remove",Color3.fromRGB(148,52,52),UDim2.fromOffset(96,26)); rm.Position=UDim2.new(1,-104,1,-32); rm.AutoButtonColor=not removing; rm.Active=not removing; if not removing then rm.Activated:Connect(function() if combatActionInFlight[inFlightKey] then return end combatActionInFlight[inFlightKey]=true; render(context); context.Controllers.BugFarm.UnequipCombat(i) end) end end end
 
 	local controls=makeCard(scroll, UDim2.new(1,-20,0,94)); controls.BackgroundColor3=Color3.fromRGB(13,31,52)
 	local search=Instance.new("TextBox"); search.PlaceholderText="Search bugs..."; search.Text=combatSearchQuery; search.Size=UDim2.new(0.4,-8,0,38); search.Position=UDim2.fromOffset(10,12); search.BackgroundColor3=COLORS.cardDark; search.ClearTextOnFocus=false; search.TextXAlignment=Enum.TextXAlignment.Left; search.TextSize=14; styleLabel(search,false); search.Parent=controls; Instance.new("UICorner",search).CornerRadius=UDim.new(0,8); search:GetPropertyChangedSignal("Text"):Connect(function() combatSearchQuery=search.Text; render(context) end)
@@ -998,9 +1005,9 @@ local function renderCombatTeamTab(context, scroll, bugs, inventory, owned, farm
 
 	local list=Instance.new("Frame"); list.Size=UDim2.new(1,-20,0,0); list.AutomaticSize=Enum.AutomaticSize.Y; list.BackgroundTransparency=1; list.Parent=scroll; Instance.new("UIListLayout",list).Padding=UDim.new(0,8)
 	local rows={}
-	for _,e in ipairs(owned) do local uid,bug=tostring(e.Uid),e.Bug; local cfg=getBugConfig(bug) or {}; local rarity=tostring(cfg.rarity or bug.Rarity or "Common"); local inFarmer=isAssignedFarmer(uid,farmerSlots); local inCombat=isAssignedCombat(uid,combatSlots); local st=getBugCombatStats(bug,cfg); local power=getBugCombatPower(bug,cfg); local locked=isBugLocked(bug); local status=inFarmer and "Farmer Equipped" or (inCombat and "Combat Equipped" or (locked and "Locked" or "Eligible")); if (combatRarityFilter=="All" or rarity==combatRarityFilter) and (combatSearchQuery=="" or string.find(string.lower(getDisplayName(bug,cfg).." "..tostring(cfg.species or "").." "..tostring(cfg.role or "")),string.lower(combatSearchQuery),1,true)) and (not combatEligibleOnly or (not inFarmer and not inCombat)) then table.insert(rows,{Uid=uid,Bug=bug,Cfg=cfg,Rarity=rarity,Stats=st,Power=power,Rank=getBugAscension(bug),Status=status}) end end
-	table.sort(rows,function(a,b) if combatSortMode=="Power" then return a.Power>b.Power elseif combatSortMode=="Rarity" then return (BugConfig.RarityOrder[a.Rarity] or 1)>(BugConfig.RarityOrder[b.Rarity] or 1) elseif combatSortMode=="Rank" then return a.Rank>b.Rank elseif a.Stats[combatSortMode] and b.Stats[combatSortMode] then return a.Stats[combatSortMode]>b.Stats[combatSortMode] end return getDisplayName(a.Bug,a.Cfg)<getDisplayName(b.Bug,b.Cfg) end)
-	for _,r in ipairs(rows) do local row=makeCard(list,UDim2.new(1,0,0,90)); row.BackgroundColor3=Color3.fromRGB(15,34,56); local n=Instance.new("TextLabel"); n.BackgroundTransparency=1; n.Size=UDim2.new(1,-360,0,22); n.Position=UDim2.fromOffset(12,6); n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(r.Bug,r.Cfg); n.TextSize=16; styleLabel(n,true); n.TextColor3=getRarityColor(r.Rarity); n.Parent=row; renderAscensionStars(row,r.Rank,UDim2.new(1,-312,0,8),UDim2.fromOffset(84,18)); local s=Instance.new("TextLabel"); s.BackgroundTransparency=1; s.Size=UDim2.new(1,-360,0,16); s.Position=UDim2.fromOffset(12,28); s.TextXAlignment=Enum.TextXAlignment.Left; s.Text=string.format("%s • %s • %s", tostring(r.Cfg.role or "Unknown"), tostring(r.Cfg.species or "Unknown"), getCombatRoleLabel(r.Stats)); s.TextColor3=COLORS.muted; s.TextSize=12; styleLabel(s,false); s.Parent=row; local st=Instance.new("TextLabel"); st.BackgroundTransparency=1; st.Size=UDim2.new(1,-360,0,16); st.Position=UDim2.fromOffset(12,48); st.TextXAlignment=Enum.TextXAlignment.Left; st.Text=string.format("PWR %d | HP %d ATK %d DEF %d SPD %d", r.Power,r.Stats.HP,r.Stats.ATK,r.Stats.DEF,r.Stats.SPD); st.TextSize=12; styleLabel(st,false); st.Parent=row; local ab=(r.Cfg.ability and (r.Cfg.ability.name or r.Cfg.ability.id or r.Cfg.ability.type)) and tostring(r.Cfg.ability.name or r.Cfg.ability.id or r.Cfg.ability.type) or "No ability"; local abl=Instance.new("TextLabel"); abl.BackgroundTransparency=1; abl.Size=UDim2.new(1,-360,0,14); abl.Position=UDim2.fromOffset(12,68); abl.TextXAlignment=Enum.TextXAlignment.Left; abl.Text=ab; abl.TextSize=11; abl.TextColor3=COLORS.warn; styleLabel(abl,false); abl.Parent=row; makeBadge(row,r.Status,r.Status=="Eligible" and COLORS.good or COLORS.warn).Position=UDim2.new(1,-250,0,34); local teamFull=filled>=5; local key="uid:"..tostring(r.Uid); local pending = combatActionInFlight[key] == true; local btnTxt,btnColor="Equip",Color3.fromRGB(35,194,157); local disabled=false; if pending then btnTxt="Equipping..."; disabled=true; btnColor=COLORS.cardDark elseif r.Status=="Combat Equipped" then btnTxt="Equipped"; disabled=true; btnColor=COLORS.cardDark elseif r.Status=="Farmer Equipped" then btnTxt="Farmer Equipped"; disabled=true; btnColor=COLORS.cardDark elseif teamFull then btnTxt="Team Full"; disabled=true; btnColor=COLORS.cardDark end local eq=makeButton(row,btnTxt,btnColor,UDim2.fromOffset(118,34)); eq.Position=UDim2.new(1,-126,0.5,-17); eq.Active=not disabled; eq.AutoButtonColor=not disabled; if not disabled then eq.Activated:Connect(function() if combatActionInFlight[key] then return end combatActionInFlight[key]=true; render(context); context.Controllers.BugFarm.EquipCombat(r.Uid,nil) end) end end
+	for _,e in ipairs(owned) do local uid,bug=tostring(e.Uid),e.Bug; local cfg=getBugConfig(bug) or {}; local rarity=tostring(cfg.rarity or bug.Rarity or "Common"); local inFarmer=isAssignedFarmer(uid,farmerSlots); local inCombat=isAssignedCombat(uid,combatSlots); local st=getBugCombatStats(bug,cfg); local power=getBugCombatPower(bug,cfg); local locked=isBugLocked(bug); local status=inFarmer and "Farmer Equipped" or (inCombat and "Combat Equipped" or (locked and "Locked" or "Eligible")); if (combatRarityFilter=="All" or rarity==combatRarityFilter) and (combatSearchQuery=="" or string.find(string.lower(getDisplayName(bug,cfg).." "..tostring(cfg.species or "").." "..tostring(cfg.role or "")),string.lower(combatSearchQuery),1,true)) and (not combatEligibleOnly or (not inFarmer and not inCombat)) then table.insert(rows,{Uid=uid,Bug=bug,Cfg=cfg,Rarity=rarity,Stats=st,Power=power,Rank=getBugAscension(bug),Level=getBugLevel(bug),Status=status}) end end
+	table.sort(rows,function(a,b) if combatSortMode=="Power" then return a.Power>b.Power elseif combatSortMode=="Rarity" then return (BugConfig.RarityOrder[a.Rarity] or 1)>(BugConfig.RarityOrder[b.Rarity] or 1) elseif combatSortMode=="Rank" then return a.Rank>b.Rank elseif combatSortMode=="Level" then return a.Level>b.Level elseif a.Stats[combatSortMode] and b.Stats[combatSortMode] then return a.Stats[combatSortMode]>b.Stats[combatSortMode] end return getDisplayName(a.Bug,a.Cfg)<getDisplayName(b.Bug,b.Cfg) end)
+	for _,r in ipairs(rows) do local row=makeCard(list,UDim2.new(1,0,0,90)); row.BackgroundColor3=Color3.fromRGB(15,34,56); local n=Instance.new("TextLabel"); n.BackgroundTransparency=1; n.Size=UDim2.new(1,-360,0,22); n.Position=UDim2.fromOffset(12,6); n.TextXAlignment=Enum.TextXAlignment.Left; n.Text=getDisplayName(r.Bug,r.Cfg); n.TextSize=16; styleLabel(n,true); n.TextColor3=getRarityColor(r.Rarity); n.Parent=row; renderAscensionStars(row,r.Rank,UDim2.new(1,-312,0,8),UDim2.fromOffset(84,18)); makeBadge(row,"Lv "..tostring(r.Level),COLORS.gold).Position=UDim2.new(1,-344,0,8); local s=Instance.new("TextLabel"); s.BackgroundTransparency=1; s.Size=UDim2.new(1,-360,0,16); s.Position=UDim2.fromOffset(12,28); s.TextXAlignment=Enum.TextXAlignment.Left; s.Text=string.format("%s • %s • %s", tostring(r.Cfg.role or "Unknown"), tostring(r.Cfg.species or "Unknown"), getCombatRoleLabel(r.Stats)); s.TextColor3=COLORS.muted; s.TextSize=12; styleLabel(s,false); s.Parent=row; local st=Instance.new("TextLabel"); st.BackgroundTransparency=1; st.Size=UDim2.new(1,-360,0,16); st.Position=UDim2.fromOffset(12,48); st.TextXAlignment=Enum.TextXAlignment.Left; st.Text=string.format("PWR %d | HP %d ATK %d DEF %d SPD %d", r.Power,r.Stats.HP,r.Stats.ATK,r.Stats.DEF,r.Stats.SPD); st.TextSize=12; styleLabel(st,false); st.Parent=row; local ab=(r.Cfg.ability and (r.Cfg.ability.name or r.Cfg.ability.id or r.Cfg.ability.type)) and tostring(r.Cfg.ability.name or r.Cfg.ability.id or r.Cfg.ability.type) or "No ability"; local abl=Instance.new("TextLabel"); abl.BackgroundTransparency=1; abl.Size=UDim2.new(1,-360,0,14); abl.Position=UDim2.fromOffset(12,68); abl.TextXAlignment=Enum.TextXAlignment.Left; abl.Text=ab; abl.TextSize=11; abl.TextColor3=COLORS.warn; styleLabel(abl,false); abl.Parent=row; makeBadge(row,r.Status,r.Status=="Eligible" and COLORS.good or COLORS.warn).Position=UDim2.new(1,-250,0,34); local teamFull=filled>=5; local key="uid:"..tostring(r.Uid); local pending = combatActionInFlight[key] == true; local btnTxt,btnColor="Equip",Color3.fromRGB(35,194,157); local disabled=false; if pending then btnTxt="Equipping..."; disabled=true; btnColor=COLORS.cardDark elseif r.Status=="Combat Equipped" then btnTxt="Equipped"; disabled=true; btnColor=COLORS.cardDark elseif r.Status=="Farmer Equipped" then btnTxt="Farmer Equipped"; disabled=true; btnColor=COLORS.cardDark elseif teamFull then btnTxt="Team Full"; disabled=true; btnColor=COLORS.cardDark end local eq=makeButton(row,btnTxt,btnColor,UDim2.fromOffset(118,34)); eq.Position=UDim2.new(1,-126,0.5,-17); eq.Active=not disabled; eq.AutoButtonColor=not disabled; if not disabled then eq.Activated:Connect(function() if combatActionInFlight[key] then return end combatActionInFlight[key]=true; render(context); context.Controllers.BugFarm.EquipCombat(r.Uid,nil) end) end end
 end
 
 local function clearRecycleModal()
@@ -1475,6 +1482,7 @@ end
 			if sortMode == "Farmer Equipped" then return (isAssignedFarmer(aUid, farmerSlots) and 1 or 0) > (isAssignedFarmer(bUid, farmerSlots) and 1 or 0) end
 			if sortMode == "Combat Equipped" then return (isAssignedCombat(aUid, combatSlots) and 1 or 0) > (isAssignedCombat(bUid, combatSlots) and 1 or 0) end
 			if sortMode == "Power" then return getBugPower(aCfg) > getBugPower(bCfg) end
+			if sortMode == "Level" then return getBugLevel(a.Bug) > getBugLevel(b.Bug) end
 			local ar = BugConfig.RarityOrder[tostring((aCfg and aCfg.rarity) or a.Bug.Rarity or "Common")] or 1
 			local br = BugConfig.RarityOrder[tostring((bCfg and bCfg.rarity) or b.Bug.Rarity or "Common")] or 1
 			return ar > br
@@ -1505,6 +1513,7 @@ end
 				local badgeColor, badgeText = getAssignmentBadgeStyle(assign)
 				local asn = makeBadge(card, assign, badgeColor); asn.Size = UDim2.fromOffset(104, 20); asn.Position = UDim2.new(0.5, -52, 0, 170); setBadgeTextColor(asn, badgeText)
 				local rarityBadge = makeBadge(card, rarity, getRarityColor(rarity)); rarityBadge.Size = UDim2.fromOffset(78, 18); rarityBadge.Position = UDim2.fromOffset(8, 8)
+				local levelBadge = makeBadge(card, "Lv " .. tostring(getBugLevel(bug)), COLORS.gold); levelBadge.Size = UDim2.fromOffset(58, 18); levelBadge.Position = UDim2.fromOffset(92, 8)
 				local previewBonus = getLegacyBonusStats(bug)[1]
 				local p = Instance.new("TextLabel"); p.BackgroundTransparency = 1; p.Size = UDim2.new(1, -16, 0, 14); p.Position = UDim2.fromOffset(8, 194); p.Text = previewBonus and formatBonusLine(previewBonus) or "No bonus"; p.TextSize = 12; styleLabel(p, true); p.TextColor3 = COLORS.good; p.Parent = card
 				if isBugLocked(bug) then local l=makeBadge(card, "LOCKED", COLORS.warn); l.Size=UDim2.fromOffset(62,18); l.Position=UDim2.new(1,-70,0,8); setBadgeTextColor(l, Color3.fromRGB(32, 22, 8)) end
