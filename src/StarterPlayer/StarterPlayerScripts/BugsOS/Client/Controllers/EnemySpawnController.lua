@@ -1,6 +1,10 @@
 --!strict
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Window = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Components"):WaitForChild("Window"))
+local EquipmentConfig = require(
+	ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("EquipmentConfig")
+)
 
 local EnemySpawnController = {}
 local context
@@ -484,14 +488,7 @@ local function createResultStat(parent: Instance, labelText: string, valueText: 
 end
 
 
-local EQUIPMENT_RARITY_COLORS = {
-	Common = Color3.fromRGB(228, 228, 228),
-	Uncommon = Color3.fromRGB(78, 214, 92),
-	Rare = Color3.fromRGB(76, 154, 255),
-	Epic = Color3.fromRGB(178, 92, 255),
-	Legendary = Color3.fromRGB(255, 196, 66),
-	Mythic = Color3.fromRGB(255, 88, 190),
-}
+local EQUIPMENT_ICONS_READY = false
 
 local function getEquipmentDisplayName(item: any): string
 	if type(item) ~= "table" then return "Equipment" end
@@ -501,7 +498,19 @@ local function getEquipmentDisplayName(item: any): string
 end
 
 local function getEquipmentRarityColor(rarity: any): Color3
-	return EQUIPMENT_RARITY_COLORS[tostring(rarity or "Common")] or EQUIPMENT_RARITY_COLORS.Common
+	return EquipmentConfig.GetRarityColor(tostring(rarity or "Common"))
+end
+
+local function getEquipmentPlaceholderVisual(slot: any): { PlaceholderSymbol: string, PlaceholderLabel: string }
+	return EquipmentConfig.GetPlaceholderVisual(tostring(slot or "Equipment"))
+end
+
+local function shouldRenderEquipmentIcon(item: any): boolean
+	if not EQUIPMENT_ICONS_READY or type(item) ~= "table" then
+		return false
+	end
+	local iconAsset = tostring(item.Icon or "")
+	return iconAsset ~= ""
 end
 
 local function formatStatLine(statEntry: any): string
@@ -516,26 +525,68 @@ local function formatStars(stars: any): string
 	return string.rep("★", starCount) .. string.rep("☆", 6 - starCount)
 end
 
-local function getSlotFallbackIcon(slot: any): string
-	local slotName = tostring(slot or "")
-	if slotName == "Weapon" then return "⚔" end
-	if slotName == "Helmet" then return "⛑" end
-	if slotName == "Chestplate" then return "🛡" end
-	if slotName == "Boots" then return "👢" end
-	if slotName == "Charm" then return "✦" end
-	return "✦"
-end
-
 local function formatSubStats(subStats: any): string
 	if type(subStats) ~= "table" or #subStats == 0 then
 		return "Sub stats: None"
 	end
 	local parts = {}
 	for index, statEntry in ipairs(subStats) do
-		if index > 4 then break end
+		if index > 2 then break end
 		table.insert(parts, formatStatLine(statEntry))
 	end
 	return "Sub stats: " .. table.concat(parts, "  •  ")
+end
+
+local function renderEquipmentSlotVisual(parent: Instance, item: any, pos: UDim2, size: UDim2, z: number, rarityColor: Color3)
+	local slotVisual = createInsetPanel(parent, pos, size, z, Color3.fromRGB(12, 14, 20))
+	slotVisual.BorderColor3 = rarityColor
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = rarityColor
+	stroke.Thickness = 2
+	stroke.Transparency = 0.05
+	stroke.Parent = slotVisual
+
+	if shouldRenderEquipmentIcon(item) then
+		local icon = Instance.new("ImageLabel")
+		icon.Size = UDim2.new(1, -14, 1, -14)
+		icon.Position = UDim2.fromOffset(7, 7)
+		icon.BackgroundTransparency = 1
+		icon.Image = tostring(item.Icon or "")
+		icon.ZIndex = z + 4
+		icon.Parent = slotVisual
+		return slotVisual
+	end
+
+	local placeholder = getEquipmentPlaceholderVisual(item and item.Slot)
+	local symbol = tostring(placeholder.PlaceholderSymbol or "")
+	local labelText = tostring(placeholder.PlaceholderLabel or item.Slot or "Gear")
+	if symbol == "" then
+		symbol = string.sub(labelText, 1, 5)
+	end
+
+	local symbolLabel = Instance.new("TextLabel")
+	symbolLabel.Size = UDim2.new(1, -10, 0, 50)
+	symbolLabel.Position = UDim2.fromOffset(5, 8)
+	symbolLabel.BackgroundTransparency = 1
+	symbolLabel.Font = Enum.Font.ArialBold
+	symbolLabel.TextSize = 34
+	symbolLabel.TextColor3 = rarityColor
+	symbolLabel.Text = symbol
+	symbolLabel.ZIndex = z + 4
+	symbolLabel.Parent = slotVisual
+
+	local slotLabel = Instance.new("TextLabel")
+	slotLabel.Size = UDim2.new(1, -8, 0, 16)
+	slotLabel.Position = UDim2.new(0, 4, 1, -22)
+	slotLabel.BackgroundTransparency = 1
+	slotLabel.Font = Enum.Font.ArialBold
+	slotLabel.TextSize = 11
+	slotLabel.TextColor3 = Color3.fromRGB(222, 228, 238)
+	slotLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	slotLabel.Text = labelText
+	slotLabel.ZIndex = z + 4
+	slotLabel.Parent = slotVisual
+	return slotVisual
 end
 
 local function createEquipmentDropCard(parent: Instance, item: any, pos: UDim2, size: UDim2, z: number)
@@ -546,55 +597,26 @@ local function createEquipmentDropCard(parent: Instance, item: any, pos: UDim2, 
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = rarityColor
 	stroke.Thickness = 2
-	stroke.Transparency = 0.05
+	stroke.Transparency = 0.08
 	stroke.Parent = card
 
-	local iconBack = Instance.new("Frame")
-	iconBack.Size = UDim2.fromOffset(72, 72)
-	iconBack.Position = UDim2.fromOffset(10, 26)
-	iconBack.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
-	iconBack.BorderSizePixel = 2
-	iconBack.BorderColor3 = rarityColor
-	iconBack.ZIndex = z + 4
-	iconBack.Parent = card
-
-	local fallbackIcon = Instance.new("TextLabel")
-	fallbackIcon.Size = UDim2.fromOffset(56, 56)
-	fallbackIcon.Position = UDim2.fromOffset(8, 8)
-	fallbackIcon.BackgroundTransparency = 1
-	fallbackIcon.Font = Enum.Font.ArialBold
-	fallbackIcon.TextSize = 34
-	fallbackIcon.TextColor3 = rarityColor
-	fallbackIcon.Text = getSlotFallbackIcon(item.Slot)
-	fallbackIcon.ZIndex = z + 5
-	fallbackIcon.Parent = iconBack
-
-	local iconAsset = tostring(item.Icon or "")
-	if iconAsset ~= "" then
-		local icon = Instance.new("ImageLabel")
-		icon.Size = UDim2.fromOffset(56, 56)
-		icon.Position = UDim2.fromOffset(8, 8)
-		icon.BackgroundTransparency = 1
-		icon.Image = iconAsset
-		icon.ZIndex = z + 6
-		icon.Parent = iconBack
-	end
+	renderEquipmentSlotVisual(card, item, UDim2.fromOffset(12, 34), UDim2.fromOffset(88, 88), z + 3, rarityColor)
 
 	local header = Instance.new("TextLabel")
-	header.Size = UDim2.new(1, -102, 0, 20)
-	header.Position = UDim2.fromOffset(94, 10)
+	header.Size = UDim2.new(1, -124, 0, 20)
+	header.Position = UDim2.fromOffset(116, 12)
 	header.BackgroundTransparency = 1
 	header.TextXAlignment = Enum.TextXAlignment.Left
 	header.Font = Enum.Font.ArialBold
-	header.TextSize = 14
+	header.TextSize = 15
 	header.TextColor3 = rarityColor
-	header.Text = "EQUIPMENT DROP!"
+	header.Text = "Equipment Drop!"
 	header.ZIndex = z + 5
 	header.Parent = card
 
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -102, 0, 24)
-	nameLabel.Position = UDim2.fromOffset(94, 30)
+	nameLabel.Size = UDim2.new(1, -124, 0, 26)
+	nameLabel.Position = UDim2.fromOffset(116, 34)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
@@ -606,22 +628,36 @@ local function createEquipmentDropCard(parent: Instance, item: any, pos: UDim2, 
 	nameLabel.Parent = card
 
 	local metaLabel = Instance.new("TextLabel")
-	metaLabel.Size = UDim2.new(1, -102, 0, 20)
-	metaLabel.Position = UDim2.fromOffset(94, 54)
+	metaLabel.Size = UDim2.new(1, -124, 0, 20)
+	metaLabel.Position = UDim2.fromOffset(116, 61)
 	metaLabel.BackgroundTransparency = 1
 	metaLabel.TextXAlignment = Enum.TextXAlignment.Left
+	metaLabel.TextTruncate = Enum.TextTruncate.AtEnd
 	metaLabel.Font = Enum.Font.Code
 	metaLabel.TextSize = 13
 	metaLabel.TextColor3 = Color3.fromRGB(222, 222, 222)
-	metaLabel.Text = string.format("%s  •  %s  •  %s", tostring(item.Slot or "Slot"), rarity, formatStars(item.Stars))
+	metaLabel.Text = string.format("%s  •  %s", tostring(item.Slot or "Slot"), rarity)
 	metaLabel.ZIndex = z + 5
 	metaLabel.Parent = card
 
+	local starsLabel = Instance.new("TextLabel")
+	starsLabel.Size = UDim2.new(1, -124, 0, 20)
+	starsLabel.Position = UDim2.fromOffset(116, 82)
+	starsLabel.BackgroundTransparency = 1
+	starsLabel.TextXAlignment = Enum.TextXAlignment.Left
+	starsLabel.Font = Enum.Font.ArialBold
+	starsLabel.TextSize = 15
+	starsLabel.TextColor3 = Color3.fromRGB(255, 226, 112)
+	starsLabel.Text = formatStars(item.Stars)
+	starsLabel.ZIndex = z + 5
+	starsLabel.Parent = card
+
 	local mainStatLabel = Instance.new("TextLabel")
-	mainStatLabel.Size = UDim2.new(1, -102, 0, 20)
-	mainStatLabel.Position = UDim2.fromOffset(94, 76)
+	mainStatLabel.Size = UDim2.new(1, -124, 0, 20)
+	mainStatLabel.Position = UDim2.fromOffset(116, 104)
 	mainStatLabel.BackgroundTransparency = 1
 	mainStatLabel.TextXAlignment = Enum.TextXAlignment.Left
+	mainStatLabel.TextTruncate = Enum.TextTruncate.AtEnd
 	mainStatLabel.Font = Enum.Font.ArialBold
 	mainStatLabel.TextSize = 14
 	mainStatLabel.TextColor3 = Color3.fromRGB(255, 244, 188)
@@ -630,8 +666,8 @@ local function createEquipmentDropCard(parent: Instance, item: any, pos: UDim2, 
 	mainStatLabel.Parent = card
 
 	local subStatLabel = Instance.new("TextLabel")
-	subStatLabel.Size = UDim2.new(1, -102, 0, 20)
-	subStatLabel.Position = UDim2.fromOffset(94, 98)
+	subStatLabel.Size = UDim2.new(1, -24, 0, 20)
+	subStatLabel.Position = UDim2.fromOffset(12, 132)
 	subStatLabel.BackgroundTransparency = 1
 	subStatLabel.TextXAlignment = Enum.TextXAlignment.Left
 	subStatLabel.TextTruncate = Enum.TextTruncate.AtEnd
@@ -641,11 +677,23 @@ local function createEquipmentDropCard(parent: Instance, item: any, pos: UDim2, 
 	subStatLabel.Text = formatSubStats(item.SubStats)
 	subStatLabel.ZIndex = z + 5
 	subStatLabel.Parent = card
+
+	local addedLabel = Instance.new("TextLabel")
+	addedLabel.Size = UDim2.new(1, -24, 0, 18)
+	addedLabel.Position = UDim2.fromOffset(12, 154)
+	addedLabel.BackgroundTransparency = 1
+	addedLabel.TextXAlignment = Enum.TextXAlignment.Left
+	addedLabel.Font = Enum.Font.ArialBold
+	addedLabel.TextSize = 13
+	addedLabel.TextColor3 = Color3.fromRGB(130, 255, 178)
+	addedLabel.Text = "Added to inventory."
+	addedLabel.ZIndex = z + 5
+	addedLabel.Parent = card
 end
 
 local function showFinalPopup(result)
 	print("[EnemySpawnController] Final result popup", tostring(result and result.Winner))
-	local windowRef = createOsWindow("Battle Results", UDim2.fromOffset(560, 560), REWARD_Z, nil)
+	local windowRef = createOsWindow("Battle Results", UDim2.fromOffset(600, 730), REWARD_Z, nil)
 	if not windowRef then return end
 	local frame = windowRef.Content
 	local winner = tostring(result.Winner or "Draw")
@@ -667,7 +715,7 @@ local function showFinalPopup(result)
 		print("[EnemySpawnController] No equipment drop in result")
 	end
 
-	local banner = createInsetPanel(frame, UDim2.fromOffset(16, 12), UDim2.new(1, -32, 0, 64), REWARD_Z + 12, isVictory and Color3.fromRGB(5, 54, 32) or (isDefeat and Color3.fromRGB(58, 22, 22) or Color3.fromRGB(62, 42, 12)))
+	local banner = createInsetPanel(frame, UDim2.fromOffset(18, 12), UDim2.new(1, -36, 0, 64), REWARD_Z + 12, isVictory and Color3.fromRGB(5, 54, 32) or (isDefeat and Color3.fromRGB(58, 22, 22) or Color3.fromRGB(62, 42, 12)))
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, -24, 1, 0)
 	title.Position = UDim2.fromOffset(12, 0)
@@ -682,7 +730,7 @@ local function showFinalPopup(result)
 	title.ZIndex = REWARD_Z + 18
 	title.Parent = banner
 
-	local enemyPanel = createInsetPanel(frame, UDim2.fromOffset(16, 88), UDim2.new(1, -32, 0, 86), REWARD_Z + 12, Color3.fromRGB(22, 34, 48))
+	local enemyPanel = createInsetPanel(frame, UDim2.fromOffset(18, 88), UDim2.new(1, -36, 0, 86), REWARD_Z + 12, Color3.fromRGB(22, 34, 48))
 	local enemyIcon = Instance.new("ImageLabel")
 	enemyIcon.Size = UDim2.fromOffset(62, 62)
 	enemyIcon.Position = UDim2.fromOffset(12, 12)
@@ -709,25 +757,25 @@ local function showFinalPopup(result)
 	detailRow.TextXAlignment = Enum.TextXAlignment.Left
 	detailRow.Font = Enum.Font.Code
 	detailRow.TextSize = 14
-	detailRow.TextColor3 = Color3.fromRGB(130, 240, 200)
-	detailRow.Text = isVictory and "Enemy defeated. Rewards granted." or "The enemy escaped after the battle."
+	detailRow.TextColor3 = isVictory and Color3.fromRGB(130, 240, 200) or Color3.fromRGB(230, 210, 180)
+	detailRow.Text = isVictory and "Enemy defeated. Rewards granted." or (isDefeat and "The enemy escaped after the battle." or "Battle ended in a draw.")
 	detailRow.ZIndex = REWARD_Z + 16
 	detailRow.Parent = enemyPanel
 
 	local statsRow = Instance.new("Frame")
-	statsRow.Size = UDim2.new(1, -32, 0, 54)
-	statsRow.Position = UDim2.fromOffset(16, 186)
+	statsRow.Size = UDim2.new(1, -36, 0, 54)
+	statsRow.Position = UDim2.fromOffset(18, 188)
 	statsRow.BackgroundTransparency = 1
 	statsRow.ZIndex = REWARD_Z + 12
 	statsRow.Parent = frame
 	createResultStat(statsRow, "Turns", tostring(result.Turns or "?"), 0)
-	createResultStat(statsRow, "Player Remaining", tostring(result.PlayerRemaining or "?"), 188)
-	createResultStat(statsRow, "Enemy Remaining", tostring(result.EnemyRemaining or "?"), 376)
+	createResultStat(statsRow, "Player Remaining", tostring(result.PlayerRemaining or "?"), 196)
+	createResultStat(statsRow, "Enemy Remaining", tostring(result.EnemyRemaining or "?"), 392)
 
-	local rewardsPanel = createInsetPanel(frame, UDim2.fromOffset(16, 252), UDim2.new(1, -32, 0, 94), REWARD_Z + 12, isVictory and Color3.fromRGB(15, 58, 42) or Color3.fromRGB(48, 42, 42))
+	local rewardsPanel = createInsetPanel(frame, UDim2.fromOffset(18, 256), UDim2.new(1, -36, 0, 96), REWARD_Z + 12, isVictory and Color3.fromRGB(15, 58, 42) or Color3.fromRGB(48, 42, 42))
 	local rewardHeader = Instance.new("TextLabel")
 	rewardHeader.Size = UDim2.new(1, -24, 0, 24)
-	rewardHeader.Position = UDim2.fromOffset(12, 9)
+	rewardHeader.Position = UDim2.fromOffset(12, 10)
 	rewardHeader.BackgroundTransparency = 1
 	rewardHeader.TextXAlignment = Enum.TextXAlignment.Left
 	rewardHeader.Font = Enum.Font.ArialBold
@@ -737,49 +785,54 @@ local function showFinalPopup(result)
 	rewardHeader.ZIndex = REWARD_Z + 16
 	rewardHeader.Parent = rewardsPanel
 	local essenceLabel = Instance.new("TextLabel")
-	essenceLabel.Size = UDim2.new(1, -24, 0, 44)
-	essenceLabel.Position = UDim2.fromOffset(12, 36)
+	essenceLabel.Size = UDim2.new(1, -24, 0, 46)
+	essenceLabel.Position = UDim2.fromOffset(12, 38)
 	essenceLabel.BackgroundTransparency = 1
 	essenceLabel.Font = Enum.Font.ArialBold
-	essenceLabel.TextSize = 32
-	essenceLabel.TextXAlignment = Enum.TextXAlignment.Left
+	essenceLabel.TextSize = 34
+	essenceLabel.TextXAlignment = Enum.TextXAlignment.Center
 	essenceLabel.TextColor3 = isVictory and Color3.fromRGB(120, 255, 178) or Color3.fromRGB(255, 150, 150)
 	essenceLabel.Text = "Bug Essence +0"
 	essenceLabel.ZIndex = REWARD_Z + 16
 	essenceLabel.Parent = rewardsPanel
 
-	local equipmentPanel = createInsetPanel(frame, UDim2.fromOffset(16, 358), UDim2.new(1, -32, 0, 124), REWARD_Z + 12, Color3.fromRGB(214, 214, 214))
+	local equipmentPanelHeight = type(droppedEquipment) == "table" and 226 or 74
+	local equipmentPanel = createInsetPanel(frame, UDim2.fromOffset(18, 366), UDim2.new(1, -36, 0, equipmentPanelHeight), REWARD_Z + 12, Color3.fromRGB(214, 214, 214))
 	if type(droppedEquipment) == "table" then
-		createEquipmentDropCard(equipmentPanel, droppedEquipment, UDim2.fromOffset(10, 10), UDim2.new(1, -20, 1, -20), REWARD_Z + 14)
+		createEquipmentDropCard(equipmentPanel, droppedEquipment, UDim2.fromOffset(12, 12), UDim2.new(1, -24, 1, -24), REWARD_Z + 14)
 	else
 		local equipmentText = Instance.new("TextLabel")
-		equipmentText.Size = UDim2.new(1, -24, 1, 0)
-		equipmentText.Position = UDim2.fromOffset(12, 0)
+		equipmentText.Size = UDim2.new(1, -28, 1, 0)
+		equipmentText.Position = UDim2.fromOffset(14, 0)
 		equipmentText.BackgroundTransparency = 1
 		equipmentText.TextXAlignment = Enum.TextXAlignment.Left
-		equipmentText.Font = Enum.Font.Arial
-		equipmentText.TextSize = 15
+		equipmentText.Font = Enum.Font.ArialBold
+		equipmentText.TextSize = 16
 		equipmentText.TextColor3 = Color3.fromRGB(55, 55, 55)
 		equipmentText.Text = "Equipment Drops: None"
 		equipmentText.ZIndex = REWARD_Z + 16
 		equipmentText.Parent = equipmentPanel
 	end
 
+	local footer = createInsetPanel(frame, UDim2.new(0, 18, 1, -76), UDim2.new(1, -36, 0, 58), REWARD_Z + 12, Color3.fromRGB(205, 205, 205))
 	local message = Instance.new("TextLabel")
-	message.Size = UDim2.new(1, -40, 0, 24)
-	message.Position = UDim2.fromOffset(20, 492)
+	message.Size = UDim2.fromOffset(160, 58)
+	message.Position = UDim2.fromOffset(14, 0)
 	message.BackgroundTransparency = 1
 	message.Font = Enum.Font.Arial
-	message.TextSize = 15
+	message.TextXAlignment = Enum.TextXAlignment.Left
+	message.TextTruncate = Enum.TextTruncate.AtEnd
+	message.TextSize = 14
 	message.TextColor3 = Color3.fromRGB(38, 38, 38)
-	message.Text = (type(droppedEquipment) == "table") and "Bug Essence collected. Equipment added to inventory." or (isVictory and "Bug Essence collected." or "No rewards were granted.")
+	message.Text = (type(droppedEquipment) == "table") and "Equipment added to inventory." or (isVictory and "Bug Essence collected." or "No rewards were granted.")
 	message.ZIndex = REWARD_Z + 15
-	message.Parent = frame
-	local closeBtn = createButton(frame, (type(droppedEquipment) == "table") and "Claim Loot" or (isVictory and "Claim Essence" or "Close"), UDim2.new(0.5, -98, 1, -44), UDim2.fromOffset(196, 34), REWARD_Z + 15, isVictory and Color3.fromRGB(40, 190, 92) or Color3.fromRGB(204, 204, 204))
+	message.Parent = footer
+	local buttonText = isVictory and "Claim Loot" or "Close"
+	local closeBtn = createButton(footer, buttonText, UDim2.new(0.5, -98, 0.5, -17), UDim2.fromOffset(196, 34), REWARD_Z + 15, isVictory and Color3.fromRGB(40, 190, 92) or Color3.fromRGB(204, 204, 204))
 	styleButton(closeBtn, closeBtn.BackgroundColor3, isVictory and Color3.fromRGB(54, 220, 110) or Color3.fromRGB(224, 224, 224), isVictory and Color3.fromRGB(28, 150, 70) or Color3.fromRGB(170, 170, 170), isVictory and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(20, 20, 20))
 	closeBtn.MouseButton1Click:Connect(function() windowRef.Destroy() end)
 	if isVictory then
-		TweenService:Create(rewardsPanel, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.fromOffset(16, 248)}):Play()
+		TweenService:Create(rewardsPanel, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.fromOffset(18, 252)}):Play()
 		task.spawn(function()
 			for i = 0, essence do
 				if not essenceLabel.Parent then return end
@@ -792,7 +845,7 @@ local function showFinalPopup(result)
 				if not frame.Parent then return end
 				local sparkle = Instance.new("Frame")
 				sparkle.Size = UDim2.fromOffset(math.random(4, 9), math.random(4, 9))
-				sparkle.Position = UDim2.new(0.5, math.random(-210, 210), 0, math.random(252, 340))
+				sparkle.Position = UDim2.new(0.5, math.random(-230, 230), 0, math.random(260, 350))
 				sparkle.BorderSizePixel = 0
 				sparkle.BackgroundColor3 = Color3.fromRGB(138, 255, 186)
 				sparkle.ZIndex = REWARD_Z + 22

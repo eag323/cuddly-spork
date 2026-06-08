@@ -78,88 +78,29 @@ EquipmentConfig.SetBonusMetadata = {
 }
 
 EquipmentConfig.DefaultIconsBySlot = {
-	Weapon = "rbxassetid://108634805180682",
-	Helmet = "rbxassetid://118602110627798",
-	Chestplate = "rbxassetid://87662023939534",
-	Boots = "rbxassetid://88635696482091",
-	Charm = "rbxassetid://108634805180682",
+	Weapon = "",
+	Helmet = "",
+	Chestplate = "",
+	Boots = "",
+	Charm = "",
 }
 
--- Legacy alias kept for current UI and older saved/generated equipment.
+EquipmentConfig.PlaceholderVisualsBySlot = {
+	Weapon = { PlaceholderSymbol = "⚔", PlaceholderLabel = "Weapon" },
+	Helmet = { PlaceholderSymbol = "🪖", PlaceholderLabel = "Helmet" },
+	Chestplate = { PlaceholderSymbol = "🛡", PlaceholderLabel = "Chestplate" },
+	Boots = { PlaceholderSymbol = "👢", PlaceholderLabel = "Boots" },
+	Charm = { PlaceholderSymbol = "✦", PlaceholderLabel = "Charm" },
+}
+
+-- Legacy aliases kept for current UI and older saved/generated equipment.
+-- Equipment art has not been uploaded yet, so these intentionally stay empty
+-- instead of falling back to bug icons.
 EquipmentConfig.IconsBySlot = EquipmentConfig.DefaultIconsBySlot
-
-EquipmentConfig.IconsBySetAndSlot = {
-	Power = {
-		Weapon = EquipmentConfig.DefaultIconsBySlot.Weapon,
-		Helmet = EquipmentConfig.DefaultIconsBySlot.Helmet,
-		Chestplate = EquipmentConfig.DefaultIconsBySlot.Chestplate,
-		Boots = EquipmentConfig.DefaultIconsBySlot.Boots,
-		Charm = EquipmentConfig.DefaultIconsBySlot.Charm,
-	},
-	Guard = {
-		Weapon = EquipmentConfig.DefaultIconsBySlot.Weapon,
-		Helmet = EquipmentConfig.DefaultIconsBySlot.Helmet,
-		Chestplate = EquipmentConfig.DefaultIconsBySlot.Chestplate,
-		Boots = EquipmentConfig.DefaultIconsBySlot.Boots,
-		Charm = EquipmentConfig.DefaultIconsBySlot.Charm,
-	},
-	Speed = {
-		Weapon = EquipmentConfig.DefaultIconsBySlot.Weapon,
-		Helmet = EquipmentConfig.DefaultIconsBySlot.Helmet,
-		Chestplate = EquipmentConfig.DefaultIconsBySlot.Chestplate,
-		Boots = EquipmentConfig.DefaultIconsBySlot.Boots,
-		Charm = EquipmentConfig.DefaultIconsBySlot.Charm,
-	},
-	Precision = {
-		Weapon = EquipmentConfig.DefaultIconsBySlot.Weapon,
-		Helmet = EquipmentConfig.DefaultIconsBySlot.Helmet,
-		Chestplate = EquipmentConfig.DefaultIconsBySlot.Chestplate,
-		Boots = EquipmentConfig.DefaultIconsBySlot.Boots,
-		Charm = EquipmentConfig.DefaultIconsBySlot.Charm,
-	},
-	Resistance = {
-		Weapon = EquipmentConfig.DefaultIconsBySlot.Weapon,
-		Helmet = EquipmentConfig.DefaultIconsBySlot.Helmet,
-		Chestplate = EquipmentConfig.DefaultIconsBySlot.Chestplate,
-		Boots = EquipmentConfig.DefaultIconsBySlot.Boots,
-		Charm = EquipmentConfig.DefaultIconsBySlot.Charm,
-	},
-	Critical = {
-		Weapon = EquipmentConfig.DefaultIconsBySlot.Weapon,
-		Helmet = EquipmentConfig.DefaultIconsBySlot.Helmet,
-		Chestplate = EquipmentConfig.DefaultIconsBySlot.Chestplate,
-		Boots = EquipmentConfig.DefaultIconsBySlot.Boots,
-		Charm = EquipmentConfig.DefaultIconsBySlot.Charm,
-	},
-	Vitality = {
-		Weapon = EquipmentConfig.DefaultIconsBySlot.Weapon,
-		Helmet = EquipmentConfig.DefaultIconsBySlot.Helmet,
-		Chestplate = EquipmentConfig.DefaultIconsBySlot.Chestplate,
-		Boots = EquipmentConfig.DefaultIconsBySlot.Boots,
-		Charm = EquipmentConfig.DefaultIconsBySlot.Charm,
-	},
-	Hunter = {
-		Weapon = EquipmentConfig.DefaultIconsBySlot.Weapon,
-		Helmet = EquipmentConfig.DefaultIconsBySlot.Helmet,
-		Chestplate = EquipmentConfig.DefaultIconsBySlot.Chestplate,
-		Boots = EquipmentConfig.DefaultIconsBySlot.Boots,
-		Charm = EquipmentConfig.DefaultIconsBySlot.Charm,
-	},
-	Essence = {
-		Weapon = EquipmentConfig.DefaultIconsBySlot.Weapon,
-		Helmet = EquipmentConfig.DefaultIconsBySlot.Helmet,
-		Chestplate = EquipmentConfig.DefaultIconsBySlot.Chestplate,
-		Boots = EquipmentConfig.DefaultIconsBySlot.Boots,
-		Charm = EquipmentConfig.DefaultIconsBySlot.Charm,
-	},
-	Fortune = {
-		Weapon = EquipmentConfig.DefaultIconsBySlot.Weapon,
-		Helmet = EquipmentConfig.DefaultIconsBySlot.Helmet,
-		Chestplate = EquipmentConfig.DefaultIconsBySlot.Chestplate,
-		Boots = EquipmentConfig.DefaultIconsBySlot.Boots,
-		Charm = EquipmentConfig.DefaultIconsBySlot.Charm,
-	},
-}
+EquipmentConfig.IconsBySetAndSlot = {}
+for _, setName in EquipmentConfig.SetNames do
+	EquipmentConfig.IconsBySetAndSlot[setName] = EquipmentConfig.DefaultIconsBySlot
+end
 
 EquipmentConfig.DropChancesByEnemyTier = {
 	CommonEnemy = 0.15,
@@ -292,6 +233,17 @@ end
 
 function EquipmentConfig.GetRarityColor(rarity: string): Color3
 	return EquipmentConfig.RarityColors[rarity] or EquipmentConfig.RarityColors.Common
+end
+
+function EquipmentConfig.GetPlaceholderVisual(slot: string?): { PlaceholderSymbol: string, PlaceholderLabel: string }
+	local visual = EquipmentConfig.PlaceholderVisualsBySlot[slot or ""]
+	if visual then
+		return visual
+	end
+	return {
+		PlaceholderSymbol = "✦",
+		PlaceholderLabel = tostring(slot or "Equipment"),
+	}
 end
 
 function EquipmentConfig.GetIcon(setName: string?, slot: string?): string
