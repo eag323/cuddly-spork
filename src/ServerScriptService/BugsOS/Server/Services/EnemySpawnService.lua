@@ -8,12 +8,15 @@ local Config=Shared:WaitForChild("Config")
 local RemoteNames=require(Remotes:WaitForChild("RemoteNames"))
 local BugConfig=require(Config:WaitForChild("BugConfig"))
 local BugAscensionConfig=require(Config:WaitForChild("BugAscensionConfig"))
+local BugLevelConfig=require(Config:WaitForChild("BugLevelConfig"))
 local EnemySpawnConfig=require(Config:WaitForChild("EnemySpawnConfig"))
 local BattleSimulator=require(Shared:WaitForChild("Combat"):WaitForChild("BattleSimulator"))
 local ProfileService=require(script.Parent:WaitForChild("ProfileService"))
 local EquipmentService=require(script.Parent:WaitForChild("EquipmentService"))
+local BugLevelService=require(script.Parent:WaitForChild("BugLevelService"))
 local S={} local remotes={} local activeByUserId={}
 local VALID_EQUIPMENT_TIER_KEYS={CommonEnemy=true,RareEnemy=true,EliteEnemy=true,MythicEnemy=true}
+local COMBAT_XP_BY_TIER={CommonEnemy=35,RareEnemy=55,EliteEnemy=85,MythicEnemy=140}
 local function ensureRemote(name) local e=Remotes:FindFirstChild(name); if e and e:IsA("RemoteEvent") then return e end local r=Instance.new("RemoteEvent"); r.Name=name; r.Parent=Remotes; return r end
 local function power(st) return math.floor((st.HP or 0)+((st.ATK or 0)*4)+((st.DEF or 0)*3)+((st.SPD or 0)*2)+((st.CritRate or 0)*8)+(st.CritDamage or 0)+((st.RES or 0)*2)+((st.ACC or 0)*2)) end
 local function tierRoll() local total=0 for _,t in pairs(EnemySpawnConfig.Tiers) do total+=t.Weight end local r=math.random()*total; local acc=0 for name,t in pairs(EnemySpawnConfig.Tiers) do acc+=t.Weight if r<=acc then return name,t end end return "CommonEnemy", EnemySpawnConfig.Tiers.CommonEnemy end
@@ -30,7 +33,7 @@ local function spawnForPlayer(player)
 end
 local function buildCombatTeam(player)
  local d=ProfileService.GetPlayerData(player); if not d then return nil,"NoCombatTeam" end local inv=((d.Bugs or {}).Inventory) or {}; local slots=((d.Bugs or {}).CombatSlots) or {}; local team={}
- for _,uid in pairs(slots) do local entry=inv[uid]; if entry then local cfg=BugConfig.GetBug(entry.BugId) or BugConfig.Bugs[entry.BugId]; if cfg then local mult=BugAscensionConfig.GetCombatMultiplier(tonumber(entry.Ascension) or 0); local s=cfg.stats; table.insert(team,{Id=uid,Name=entry.Nickname or cfg.displayName,Icon=cfg.icon,Rarity=cfg.rarity,Rank=tonumber(entry.Ascension) or 0,Team="Player",Stats={HP=math.floor(s.HP*mult),ATK=math.floor(s.ATK*mult),DEF=math.floor(s.DEF*mult),SPD=math.floor(s.SPD*mult),CritRate=s.CritRate,CritDamage=s.CritDamage,RES=s.RES,ACC=s.ACC}}) end end end
+ for _,uid in pairs(slots) do local entry=inv[uid]; if entry then local cfg=BugConfig.GetBug(entry.BugId) or BugConfig.Bugs[entry.BugId]; if cfg then local ascMult=BugAscensionConfig.GetCombatMultiplier(tonumber(entry.Ascension) or 0); local level=math.max(1, tonumber(entry.Level) or BugLevelConfig.GetLevelFromXp(tonumber(entry.Xp) or 0)); local levelMult=BugLevelConfig.GetCombatLevelMultiplier(level); local mult=ascMult*levelMult; local s=cfg.stats; table.insert(team,{Id=uid,Name=entry.Nickname or cfg.displayName,Icon=cfg.icon,Rarity=cfg.rarity,Rank=tonumber(entry.Ascension) or 0,Level=level,Team="Player",Stats={HP=math.floor(s.HP*mult),ATK=math.floor(s.ATK*mult),DEF=math.floor(s.DEF*mult),SPD=math.floor(s.SPD*mult),CritRate=s.CritRate,CritDamage=s.CritDamage,RES=s.RES,ACC=s.ACC}}) end end end
  if #team==0 then return nil,"NoCombatTeam" end return team,nil,d end
 function S.Init() remotes.Spawned=ensureRemote(RemoteNames.EnemyBug_Spawned); remotes.Despawned=ensureRemote(RemoteNames.EnemyBug_Despawned); remotes.Attack=ensureRemote(RemoteNames.EnemyBug_Attack); remotes.AttackResult=ensureRemote(RemoteNames.EnemyBug_AttackResult) end
 function S.Start()
@@ -57,6 +60,8 @@ function S.Start()
    Log=res.Log,
    Events=res.Events,
    FinalUnits=res.FinalUnits,
+   Team=team,
+   BugXpResults={},
    EnemyName=enemy.DisplayName,
    EnemyIcon=enemy.Icon
   }
@@ -65,7 +70,11 @@ function S.Start()
    if not VALID_EQUIPMENT_TIER_KEYS[enemy.Tier] then warn("[EnemySpawnService] Unexpected equipment tier key", tostring(enemy.Tier)) end
    print("[EnemySpawnService] Rolling equipment drop for tier", enemy.Tier)
    local droppedEquipment=EquipmentService.RollAndGrant(player, enemy.Tier)
-   out.Rewards={BugEssence=enemy.RewardsPreview.BugEssence or 0, Equipment=droppedEquipment}
+   local bugUids={} for _,unit in ipairs(team) do if unit.Id then table.insert(bugUids, unit.Id) end end
+   local combatXp=COMBAT_XP_BY_TIER[enemy.Tier] or COMBAT_XP_BY_TIER.CommonEnemy
+   local xpResults=BugLevelService.GrantCombatXp(player, bugUids, combatXp)
+   out.BugXpResults=xpResults
+   out.Rewards={BugEssence=enemy.RewardsPreview.BugEssence or 0, Equipment=droppedEquipment, CombatXp=combatXp}
    print("[EnemySpawnService] Attack reward payload equipment", droppedEquipment and droppedEquipment.Uid or "nil")
    ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
   end

@@ -57,6 +57,8 @@ function BugInventoryService.CreateBug(player: Player, speciesId: string, rarity
 		Species = species.displayName or species.species or speciesId,
 		Rarity = rarity,
 		Ascension = 0,
+		Level = 1,
+		Xp = 0,
 		Equipment = {},
 		CaughtAt = os.time(),
 		BonusStats = bonusStats,
