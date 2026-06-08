@@ -13,6 +13,7 @@ local BattleSimulator=require(Shared:WaitForChild("Combat"):WaitForChild("Battle
 local ProfileService=require(script.Parent:WaitForChild("ProfileService"))
 local EquipmentService=require(script.Parent:WaitForChild("EquipmentService"))
 local S={} local remotes={} local activeByUserId={}
+local VALID_EQUIPMENT_TIER_KEYS={CommonEnemy=true,RareEnemy=true,EliteEnemy=true,MythicEnemy=true}
 local function ensureRemote(name) local e=Remotes:FindFirstChild(name); if e and e:IsA("RemoteEvent") then return e end local r=Instance.new("RemoteEvent"); r.Name=name; r.Parent=Remotes; return r end
 local function power(st) return math.floor((st.HP or 0)+((st.ATK or 0)*4)+((st.DEF or 0)*3)+((st.SPD or 0)*2)+((st.CritRate or 0)*8)+(st.CritDamage or 0)+((st.RES or 0)*2)+((st.ACC or 0)*2)) end
 local function tierRoll() local total=0 for _,t in pairs(EnemySpawnConfig.Tiers) do total+=t.Weight end local r=math.random()*total; local acc=0 for name,t in pairs(EnemySpawnConfig.Tiers) do acc+=t.Weight if r<=acc then return name,t end end return "CommonEnemy", EnemySpawnConfig.Tiers.CommonEnemy end
@@ -61,8 +62,11 @@ function S.Start()
   }
   print("[EnemySpawnService] Attack resolved", tostring(res.Winner), enemy.EnemyId)
   if res.Winner=="Player" then d.Currencies=d.Currencies or {}; d.Currencies.BugEssence=(tonumber(d.Currencies.BugEssence)or 0)+(enemy.RewardsPreview.BugEssence or 0)
+   if not VALID_EQUIPMENT_TIER_KEYS[enemy.Tier] then warn("[EnemySpawnService] Unexpected equipment tier key", tostring(enemy.Tier)) end
+   print("[EnemySpawnService] Rolling equipment drop for tier", enemy.Tier)
    local droppedEquipment=EquipmentService.RollAndGrant(player, enemy.Tier)
    out.Rewards={BugEssence=enemy.RewardsPreview.BugEssence or 0, Equipment=droppedEquipment}
+   print("[EnemySpawnService] Attack reward payload equipment", droppedEquipment and droppedEquipment.Uid or "nil")
    ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
   end
   activeByUserId[player.UserId]=nil
