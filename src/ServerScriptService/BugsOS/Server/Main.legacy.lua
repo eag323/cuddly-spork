@@ -23,6 +23,7 @@ local serviceOrder = {
 	"AchievementService",
 	"ProfileDisplayService",
 	"BugSpawnService",
+	"EquipmentService",
 	"EnemySpawnService",
 }
 

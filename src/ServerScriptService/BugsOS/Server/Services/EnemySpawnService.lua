@@ -11,6 +11,7 @@ local BugAscensionConfig=require(Config:WaitForChild("BugAscensionConfig"))
 local EnemySpawnConfig=require(Config:WaitForChild("EnemySpawnConfig"))
 local BattleSimulator=require(Shared:WaitForChild("Combat"):WaitForChild("BattleSimulator"))
 local ProfileService=require(script.Parent:WaitForChild("ProfileService"))
+local EquipmentService=require(script.Parent:WaitForChild("EquipmentService"))
 local S={} local remotes={} local activeByUserId={}
 local function ensureRemote(name) local e=Remotes:FindFirstChild(name); if e and e:IsA("RemoteEvent") then return e end local r=Instance.new("RemoteEvent"); r.Name=name; r.Parent=Remotes; return r end
 local function power(st) return math.floor((st.HP or 0)+((st.ATK or 0)*4)+((st.DEF or 0)*3)+((st.SPD or 0)*2)+((st.CritRate or 0)*8)+(st.CritDamage or 0)+((st.RES or 0)*2)+((st.ACC or 0)*2)) end
@@ -59,7 +60,9 @@ function S.Start()
    EnemyIcon=enemy.Icon
   }
   print("[EnemySpawnService] Attack resolved", tostring(res.Winner), enemy.EnemyId)
-  if res.Winner=="Player" then d.Currencies=d.Currencies or {}; d.Currencies.BugEssence=(tonumber(d.Currencies.BugEssence)or 0)+(enemy.RewardsPreview.BugEssence or 0); out.Rewards={BugEssence=enemy.RewardsPreview.BugEssence or 0}
+  if res.Winner=="Player" then d.Currencies=d.Currencies or {}; d.Currencies.BugEssence=(tonumber(d.Currencies.BugEssence)or 0)+(enemy.RewardsPreview.BugEssence or 0)
+   local droppedEquipment=EquipmentService.RollAndGrant(player, enemy.Tier)
+   out.Rewards={BugEssence=enemy.RewardsPreview.BugEssence or 0, Equipment=droppedEquipment}
    ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
   end
   activeByUserId[player.UserId]=nil

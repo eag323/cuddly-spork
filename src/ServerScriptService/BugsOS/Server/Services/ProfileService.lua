@@ -77,6 +77,17 @@ local DEFAULT_PLAYER_DATA: PlayerData = {
 		SlotsUnlocked = 5,
 	},
 
+	Equipment = {
+		Inventory = {},
+		Equipped = {
+			Weapon = nil,
+			Helmet = nil,
+			Chestplate = nil,
+			Boots = nil,
+			Charm = nil,
+		},
+	},
+
 	GeneratorCores = {
 		Inventory = {},
 	},
@@ -241,6 +252,19 @@ local function maybeGrantAscensionTestKit(playerData: PlayerData): ()
 	end
 end
 
+local function normalizeEquipment(playerData: PlayerData): ()
+	playerData.Equipment = playerData.Equipment or {}
+	playerData.Equipment.Inventory = playerData.Equipment.Inventory or {}
+	playerData.Equipment.Equipped = playerData.Equipment.Equipped or {}
+
+	local equipped = playerData.Equipment.Equipped
+	equipped.Weapon = equipped.Weapon or nil
+	equipped.Helmet = equipped.Helmet or nil
+	equipped.Chestplate = equipped.Chestplate or nil
+	equipped.Boots = equipped.Boots or nil
+	equipped.Charm = equipped.Charm or nil
+end
+
 local function normalizeCosmetics(playerData: PlayerData): ()
 	playerData.Cosmetics = playerData.Cosmetics or {}
 	playerData.Cosmetics.Owned = playerData.Cosmetics.Owned or {}
@@ -280,6 +304,7 @@ end
 
 local function syncPlayer(player: Player): ()
 	local playerData = loadDefaultPlayerData(player)
+	normalizeEquipment(playerData)
 	normalizeCosmetics(playerData)
 	maybeGrantAscensionTestKit(playerData)
 	playerDataByUserId[player.UserId] = playerData
