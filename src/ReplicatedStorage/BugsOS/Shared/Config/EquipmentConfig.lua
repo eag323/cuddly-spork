@@ -78,16 +78,16 @@ EquipmentConfig.SetBonusMetadata = {
 }
 
 EquipmentConfig.SetIcons = {
-	Power = { Text = "PWR", Color = Color3.fromRGB(255, 92, 92) },
-	Guard = { Text = "GRD", Color = Color3.fromRGB(112, 176, 255) },
-	Speed = { Text = "SPD", Color = Color3.fromRGB(90, 235, 190) },
-	Precision = { Text = "ACC", Color = Color3.fromRGB(255, 204, 84) },
-	Resistance = { Text = "RES", Color = Color3.fromRGB(180, 146, 255) },
-	Critical = { Text = "CRT", Color = Color3.fromRGB(255, 118, 188) },
-	Vitality = { Text = "HP", Color = Color3.fromRGB(110, 235, 118) },
-	Hunter = { Text = "HNT", Color = Color3.fromRGB(232, 146, 76) },
-	Essence = { Text = "ESS", Color = Color3.fromRGB(94, 226, 216) },
-	Fortune = { Text = "LCK", Color = Color3.fromRGB(255, 226, 104) },
+	Power = { Text = "⚔", Color = Color3.fromRGB(255, 92, 92) },
+	Guard = { Text = "⬟", Color = Color3.fromRGB(112, 176, 255) },
+	Speed = { Text = "⚡", Color = Color3.fromRGB(90, 235, 190) },
+	Precision = { Text = "⌖", Color = Color3.fromRGB(255, 204, 84) },
+	Resistance = { Text = "◆", Color = Color3.fromRGB(180, 146, 255) },
+	Critical = { Text = "✹", Color = Color3.fromRGB(255, 118, 188) },
+	Vitality = { Text = "♥", Color = Color3.fromRGB(110, 235, 118) },
+	Hunter = { Text = "♞", Color = Color3.fromRGB(232, 146, 76) },
+	Essence = { Text = "●", Color = Color3.fromRGB(94, 226, 216) },
+	Fortune = { Text = "♣", Color = Color3.fromRGB(255, 226, 104) },
 }
 
 EquipmentConfig.DefaultIconsBySlot = {
@@ -269,7 +269,7 @@ function EquipmentConfig.GetSetIcon(setName: string?): { Text: string, Color: Co
 		normalizedSetName = "Set"
 	end
 	return {
-		Text = string.upper(string.sub(normalizedSetName, 1, 3)),
+		Text = "◆",
 		Color = Color3.fromRGB(198, 204, 216),
 	}
 end
