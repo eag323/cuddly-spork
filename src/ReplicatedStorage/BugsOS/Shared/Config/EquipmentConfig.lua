@@ -93,6 +93,27 @@ EquipmentConfig.SetIconImages = {
 	Fortune = "rbxassetid://87625640122718",
 }
 
+-- Paste the shared equipment loot tile texture asset ID here.
+-- This default tile background is rendered behind every equipment loot tile to add subtle texture and depth.
+-- Use a string like "rbxassetid://1234567890" and leave it as "" until the standard texture has been uploaded.
+EquipmentConfig.DefaultTileBackgroundImage = ""
+
+-- Paste uploaded Roblox asset IDs for set-specific equipment loot tile gradient overlays here.
+-- These set gradient images are colored accent layers rendered above DefaultTileBackgroundImage and below the equipment icon.
+-- Use strings like "rbxassetid://1234567890" and leave a value as "" until that set gradient art has been uploaded.
+EquipmentConfig.SetGradientImages = {
+	Power = "",
+	Guard = "",
+	Speed = "",
+	Precision = "",
+	Resistance = "",
+	Critical = "",
+	Vitality = "",
+	Hunter = "",
+	Essence = "",
+	Fortune = "",
+}
+
 -- Color metadata is for UI accents only; actual set icons come from SetIconImages.
 EquipmentConfig.SetIconColors = {
 	Power = Color3.fromRGB(255, 92, 92),
@@ -353,6 +374,14 @@ function EquipmentConfig.GetSetIconImage(setName: string?): string
 	local setIconImage = EquipmentConfig.SetIconImages[tostring(setName or "")]
 	if type(setIconImage) == "string" and setIconImage ~= "" then
 		return setIconImage
+	end
+	return ""
+end
+
+function EquipmentConfig.GetSetGradientImage(setName: string?): string
+	local setGradientImage = EquipmentConfig.SetGradientImages[tostring(setName or "")]
+	if type(setGradientImage) == "string" and setGradientImage ~= "" then
+		return setGradientImage
 	end
 	return ""
 end
