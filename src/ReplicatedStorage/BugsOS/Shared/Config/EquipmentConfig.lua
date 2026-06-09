@@ -77,19 +77,38 @@ EquipmentConfig.SetBonusMetadata = {
 	Fortune = { Theme = "Drops" },
 }
 
-EquipmentConfig.SetIcons = {
-	Power = { Text = "⚔", Color = Color3.fromRGB(255, 92, 92) },
-	Guard = { Text = "⬟", Color = Color3.fromRGB(112, 176, 255) },
-	Speed = { Text = "⚡", Color = Color3.fromRGB(90, 235, 190) },
-	Precision = { Text = "⌖", Color = Color3.fromRGB(255, 204, 84) },
-	Resistance = { Text = "◆", Color = Color3.fromRGB(180, 146, 255) },
-	Critical = { Text = "✹", Color = Color3.fromRGB(255, 118, 188) },
-	Vitality = { Text = "♥", Color = Color3.fromRGB(110, 235, 118) },
-	Hunter = { Text = "♞", Color = Color3.fromRGB(232, 146, 76) },
-	Essence = { Text = "●", Color = Color3.fromRGB(94, 226, 216) },
-	Fortune = { Text = "♣", Color = Color3.fromRGB(255, 226, 104) },
+-- Paste uploaded Roblox asset IDs for small set badge icons here.
+-- These badges are shown on equipment tiles and should use strings like "rbxassetid://1234567890".
+-- Leave a value as "" until that set badge art has been uploaded.
+EquipmentConfig.SetIconImages = {
+	Power = "",
+	Guard = "",
+	Speed = "",
+	Precision = "",
+	Resistance = "",
+	Critical = "",
+	Vitality = "",
+	Hunter = "",
+	Essence = "",
+	Fortune = "",
 }
 
+-- Color metadata is for UI accents only; actual set icons come from SetIconImages.
+EquipmentConfig.SetIconColors = {
+	Power = Color3.fromRGB(255, 92, 92),
+	Guard = Color3.fromRGB(112, 176, 255),
+	Speed = Color3.fromRGB(90, 235, 190),
+	Precision = Color3.fromRGB(255, 204, 84),
+	Resistance = Color3.fromRGB(180, 146, 255),
+	Critical = Color3.fromRGB(255, 118, 188),
+	Vitality = Color3.fromRGB(110, 235, 118),
+	Hunter = Color3.fromRGB(232, 146, 76),
+	Essence = Color3.fromRGB(94, 226, 216),
+	Fortune = Color3.fromRGB(255, 226, 104),
+}
+
+-- Paste uploaded Roblox asset IDs for generic fallback equipment art here.
+-- These slot icons are used only when IconsBySetAndSlot has no image for the rolled set and slot.
 EquipmentConfig.DefaultIconsBySlot = {
 	Weapon = "",
 	Helmet = "",
@@ -106,14 +125,85 @@ EquipmentConfig.PlaceholderVisualsBySlot = {
 	Charm = { PlaceholderSymbol = "CHARM", PlaceholderLabel = "Charm" },
 }
 
--- Legacy aliases kept for current UI and older saved/generated equipment.
--- Equipment art has not been uploaded yet, so these intentionally stay empty
--- instead of falling back to bug icons.
+-- Paste uploaded Roblox asset IDs for set-specific equipment art here.
+-- Each set owns its own slot table so individual images can be filled independently.
+-- Use strings like "rbxassetid://1234567890" and leave unknown images as "".
+EquipmentConfig.IconsBySetAndSlot = {
+	Power = {
+		Weapon = "",
+		Helmet = "",
+		Chestplate = "",
+		Boots = "",
+		Charm = "",
+	},
+	Guard = {
+		Weapon = "",
+		Helmet = "",
+		Chestplate = "",
+		Boots = "",
+		Charm = "",
+	},
+	Speed = {
+		Weapon = "",
+		Helmet = "",
+		Chestplate = "",
+		Boots = "",
+		Charm = "",
+	},
+	Precision = {
+		Weapon = "",
+		Helmet = "",
+		Chestplate = "",
+		Boots = "",
+		Charm = "",
+	},
+	Resistance = {
+		Weapon = "",
+		Helmet = "",
+		Chestplate = "",
+		Boots = "",
+		Charm = "",
+	},
+	Critical = {
+		Weapon = "",
+		Helmet = "",
+		Chestplate = "",
+		Boots = "",
+		Charm = "",
+	},
+	Vitality = {
+		Weapon = "",
+		Helmet = "",
+		Chestplate = "",
+		Boots = "",
+		Charm = "",
+	},
+	Hunter = {
+		Weapon = "",
+		Helmet = "",
+		Chestplate = "",
+		Boots = "",
+		Charm = "",
+	},
+	Essence = {
+		Weapon = "",
+		Helmet = "",
+		Chestplate = "",
+		Boots = "",
+		Charm = "",
+	},
+	Fortune = {
+		Weapon = "",
+		Helmet = "",
+		Chestplate = "",
+		Boots = "",
+		Charm = "",
+	},
+}
+
+-- Legacy alias for current UI and older saved/generated equipment.
+-- Equipment art intentionally stays empty until uploaded instead of falling back to bug icons.
 EquipmentConfig.IconsBySlot = EquipmentConfig.DefaultIconsBySlot
-EquipmentConfig.IconsBySetAndSlot = {}
-for _, setName in EquipmentConfig.SetNames do
-	EquipmentConfig.IconsBySetAndSlot[setName] = EquipmentConfig.DefaultIconsBySlot
-end
 
 EquipmentConfig.DropChancesByEnemyTier = {
 	CommonEnemy = 0.15,
@@ -259,35 +349,36 @@ function EquipmentConfig.GetPlaceholderVisual(slot: string?): { PlaceholderSymbo
 	}
 end
 
-function EquipmentConfig.GetSetIcon(setName: string?): { Text: string, Color: Color3 }
-	local normalizedSetName = tostring(setName or "")
-	local icon = EquipmentConfig.SetIcons[normalizedSetName]
-	if icon then
-		return icon
+function EquipmentConfig.GetSetIconImage(setName: string?): string
+	local setIconImage = EquipmentConfig.SetIconImages[tostring(setName or "")]
+	if type(setIconImage) == "string" and setIconImage ~= "" then
+		return setIconImage
 	end
-	if normalizedSetName == "" then
-		normalizedSetName = "Set"
-	end
-	return {
-		Text = "◆",
-		Color = Color3.fromRGB(198, 204, 216),
-	}
+	return ""
 end
 
-function EquipmentConfig.GetIcon(setName: string?, slot: string?): string
-	local setIcons = EquipmentConfig.IconsBySetAndSlot[setName or ""]
+function EquipmentConfig.GetSetIconColor(setName: string?): Color3
+	return EquipmentConfig.SetIconColors[tostring(setName or "")] or Color3.fromRGB(198, 204, 216)
+end
+
+function EquipmentConfig.GetEquipmentIcon(setName: string?, slot: string?): string
+	local setIcons = EquipmentConfig.IconsBySetAndSlot[tostring(setName or "")]
 	if setIcons then
-		local setIcon = setIcons[slot or ""]
+		local setIcon = setIcons[tostring(slot or "")]
 		if type(setIcon) == "string" and setIcon ~= "" then
 			return setIcon
 		end
 	end
 
-	local defaultIcon = EquipmentConfig.DefaultIconsBySlot[slot or ""]
-	if type(defaultIcon) == "string" then
+	local defaultIcon = EquipmentConfig.DefaultIconsBySlot[tostring(slot or "")]
+	if type(defaultIcon) == "string" and defaultIcon ~= "" then
 		return defaultIcon
 	end
 	return ""
+end
+
+function EquipmentConfig.GetIcon(setName: string?, slot: string?): string
+	return EquipmentConfig.GetEquipmentIcon(setName, slot)
 end
 
 function EquipmentConfig.GetRandomSlot(rng: any): string
@@ -339,7 +430,8 @@ function EquipmentConfig.RollEquipment(rng: any, enemyTier: string?): { [string]
 			Value = statValue(mainStatName, rarity, stars, true, rng),
 		},
 		SubStats = subStats,
-		Icon = EquipmentConfig.GetIcon(setName, slot),
+		Icon = EquipmentConfig.GetEquipmentIcon(setName, slot),
+		SetIcon = EquipmentConfig.GetSetIconImage(setName),
 		ItemLevel = 0,
 		CreatedAt = os.time(),
 	}
