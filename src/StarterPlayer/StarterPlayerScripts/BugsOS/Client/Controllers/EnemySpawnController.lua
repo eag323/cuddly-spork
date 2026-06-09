@@ -552,6 +552,21 @@ local function getEquipmentSetIconImage(item: any): string
 	return ""
 end
 
+local function getEquipmentTileBackgroundImage(): string
+	local backgroundImage = tostring(EquipmentConfig.DefaultTileBackgroundImage or "")
+	if backgroundImage ~= "" then
+		return backgroundImage
+	end
+	return ""
+end
+
+local function getEquipmentSetGradientImage(item: any): string
+	if type(item) == "table" then
+		return EquipmentConfig.GetSetGradientImage(tostring(item.SetName or ""))
+	end
+	return ""
+end
+
 local function getEquipmentItemLevel(item: any): number
 	local level = 0
 	if type(item) == "table" then
@@ -570,7 +585,7 @@ local function renderEquipmentSlotVisual(parent: Instance, item: any, pos: UDim2
 	slotVisual.Size = size
 	slotVisual.BackgroundColor3 = Color3.fromRGB(8, 11, 18)
 	slotVisual.BorderSizePixel = 0
-	slotVisual.ClipsDescendants = false
+	slotVisual.ClipsDescendants = true
 	slotVisual.ZIndex = z
 	slotVisual.Parent = parent
 
@@ -580,23 +595,101 @@ local function renderEquipmentSlotVisual(parent: Instance, item: any, pos: UDim2
 	stroke.Transparency = 0.02
 	stroke.Parent = slotVisual
 
+	local tileBackgroundImage = getEquipmentTileBackgroundImage()
+	if tileBackgroundImage ~= "" then
+		local tileBackground = Instance.new("ImageLabel")
+		tileBackground.Size = UDim2.fromScale(1, 1)
+		tileBackground.Position = UDim2.fromScale(0, 0)
+		tileBackground.BackgroundTransparency = 1
+		tileBackground.BorderSizePixel = 0
+		tileBackground.Image = tileBackgroundImage
+		tileBackground.ScaleType = Enum.ScaleType.Crop
+		tileBackground.ZIndex = z + 1
+		tileBackground.Parent = slotVisual
+	end
+
+	local textureTint = Instance.new("Frame")
+	textureTint.Size = UDim2.fromScale(1, 1)
+	textureTint.Position = UDim2.fromScale(0, 0)
+	textureTint.BackgroundColor3 = Color3.fromRGB(12, 16, 25)
+	textureTint.BackgroundTransparency = tileBackgroundImage ~= "" and 0.54 or 0.08
+	textureTint.BorderSizePixel = 0
+	textureTint.ZIndex = z + 2
+	textureTint.Parent = slotVisual
+
+	local baseGradient = Instance.new("UIGradient")
+	baseGradient.Rotation = 90
+	baseGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(38, 45, 62)),
+		ColorSequenceKeypoint.new(0.52, Color3.fromRGB(10, 13, 21)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(3, 6, 12)),
+	})
+	baseGradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.18),
+		NumberSequenceKeypoint.new(0.62, 0.02),
+		NumberSequenceKeypoint.new(1, 0.14),
+	})
+	baseGradient.Parent = textureTint
+
+	local setAccentColor = EquipmentConfig.GetSetIconColor(type(item) == "table" and tostring(item.SetName or "") or "")
+	local setGradientImage = getEquipmentSetGradientImage(item)
+	if setGradientImage ~= "" then
+		local setGradient = Instance.new("ImageLabel")
+		setGradient.Size = UDim2.fromScale(1, 1)
+		setGradient.Position = UDim2.fromScale(0, 0)
+		setGradient.BackgroundTransparency = 1
+		setGradient.BorderSizePixel = 0
+		setGradient.Image = setGradientImage
+		setGradient.ImageTransparency = 0.08
+		setGradient.ScaleType = Enum.ScaleType.Crop
+		setGradient.ZIndex = z + 3
+		setGradient.Parent = slotVisual
+	else
+		local setGradient = Instance.new("Frame")
+		setGradient.Size = UDim2.fromScale(1, 1)
+		setGradient.Position = UDim2.fromScale(0, 0)
+		setGradient.BackgroundColor3 = setAccentColor
+		setGradient.BackgroundTransparency = 0.72
+		setGradient.BorderSizePixel = 0
+		setGradient.ZIndex = z + 3
+		setGradient.Parent = slotVisual
+
+		local accentGradient = Instance.new("UIGradient")
+		accentGradient.Rotation = 45
+		accentGradient.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.12),
+			NumberSequenceKeypoint.new(0.48, 0.58),
+			NumberSequenceKeypoint.new(1, 0.86),
+		})
+		accentGradient.Parent = setGradient
+	end
+
 	local innerTint = Instance.new("Frame")
-	innerTint.Size = UDim2.new(1, -8, 1, -8)
-	innerTint.Position = UDim2.fromOffset(4, 4)
+	innerTint.Size = UDim2.new(1, -6, 1, -6)
+	innerTint.Position = UDim2.fromOffset(3, 3)
 	innerTint.BackgroundColor3 = rarityColor
-	innerTint.BackgroundTransparency = 0.92
+	innerTint.BackgroundTransparency = 0.9
 	innerTint.BorderSizePixel = 0
-	innerTint.ZIndex = z + 1
+	innerTint.ZIndex = z + 4
 	innerTint.Parent = slotVisual
+
+	local innerGradient = Instance.new("UIGradient")
+	innerGradient.Rotation = 135
+	innerGradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.36),
+		NumberSequenceKeypoint.new(0.5, 0.86),
+		NumberSequenceKeypoint.new(1, 0.98),
+	})
+	innerGradient.Parent = innerTint
 
 	if shouldRenderEquipmentIcon(item) then
 		local icon = Instance.new("ImageLabel")
-		icon.Size = UDim2.new(1, -24, 1, -24)
-		icon.Position = UDim2.fromOffset(12, 12)
+		icon.Size = UDim2.new(1, -16, 1, -16)
+		icon.Position = UDim2.fromOffset(8, 8)
 		icon.BackgroundTransparency = 1
 		icon.Image = getEquipmentIconImage(item)
 		icon.ScaleType = Enum.ScaleType.Fit
-		icon.ZIndex = z + 4
+		icon.ZIndex = z + 6
 		icon.Parent = slotVisual
 		return slotVisual
 	end
@@ -609,17 +702,17 @@ local function renderEquipmentSlotVisual(parent: Instance, item: any, pos: UDim2
 	end
 
 	local symbolLabel = Instance.new("TextLabel")
-	symbolLabel.Size = UDim2.new(1, -18, 0, 44)
-	symbolLabel.Position = UDim2.new(0.5, 0, 0.5, -22)
+	symbolLabel.Size = UDim2.new(1, -12, 0, 48)
+	symbolLabel.Position = UDim2.new(0.5, 0, 0.5, -24)
 	symbolLabel.AnchorPoint = Vector2.new(0.5, 0)
 	symbolLabel.BackgroundTransparency = 1
 	symbolLabel.Font = Enum.Font.ArialBold
-	symbolLabel.TextSize = #symbol > 4 and 15 or 24
+	symbolLabel.TextSize = #symbol > 4 and 16 or 28
 	symbolLabel.TextColor3 = rarityColor
 	symbolLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	symbolLabel.TextStrokeTransparency = 0.18
 	symbolLabel.Text = symbol
-	symbolLabel.ZIndex = z + 4
+	symbolLabel.ZIndex = z + 6
 	symbolLabel.Parent = slotVisual
 
 	return slotVisual
@@ -761,7 +854,7 @@ end
 local function createEssenceLootCard(parent: Instance, pos: UDim2, z: number, essence: number, isVictory: boolean): (Frame, TextLabel)
 	local tile = Instance.new("Frame")
 	tile.Position = pos
-	tile.Size = UDim2.fromOffset(92, 92)
+	tile.Size = UDim2.fromOffset(88, 88)
 	tile.BackgroundColor3 = Color3.fromRGB(8, 18, 26)
 	tile.BorderSizePixel = 0
 	tile.ZIndex = z
@@ -829,22 +922,33 @@ end
 local function createEquipmentLootCard(parent: Instance, item: any, pos: UDim2, z: number): Frame
 	local rarity = tostring(item.Rarity or "Common")
 	local rarityColor = getEquipmentRarityColor(rarity)
-	local tile = renderEquipmentSlotVisual(parent, item, pos, UDim2.fromOffset(92, 92), z, rarityColor)
+	local tile = renderEquipmentSlotVisual(parent, item, pos, UDim2.fromOffset(88, 88), z, rarityColor)
 
-	local stars = Instance.new("TextLabel")
-	stars.Size = UDim2.fromOffset(82, 22)
-	stars.Position = UDim2.fromOffset(4, 3)
+	local stars = Instance.new("Frame")
+	stars.Size = UDim2.fromOffset(78, 24)
+	stars.Position = UDim2.fromOffset(4, 2)
 	stars.BackgroundTransparency = 1
 	stars.BorderSizePixel = 0
-	stars.Font = Enum.Font.ArialBold
-	stars.TextSize = 16
-	stars.TextXAlignment = Enum.TextXAlignment.Left
-	stars.TextColor3 = Color3.fromRGB(255, 232, 120)
-	stars.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	stars.TextStrokeTransparency = 0.18
-	stars.Text = formatStars(item.Stars)
 	stars.ZIndex = z + 12
 	stars.Parent = tile
+
+	local starCount = math.max(1, math.min(6, tonumber(item.Stars) or 1))
+	for index = 1, starCount do
+		local star = Instance.new("TextLabel")
+		star.Size = UDim2.fromOffset(16, 22)
+		star.Position = UDim2.fromOffset((index - 1) * 11, 0)
+		star.BackgroundTransparency = 1
+		star.BorderSizePixel = 0
+		star.Font = Enum.Font.ArialBold
+		star.TextSize = 18
+		star.TextXAlignment = Enum.TextXAlignment.Center
+		star.TextColor3 = Color3.fromRGB(255, 232, 120)
+		star.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+		star.TextStrokeTransparency = 0.1
+		star.Text = "★"
+		star.ZIndex = z + 12
+		star.Parent = stars
+	end
 
 	local setIconImage = getEquipmentSetIconImage(item)
 	if setIconImage ~= "" then
@@ -863,7 +967,7 @@ local function createEquipmentLootCard(parent: Instance, item: any, pos: UDim2, 
 	if itemLevel > 0 then
 		local levelBadge = Instance.new("TextLabel")
 		levelBadge.Size = UDim2.fromOffset(34, 18)
-		levelBadge.Position = UDim2.new(1, -39, 1, -24)
+		levelBadge.Position = UDim2.new(1, -38, 1, -23)
 		levelBadge.BackgroundTransparency = 1
 		levelBadge.BorderSizePixel = 0
 		levelBadge.Font = Enum.Font.ArialBold
@@ -1114,8 +1218,8 @@ local function showFinalPopup(result)
 	lootHeader.Parent = lootPanel
 
 	local hasEquipmentDrop = type(droppedEquipment) == "table"
-	local lootTileSize = 92
-	local lootGap = 18
+	local lootTileSize = 88
+	local lootGap = 16
 	local lootPanelWidth = 652
 	local lootCardCount = hasEquipmentDrop and 2 or 1
 	local lootRowWidth = (lootCardCount * lootTileSize) + ((lootCardCount - 1) * lootGap)
