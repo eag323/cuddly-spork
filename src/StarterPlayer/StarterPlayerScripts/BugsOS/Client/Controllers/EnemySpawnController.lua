@@ -488,7 +488,7 @@ local function createResultStat(parent: Instance, labelText: string, valueText: 
 end
 
 
-local EQUIPMENT_ICONS_READY = false
+local EQUIPMENT_ICONS_READY = true
 
 local function getEquipmentDisplayName(item: any): string
 	if type(item) ~= "table" then return "Equipment" end
@@ -501,17 +501,14 @@ local function getEquipmentRarityColor(rarity: any): Color3
 	return EquipmentConfig.GetRarityColor(tostring(rarity or "Common"))
 end
 
-local function getEquipmentPlaceholderVisual(slot: any): { PlaceholderSymbol: string, PlaceholderLabel: string }
-	return EquipmentConfig.GetPlaceholderVisual(tostring(slot or "Equipment"))
+
+local function getEquipmentIconAsset(item: any): string
+	if not EQUIPMENT_ICONS_READY or type(item) ~= "table" then
+		return ""
+	end
+	return EquipmentConfig.GetEquipmentIcon(item)
 end
 
-local function shouldRenderEquipmentIcon(item: any): boolean
-	if not EQUIPMENT_ICONS_READY or type(item) ~= "table" then
-		return false
-	end
-	local iconAsset = tostring(item.Icon or "")
-	return iconAsset ~= ""
-end
 
 local function formatStatLine(statEntry: any): string
 	if type(statEntry) ~= "table" then return "—" end
@@ -536,8 +533,12 @@ local function formatSubStats(subStats: any): string
 	return "Sub stats: " .. table.concat(parts, "  •  ")
 end
 
-local function getEquipmentSetIcon(setName: any): { Text: string, Color: Color3 }
+local function getEquipmentSetIcon(setName: any): string
 	return EquipmentConfig.GetSetIcon(tostring(setName or ""))
+end
+
+local function getEquipmentSetIconColor(setName: any): Color3
+	return EquipmentConfig.GetSetIconColor(tostring(setName or ""))
 end
 
 local function getEquipmentItemLevel(item: any): number
@@ -552,7 +553,7 @@ local function formatItemLevel(item: any): string
 	return "+" .. tostring(getEquipmentItemLevel(item))
 end
 
-local function renderEquipmentSlotVisual(parent: Instance, item: any, pos: UDim2, size: UDim2, z: number, rarityColor: Color3)
+local function renderEquipmentSlotVisual(parent: Instance, item: any, pos: UDim2, size: UDim2, z: number, rarityColor: Color3, resolvedIconAsset: string?)
 	local slotVisual = createInsetPanel(parent, pos, size, z, Color3.fromRGB(10, 12, 18))
 	slotVisual.BorderColor3 = rarityColor
 	local stroke = Instance.new("UIStroke")
@@ -570,38 +571,24 @@ local function renderEquipmentSlotVisual(parent: Instance, item: any, pos: UDim2
 	glow.ZIndex = z + 1
 	glow.Parent = slotVisual
 
-	if shouldRenderEquipmentIcon(item) then
+	local iconAsset = resolvedIconAsset
+	if iconAsset == nil then
+		iconAsset = getEquipmentIconAsset(item)
+	end
+	if iconAsset ~= "" then
 		local icon = Instance.new("ImageLabel")
 		icon.Size = UDim2.new(1, -18, 1, -18)
 		icon.Position = UDim2.fromOffset(9, 9)
 		icon.BackgroundTransparency = 1
-		icon.Image = tostring(item.Icon or "")
+		icon.Image = iconAsset
+		icon.ScaleType = Enum.ScaleType.Fit
 		icon.ZIndex = z + 4
 		icon.Parent = slotVisual
 		return slotVisual
 	end
 
-	local placeholder = getEquipmentPlaceholderVisual(item and item.Slot)
-	local symbol = tostring(placeholder.PlaceholderSymbol or "")
-	local labelText = tostring(placeholder.PlaceholderLabel or item.Slot or "Gear")
-	if symbol == "" then
-		symbol = string.upper(string.sub(labelText, 1, 5))
-	end
-
-	local symbolLabel = Instance.new("TextLabel")
-	symbolLabel.Size = UDim2.new(1, -18, 0, 44)
-	symbolLabel.Position = UDim2.new(0.5, 0, 0.5, -22)
-	symbolLabel.AnchorPoint = Vector2.new(0.5, 0)
-	symbolLabel.BackgroundTransparency = 1
-	symbolLabel.Font = Enum.Font.ArialBold
-	symbolLabel.TextSize = #symbol > 4 and 15 or 23
-	symbolLabel.TextColor3 = rarityColor
-	symbolLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	symbolLabel.TextStrokeTransparency = 0.22
-	symbolLabel.Text = symbol
-	symbolLabel.ZIndex = z + 4
-	symbolLabel.Parent = slotVisual
-
+	-- Missing art should leave a clean tile frame rather than showing bug art,
+	-- emoji, slot abbreviations, or a broken ImageLabel.
 	return slotVisual
 end
 
@@ -625,7 +612,7 @@ local function createEquipmentDropCard(parent: Instance, item: any, pos: UDim2, 
 	accentStrip.ZIndex = z + 2
 	accentStrip.Parent = card
 
-	renderEquipmentSlotVisual(card, item, UDim2.fromOffset(16, 26), UDim2.fromOffset(104, 104), z + 3, rarityColor)
+	renderEquipmentSlotVisual(card, item, UDim2.fromOffset(16, 26), UDim2.fromOffset(104, 104), z + 3, rarityColor, nil)
 
 	local sectionLabel = Instance.new("TextLabel")
 	sectionLabel.Size = UDim2.new(1, -34, 0, 18)
@@ -804,41 +791,51 @@ end
 local function createEquipmentLootCard(parent: Instance, item: any, pos: UDim2, z: number): Frame
 	local rarity = tostring(item.Rarity or "Common")
 	local rarityColor = getEquipmentRarityColor(rarity)
-	local card = createInsetPanel(parent, pos, UDim2.fromOffset(104, 118), z, Color3.fromRGB(18, 21, 29))
+	local equipmentIcon = getEquipmentIconAsset(item)
+	local setIcon = getEquipmentSetIcon(item.SetName)
+	print(string.format(
+		"[BattleResults] Rendering equipment tile slot=%s rarity=%s stars=%s set=%s icon=%s setIcon=%s",
+		tostring(item.Slot or "?"),
+		rarity,
+		tostring(item.Stars or 1),
+		tostring(item.SetName or "?"),
+		equipmentIcon ~= "" and "yes" or "missing",
+		setIcon ~= "" and "yes" or "missing"
+	))
+
+	local card = createInsetPanel(parent, pos, UDim2.fromOffset(104, 104), z, Color3.fromRGB(18, 21, 29))
 	card.BorderColor3 = Color3.fromRGB(54, 58, 70)
 
-	local tile = renderEquipmentSlotVisual(card, item, UDim2.fromOffset(8, 6), UDim2.fromOffset(88, 88), z + 2, rarityColor)
+	local tile = renderEquipmentSlotVisual(card, item, UDim2.fromOffset(8, 8), UDim2.fromOffset(88, 88), z + 2, rarityColor, equipmentIcon)
 	tile.BorderColor3 = rarityColor
 
 	local stars = Instance.new("TextLabel")
-	stars.Size = UDim2.fromOffset(68, 18)
-	stars.Position = UDim2.fromOffset(5, 4)
+	stars.Size = UDim2.fromOffset(80, 22)
+	stars.Position = UDim2.fromOffset(5, 2)
 	stars.BackgroundTransparency = 1
 	stars.BorderSizePixel = 0
 	stars.Font = Enum.Font.ArialBold
-	stars.TextSize = 10
+	stars.TextSize = 15
 	stars.TextXAlignment = Enum.TextXAlignment.Left
-	stars.TextColor3 = Color3.fromRGB(255, 232, 120)
+	stars.TextColor3 = Color3.fromRGB(255, 232, 86)
 	stars.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	stars.TextStrokeTransparency = 0.22
+	stars.TextStrokeTransparency = 0.16
 	stars.Text = formatStars(item.Stars)
 	stars.ZIndex = z + 12
 	stars.Parent = tile
 
-	local setIcon = getEquipmentSetIcon(item.SetName)
-	local setBadge = Instance.new("TextLabel")
-	setBadge.Size = UDim2.fromOffset(24, 22)
-	setBadge.Position = UDim2.new(0, 5, 1, -26)
-	setBadge.BackgroundTransparency = 1
-	setBadge.BorderSizePixel = 0
-	setBadge.Font = Enum.Font.ArialBold
-	setBadge.TextSize = 16
-	setBadge.TextColor3 = setIcon.Color
-	setBadge.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	setBadge.TextStrokeTransparency = 0.24
-	setBadge.Text = tostring(setIcon.Text or "◆")
-	setBadge.ZIndex = z + 12
-	setBadge.Parent = tile
+	if setIcon ~= "" then
+		local setBadge = Instance.new("ImageLabel")
+		setBadge.Size = UDim2.fromOffset(20, 20)
+		setBadge.Position = UDim2.new(0, 5, 1, -25)
+		setBadge.BackgroundTransparency = 1
+		setBadge.BorderSizePixel = 0
+		setBadge.Image = setIcon
+		setBadge.ImageColor3 = getEquipmentSetIconColor(item.SetName)
+		setBadge.ScaleType = Enum.ScaleType.Fit
+		setBadge.ZIndex = z + 12
+		setBadge.Parent = tile
+	end
 
 	local itemLevel = getEquipmentItemLevel(item)
 	if itemLevel > 0 then
@@ -857,18 +854,6 @@ local function createEquipmentLootCard(parent: Instance, item: any, pos: UDim2, 
 		levelBadge.ZIndex = z + 12
 		levelBadge.Parent = tile
 	end
-
-	local name = Instance.new("TextLabel")
-	name.Size = UDim2.new(1, -8, 0, 18)
-	name.Position = UDim2.fromOffset(4, 96)
-	name.BackgroundTransparency = 1
-	name.Font = Enum.Font.ArialBold
-	name.TextSize = 10
-	name.TextColor3 = rarity == "Common" and Color3.fromRGB(238, 238, 238) or rarityColor
-	name.TextTruncate = Enum.TextTruncate.AtEnd
-	name.Text = getEquipmentDisplayName(item)
-	name.ZIndex = z + 5
-	name.Parent = card
 
 	if rarity ~= "Common" then
 		local tileStroke = tile:FindFirstChildOfClass("UIStroke")
@@ -1134,13 +1119,13 @@ local function showFinalPopup(result)
 		teamPanel.Position = UDim2.fromOffset(14, 90)
 		lootPanel.Position = UDim2.fromOffset(14, 250)
 		lootPanel.BackgroundTransparency = 1
-		if gearCard then gearCard.Size = UDim2.fromOffset(78, 90) end
+		if gearCard then gearCard.Size = UDim2.fromOffset(78, 78) end
 		TweenService:Create(teamPanel, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.fromOffset(14, 80)}):Play()
 		TweenService:Create(lootPanel, TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0, Position = UDim2.fromOffset(14, 240)}):Play()
 		if gearCard then
 			task.delay(0.18, function()
 				if not gearCard or not gearCard.Parent then return end
-				TweenService:Create(gearCard, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(104, 118)}):Play()
+				TweenService:Create(gearCard, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(104, 104)}):Play()
 			end)
 		end
 		task.spawn(function()
