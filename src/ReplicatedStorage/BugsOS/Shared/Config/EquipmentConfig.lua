@@ -81,16 +81,16 @@ EquipmentConfig.SetBonusMetadata = {
 -- These images already include the set color, texture/gradient, and set icon in the tile art.
 -- Use strings like "rbxassetid://1234567890" and leave a value as "" until that tile image has been uploaded.
 EquipmentConfig.SetTileImages = {
-	Power = "",
-	Guard = "",
-	Speed = "",
-	Precision = "",
-	Resistance = "",
-	Critical = "",
-	Vitality = "",
-	Hunter = "",
-	Essence = "",
-	Fortune = "",
+	Power = "rbxassetid://126588716297217",
+	Guard = "rbxassetid://133721507834976",
+	Speed = "rbxassetid://87313841168194",
+	Precision = "rbxassetid://87800026480756",
+	Resistance = "rbxassetid://93443876326869",
+	Critical = "rbxassetid://83975472008985",
+	Vitality = "rbxassetid://108124586474235",
+	Hunter = "rbxassetid://74101507121765",
+	Essence = "rbxassetid://82585415842697",
+	Fortune = "rbxassetid://131602087348625",
 }
 
 -- Legacy/optional layered tile assets. The main Battle Results loot tile now prefers SetTileImages when available.
