@@ -679,7 +679,7 @@ local function renderEquipmentSlotVisual(parent: Instance, item: any, pos: UDim2
 
 	if shouldRenderEquipmentIcon(item) then
 		local icon = Instance.new("ImageLabel")
-		icon.Size = UDim2.new(1, -20, 1, -20)
+		icon.Size = UDim2.new(1, -10, 1, -10)
 		icon.Position = UDim2.fromScale(0.5, 0.5)
 		icon.AnchorPoint = Vector2.new(0.5, 0.5)
 		icon.BackgroundTransparency = 1
@@ -926,32 +926,38 @@ local function createEquipmentLootCard(parent: Instance, item: any, pos: UDim2, 
 	local tile = renderEquipmentSlotVisual(parent, item, pos, UDim2.fromOffset(88, 88), z, rarityColor)
 
 	local stars = Instance.new("Frame")
-	stars.Size = UDim2.fromOffset(84, 28)
-	stars.Position = UDim2.fromOffset(2, 1)
+	stars.Size = UDim2.fromOffset(88, 31)
+	stars.Position = UDim2.fromOffset(0, 0)
 	stars.BackgroundTransparency = 1
 	stars.BorderSizePixel = 0
 	stars.ZIndex = z + 13
 	stars.Parent = tile
 
 	local starCount = math.max(1, math.min(6, tonumber(item.Stars) or 1))
-	local starSize = 22
-	local starStep = 11
+	local starSize = 25
+	local starStep = 12
 	for index = 1, starCount do
 		local star = Instance.new("TextLabel")
-		star.Size = UDim2.fromOffset(starSize, 26)
+		star.Size = UDim2.fromOffset(starSize, 29)
 		star.Position = UDim2.fromOffset((index - 1) * starStep, 0)
 		star.BackgroundTransparency = 1
 		star.BorderSizePixel = 0
 		star.Font = Enum.Font.ArialBold
-		star.TextSize = 24
+		star.TextSize = 27
 		star.TextXAlignment = Enum.TextXAlignment.Center
 		star.TextYAlignment = Enum.TextYAlignment.Top
 		star.TextColor3 = Color3.fromRGB(255, 232, 120)
 		star.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-		star.TextStrokeTransparency = 0.08
+		star.TextStrokeTransparency = 0
 		star.Text = "★"
 		star.ZIndex = z + 13 + index
 		star.Parent = stars
+
+		local starStroke = Instance.new("UIStroke")
+		starStroke.Color = Color3.fromRGB(0, 0, 0)
+		starStroke.Thickness = 1.8
+		starStroke.Transparency = 0
+		starStroke.Parent = star
 	end
 
 
@@ -1015,6 +1021,23 @@ local function findXpResult(xpResults, uid: any)
 		end
 	end
 	return nil
+end
+
+
+local function getEquipmentDrops(droppedEquipment: any): { any }
+	if type(droppedEquipment) ~= "table" then
+		return {}
+	end
+	if droppedEquipment.Slot ~= nil or droppedEquipment.Rarity ~= nil or droppedEquipment.Uid ~= nil then
+		return { droppedEquipment }
+	end
+	local drops = {}
+	for _, item in ipairs(droppedEquipment) do
+		if type(item) == "table" then
+			table.insert(drops, item)
+		end
+	end
+	return drops
 end
 
 local function createTeamXpCard(parent: Instance, unit, xpResult, index: number, totalCards: number, isVictory: boolean)
@@ -1209,24 +1232,28 @@ local function showFinalPopup(result)
 	lootHeader.ZIndex = REWARD_Z + 16
 	lootHeader.Parent = lootPanel
 
-	local hasEquipmentDrop = type(droppedEquipment) == "table"
+	local equipmentDrops = getEquipmentDrops(droppedEquipment)
+	local hasEquipmentDrop = #equipmentDrops > 0
 	local lootTileSize = 88
-	local lootGap = 16
+	local lootGap = hasEquipmentDrop and 8 or 16
 	local lootPanelWidth = 652
-	local lootCardCount = hasEquipmentDrop and 2 or 1
+	local lootCardCount = 1 + #equipmentDrops
 	local lootRowWidth = (lootCardCount * lootTileSize) + ((lootCardCount - 1) * lootGap)
 	local lootStartX = math.floor((lootPanelWidth - lootRowWidth) / 2)
 	local lootTileY = 30
 	local _, essenceLabel = createEssenceLootCard(lootPanel, UDim2.fromOffset(lootStartX, lootTileY), REWARD_Z + 14, isVictory and 0 or essence, isVictory)
-	local gearCard: Frame? = nil
+	local gearCards = {}
 	if hasEquipmentDrop then
-		gearCard = createEquipmentLootCard(lootPanel, droppedEquipment, UDim2.fromOffset(lootStartX + lootTileSize + lootGap, lootTileY), REWARD_Z + 14)
+		for index, item in ipairs(equipmentDrops) do
+			local gearCard = createEquipmentLootCard(lootPanel, item, UDim2.fromOffset(lootStartX + (index * (lootTileSize + lootGap)), lootTileY), REWARD_Z + 14)
+			table.insert(gearCards, gearCard)
+		end
 	end
 
 	local detailsBtn = createButton(frame, "Details", UDim2.new(0.5, -206, 1, -42), UDim2.fromOffset(156, 34), REWARD_Z + 15, Color3.fromRGB(204, 204, 204))
 	styleButton(detailsBtn, Color3.fromRGB(204, 204, 204), Color3.fromRGB(224, 224, 224), Color3.fromRGB(170, 170, 170), Color3.fromRGB(20, 20, 20))
-	if type(droppedEquipment) == "table" then
-		detailsBtn.MouseButton1Click:Connect(function() showEquipmentDetailsPopup(droppedEquipment) end)
+	if hasEquipmentDrop then
+		detailsBtn.MouseButton1Click:Connect(function() showEquipmentDetailsPopup(equipmentDrops[1]) end)
 	else
 		detailsBtn.Active = false
 		detailsBtn.AutoButtonColor = false
@@ -1243,11 +1270,13 @@ local function showFinalPopup(result)
 		teamPanel.Position = UDim2.fromOffset(14, 90)
 		lootPanel.Position = UDim2.fromOffset(14, 250)
 		lootPanel.BackgroundTransparency = 1
-		if gearCard then gearCard.Size = UDim2.fromOffset(76, 76) end
+		for _, gearCard in ipairs(gearCards) do
+			gearCard.Size = UDim2.fromOffset(76, 76)
+		end
 		TweenService:Create(teamPanel, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.fromOffset(14, 80)}):Play()
 		TweenService:Create(lootPanel, TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0, Position = UDim2.fromOffset(14, 240)}):Play()
-		if gearCard then
-			task.delay(0.18, function()
+		for index, gearCard in ipairs(gearCards) do
+			task.delay(0.12 + (index * 0.04), function()
 				if not gearCard or not gearCard.Parent then return end
 				TweenService:Create(gearCard, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(92, 92)}):Play()
 			end)
@@ -1266,7 +1295,7 @@ local function showFinalPopup(result)
 				sparkle.Size = UDim2.fromOffset(math.random(3, 6), math.random(3, 6))
 				sparkle.Position = UDim2.new(0.5, math.random(-260, 260), 0, math.random(88, 350))
 				sparkle.BorderSizePixel = 0
-				sparkle.BackgroundColor3 = type(droppedEquipment) == "table" and getEquipmentRarityColor(droppedEquipment.Rarity) or Color3.fromRGB(138, 255, 186)
+				sparkle.BackgroundColor3 = hasEquipmentDrop and getEquipmentRarityColor(equipmentDrops[1].Rarity) or Color3.fromRGB(138, 255, 186)
 				sparkle.ZIndex = REWARD_Z + 22
 				sparkle.Parent = frame
 				Instance.new("UICorner", sparkle).CornerRadius = UDim.new(1, 0)

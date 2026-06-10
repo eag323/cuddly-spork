@@ -276,6 +276,32 @@ EquipmentConfig.RarityWeightsByEnemyTier = {
 	},
 }
 
+
+-- TEMPORARY DEVELOPMENT/TEST MODE ONLY.
+-- This intentionally breaks normal equipment drop balance so Battle Results loot tiles,
+-- rarity visuals, and star outcomes can be validated quickly during development.
+-- Turn Enabled to false before any production balance pass or release.
+EquipmentConfig.DevDropMode = {
+	Enabled = true,
+	EquipmentPerVictory = 5,
+	ForceEquipmentDrop = true,
+	AllowHighRarityFromAnyEnemy = true,
+	MinimumRarity = "Legendary",
+	BoostStars = true,
+	MinimumStars = 4,
+	PreferHighStars = true,
+	RarityWeights = {
+		Epic = 10,
+		Legendary = 58,
+		Mythic = 32,
+	},
+	StarWeights = {
+		[4] = 18,
+		[5] = 44,
+		[6] = 38,
+	},
+}
+
 EquipmentConfig.StarWeightsByRarity = {
 	Common = { [1] = 82, [2] = 18 },
 	Uncommon = { [1] = 45, [2] = 45, [3] = 10 },
@@ -324,6 +350,16 @@ local RARITY_SUB_STAT_COUNTS = {
 	Legendary = 3,
 	Mythic = 4,
 }
+
+local RARITY_RANKS = {
+	Common = 1,
+	Uncommon = 2,
+	Rare = 3,
+	Epic = 4,
+	Legendary = 5,
+	Mythic = 6,
+}
+
 
 local function nextNumber(rng: any): number
 	if rng and typeof(rng) == "Random" then
@@ -439,14 +475,58 @@ function EquipmentConfig.GetRandomSlot(rng: any): string
 	return pickFromArray(EquipmentConfig.Slots, rng)
 end
 
+function EquipmentConfig.IsDevDropModeEnabled(): boolean
+	return type(EquipmentConfig.DevDropMode) == "table" and EquipmentConfig.DevDropMode.Enabled == true
+end
+
+function EquipmentConfig.GetEquipmentRollCountForEnemy(_enemyTier: string?): number
+	if EquipmentConfig.IsDevDropModeEnabled() then
+		return math.max(1, math.floor(tonumber(EquipmentConfig.DevDropMode.EquipmentPerVictory) or 1))
+	end
+	return 1
+end
+
+function EquipmentConfig.GetDevRarityWeights(_enemyTier: string?): { [string]: number }?
+	if not EquipmentConfig.IsDevDropModeEnabled() or not EquipmentConfig.DevDropMode.AllowHighRarityFromAnyEnemy then
+		return nil
+	end
+	return EquipmentConfig.DevDropMode.RarityWeights
+end
+
+function EquipmentConfig.GetDevStarWeights(_rarity: string): { [number]: number }?
+	if not EquipmentConfig.IsDevDropModeEnabled() or not EquipmentConfig.DevDropMode.BoostStars then
+		return nil
+	end
+	return EquipmentConfig.DevDropMode.StarWeights
+end
+
 function EquipmentConfig.GetRandomRarity(rng: any, tier: string?): string
-	local weights = EquipmentConfig.RarityWeightsByEnemyTier[tier or "CommonEnemy"] or EquipmentConfig.RarityWeightsByEnemyTier.CommonEnemy
-	return pickWeighted(weights, rng) or "Common"
+	local weights = EquipmentConfig.GetDevRarityWeights(tier)
+		or EquipmentConfig.RarityWeightsByEnemyTier[tier or "CommonEnemy"]
+		or EquipmentConfig.RarityWeightsByEnemyTier.CommonEnemy
+	local rarity = pickWeighted(weights, rng) or "Common"
+	if EquipmentConfig.IsDevDropModeEnabled() then
+		local minimumRarity = EquipmentConfig.DevDropMode.MinimumRarity
+		if type(minimumRarity) == "string" and RARITY_RANKS[minimumRarity] then
+			local currentRank = RARITY_RANKS[tostring(rarity)] or 0
+			if currentRank < RARITY_RANKS[minimumRarity] then
+				rarity = minimumRarity
+			end
+		end
+	end
+	return rarity
 end
 
 function EquipmentConfig.GetRandomStars(rng: any, rarity: string): number
-	local weights = EquipmentConfig.StarWeightsByRarity[rarity] or EquipmentConfig.StarWeightsByRarity.Common
-	return pickWeighted(weights, rng) or 1
+	local weights = EquipmentConfig.GetDevStarWeights(rarity) or EquipmentConfig.StarWeightsByRarity[rarity] or EquipmentConfig.StarWeightsByRarity.Common
+	local stars = tonumber(pickWeighted(weights, rng)) or 1
+	if EquipmentConfig.IsDevDropModeEnabled() then
+		local minimumStars = tonumber(EquipmentConfig.DevDropMode.MinimumStars)
+		if minimumStars then
+			stars = math.max(stars, math.clamp(math.floor(minimumStars), 1, 6))
+		end
+	end
+	return stars
 end
 
 function EquipmentConfig.RollEquipment(rng: any, enemyTier: string?): { [string]: any }

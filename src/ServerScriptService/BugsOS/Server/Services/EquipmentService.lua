@@ -6,44 +6,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("BugsOS"):WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local EquipmentConfig = require(Config:WaitForChild("EquipmentConfig"))
-local EconomyConfig = require(Config:WaitForChild("EconomyConfig"))
 local ProfileService = require(script.Parent:WaitForChild("ProfileService"))
 
 local EquipmentService = {}
 
-local RARITY_RANKS = {
-	Common = 1,
-	Uncommon = 2,
-	Rare = 3,
-	Epic = 4,
-	Legendary = 5,
-	Mythic = 6,
-}
-
-local function getDropChance(enemyTier: string?): number
-	if EconomyConfig.DEV_MODE and EconomyConfig.DEV_FORCE_EQUIPMENT_DROPS then
-		return tonumber(EconomyConfig.DEV_EQUIPMENT_DROP_CHANCE) or 1
-	end
-	return tonumber(EquipmentConfig.DropChancesByEnemyTier[enemyTier or "CommonEnemy"]) or 0
+local function isDevDropModeEnabled(): boolean
+	return EquipmentConfig.IsDevDropModeEnabled ~= nil and EquipmentConfig.IsDevDropModeEnabled()
 end
 
-local function applyDevMinimums(item: { [string]: any }): ()
-	if not EconomyConfig.DEV_MODE then
-		return
+local function getDropChance(enemyTier: string?): number
+	local devMode = EquipmentConfig.DevDropMode
+	if isDevDropModeEnabled() and type(devMode) == "table" and devMode.ForceEquipmentDrop then
+		return 1
 	end
-
-	local minRarity = EconomyConfig.DEV_EQUIPMENT_DROP_MIN_RARITY
-	if type(minRarity) == "string" and RARITY_RANKS[minRarity] then
-		local currentRarity = tostring(item.Rarity or "Common")
-		if (RARITY_RANKS[currentRarity] or 0) < RARITY_RANKS[minRarity] then
-			item.Rarity = minRarity
-		end
-	end
-
-	local minStars = tonumber(EconomyConfig.DEV_EQUIPMENT_DROP_MIN_STARS)
-	if minStars then
-		item.Stars = math.max(tonumber(item.Stars) or 1, math.clamp(math.floor(minStars), 1, 6))
-	end
+	return tonumber(EquipmentConfig.DropChancesByEnemyTier[enemyTier or "CommonEnemy"]) or 0
 end
 
 local function summarizeEquipment(item: { [string]: any }): string
@@ -110,7 +86,7 @@ function EquipmentService.AddEquipment(player: Player, item: { [string]: any }):
 	return true
 end
 
-function EquipmentService.RollAndGrant(player: Player, enemyTier: string?): { [string]: any }?
+function EquipmentService.RollAndGrantMany(player: Player, enemyTier: string?): { { [string]: any } }
 	local tierKey = enemyTier or "CommonEnemy"
 	local chance = getDropChance(tierKey)
 	local roll = math.random()
@@ -125,25 +101,35 @@ function EquipmentService.RollAndGrant(player: Player, enemyTier: string?): { [s
 	))
 
 	if not passed then
-		return nil
+		return {}
 	end
 
-	local item = EquipmentConfig.RollEquipment(Random.new(), tierKey)
-	applyDevMinimums(item)
-	print("[EquipmentService] Generated equipment", summarizeEquipment(item))
-	if not EquipmentService.AddEquipment(player, item) then
-		warn(string.format("[EquipmentService] Inventory full; could not grant equipment to %s", player.Name))
-		return nil
+	local rollCount = EquipmentConfig.GetEquipmentRollCountForEnemy(tierKey)
+	local drops = {}
+	for _index = 1, rollCount do
+		local item = EquipmentConfig.RollEquipment(Random.new(), tierKey)
+		print("[EquipmentService] Generated equipment", summarizeEquipment(item))
+		if EquipmentService.AddEquipment(player, item) then
+			print(string.format(
+				"[EquipmentService] Granted equipment %s %s %s★ to %s",
+				EquipmentConfig.GetDisplayName(item),
+				tostring(item.Rarity or "Common"),
+				tostring(item.Stars or 1),
+				player.Name
+			))
+			table.insert(drops, item)
+		else
+			warn(string.format("[EquipmentService] Inventory full; could not grant equipment to %s", player.Name))
+			break
+		end
 	end
 
-	print(string.format(
-		"[EquipmentService] Granted equipment %s %s %s★ to %s",
-		EquipmentConfig.GetDisplayName(item),
-		tostring(item.Rarity or "Common"),
-		tostring(item.Stars or 1),
-		player.Name
-	))
-	return item
+	return drops
+end
+
+function EquipmentService.RollAndGrant(player: Player, enemyTier: string?): { [string]: any }?
+	local drops = EquipmentService.RollAndGrantMany(player, enemyTier)
+	return drops[1]
 end
 
 function EquipmentService.Init(): ()
