@@ -69,13 +69,13 @@ function S.Start()
   if res.Winner=="Player" then d.Currencies=d.Currencies or {}; d.Currencies.BugEssence=(tonumber(d.Currencies.BugEssence)or 0)+(enemy.RewardsPreview.BugEssence or 0)
    if not VALID_EQUIPMENT_TIER_KEYS[enemy.Tier] then warn("[EnemySpawnService] Unexpected equipment tier key", tostring(enemy.Tier)) end
    print("[EnemySpawnService] Rolling equipment drop for tier", enemy.Tier)
-   local droppedEquipment=EquipmentService.RollAndGrant(player, enemy.Tier)
+   local droppedEquipment=EquipmentService.RollAndGrantMany(player, enemy.Tier)
    local bugUids={} for _,unit in ipairs(team) do if unit.Id then table.insert(bugUids, unit.Id) end end
    local combatXp=COMBAT_XP_BY_TIER[enemy.Tier] or COMBAT_XP_BY_TIER.CommonEnemy
    local xpResults=BugLevelService.GrantCombatXp(player, bugUids, combatXp)
    out.BugXpResults=xpResults
    out.Rewards={BugEssence=enemy.RewardsPreview.BugEssence or 0, Equipment=droppedEquipment, CombatXp=combatXp}
-   print("[EnemySpawnService] Attack reward payload equipment", droppedEquipment and droppedEquipment.Uid or "nil")
+   print("[EnemySpawnService] Attack reward payload equipment count", type(droppedEquipment)=="table" and #droppedEquipment or 0)
    ProfileService.PatchPlayerState(player,{"Currencies","BugEssence"},d.Currencies.BugEssence)
   end
   activeByUserId[player.UserId]=nil
