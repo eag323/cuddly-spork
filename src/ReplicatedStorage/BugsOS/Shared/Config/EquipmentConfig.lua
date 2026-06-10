@@ -77,8 +77,25 @@ EquipmentConfig.SetBonusMetadata = {
 	Fortune = { Theme = "Drops" },
 }
 
+-- Paste uploaded Roblox asset IDs for premade full tile backgrounds here.
+-- These images already include the set color, texture/gradient, and set icon in the tile art.
+-- Use strings like "rbxassetid://1234567890" and leave a value as "" until that tile image has been uploaded.
+EquipmentConfig.SetTileImages = {
+	Power = "",
+	Guard = "",
+	Speed = "",
+	Precision = "",
+	Resistance = "",
+	Critical = "",
+	Vitality = "",
+	Hunter = "",
+	Essence = "",
+	Fortune = "",
+}
+
+-- Legacy/optional layered tile assets. The main Battle Results loot tile now prefers SetTileImages when available.
 -- Paste uploaded Roblox asset IDs for small set badge icons here.
--- These badges are shown on equipment tiles and should use strings like "rbxassetid://1234567890".
+-- These badges can be used by other equipment UI and should use strings like "rbxassetid://1234567890".
 -- Leave a value as "" until that set badge art has been uploaded.
 EquipmentConfig.SetIconImages = {
 	Power = "rbxassetid://72581429487954",
@@ -93,13 +110,13 @@ EquipmentConfig.SetIconImages = {
 	Fortune = "rbxassetid://87625640122718",
 }
 
+-- Legacy/optional layered tile assets. The main Battle Results loot tile now prefers SetTileImages when available.
 -- Paste the shared equipment loot tile texture asset ID here.
--- This default tile background is rendered behind every equipment loot tile to add subtle texture and depth.
 -- Use a string like "rbxassetid://1234567890" and leave it as "" until the standard texture has been uploaded.
 EquipmentConfig.DefaultTileBackgroundImage = ""
 
+-- Legacy/optional layered tile assets. The main Battle Results loot tile now prefers SetTileImages when available.
 -- Paste uploaded Roblox asset IDs for set-specific equipment loot tile gradient overlays here.
--- These set gradient images are colored accent layers rendered above DefaultTileBackgroundImage and below the equipment icon.
 -- Use strings like "rbxassetid://1234567890" and leave a value as "" until that set gradient art has been uploaded.
 EquipmentConfig.SetGradientImages = {
 	Power = "",
@@ -370,6 +387,14 @@ function EquipmentConfig.GetPlaceholderVisual(slot: string?): { PlaceholderSymbo
 	}
 end
 
+function EquipmentConfig.GetSetTileImage(setName: string?): string
+	local setTileImage = EquipmentConfig.SetTileImages[tostring(setName or "")]
+	if type(setTileImage) == "string" and setTileImage ~= "" then
+		return setTileImage
+	end
+	return ""
+end
+
 function EquipmentConfig.GetSetIconImage(setName: string?): string
 	local setIconImage = EquipmentConfig.SetIconImages[tostring(setName or "")]
 	if type(setIconImage) == "string" and setIconImage ~= "" then
@@ -461,6 +486,7 @@ function EquipmentConfig.RollEquipment(rng: any, enemyTier: string?): { [string]
 		SubStats = subStats,
 		Icon = EquipmentConfig.GetEquipmentIcon(setName, slot),
 		SetIcon = EquipmentConfig.GetSetIconImage(setName),
+		SetTile = EquipmentConfig.GetSetTileImage(setName),
 		ItemLevel = 0,
 		CreatedAt = os.time(),
 	}

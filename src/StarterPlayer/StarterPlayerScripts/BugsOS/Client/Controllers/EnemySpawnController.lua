@@ -552,6 +552,17 @@ local function getEquipmentSetIconImage(item: any): string
 	return ""
 end
 
+local function getEquipmentSetTileImage(item: any): string
+	if type(item) == "table" then
+		local setTileAsset = tostring(item.SetTile or "")
+		if setTileAsset ~= "" then
+			return setTileAsset
+		end
+		return EquipmentConfig.GetSetTileImage(tostring(item.SetName or ""))
+	end
+	return ""
+end
+
 local function getEquipmentTileBackgroundImage(): string
 	local backgroundImage = tostring(EquipmentConfig.DefaultTileBackgroundImage or "")
 	if backgroundImage ~= "" then
@@ -589,131 +600,121 @@ local function renderEquipmentSlotVisual(parent: Instance, item: any, pos: UDim2
 	slotVisual.ZIndex = z
 	slotVisual.Parent = parent
 
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = rarityColor
-	stroke.Thickness = 3
-	stroke.Transparency = 0.02
-	stroke.Parent = slotVisual
-
-	local tileBackgroundImage = getEquipmentTileBackgroundImage()
-	if tileBackgroundImage ~= "" then
-		local tileBackground = Instance.new("ImageLabel")
-		tileBackground.Size = UDim2.fromScale(1, 1)
-		tileBackground.Position = UDim2.fromScale(0, 0)
-		tileBackground.BackgroundTransparency = 1
-		tileBackground.BorderSizePixel = 0
-		tileBackground.Image = tileBackgroundImage
-		tileBackground.ScaleType = Enum.ScaleType.Crop
-		tileBackground.ZIndex = z + 1
-		tileBackground.Parent = slotVisual
-	end
-
-	local textureTint = Instance.new("Frame")
-	textureTint.Size = UDim2.fromScale(1, 1)
-	textureTint.Position = UDim2.fromScale(0, 0)
-	textureTint.BackgroundColor3 = Color3.fromRGB(12, 16, 25)
-	textureTint.BackgroundTransparency = tileBackgroundImage ~= "" and 0.54 or 0.08
-	textureTint.BorderSizePixel = 0
-	textureTint.ZIndex = z + 2
-	textureTint.Parent = slotVisual
-
-	local baseGradient = Instance.new("UIGradient")
-	baseGradient.Rotation = 90
-	baseGradient.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(38, 45, 62)),
-		ColorSequenceKeypoint.new(0.52, Color3.fromRGB(10, 13, 21)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(3, 6, 12)),
-	})
-	baseGradient.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.18),
-		NumberSequenceKeypoint.new(0.62, 0.02),
-		NumberSequenceKeypoint.new(1, 0.14),
-	})
-	baseGradient.Parent = textureTint
-
-	local setAccentColor = EquipmentConfig.GetSetIconColor(type(item) == "table" and tostring(item.SetName or "") or "")
-	local setGradientImage = getEquipmentSetGradientImage(item)
-	if setGradientImage ~= "" then
-		local setGradient = Instance.new("ImageLabel")
-		setGradient.Size = UDim2.fromScale(1, 1)
-		setGradient.Position = UDim2.fromScale(0, 0)
-		setGradient.BackgroundTransparency = 1
-		setGradient.BorderSizePixel = 0
-		setGradient.Image = setGradientImage
-		setGradient.ImageTransparency = 0.08
-		setGradient.ScaleType = Enum.ScaleType.Crop
-		setGradient.ZIndex = z + 3
-		setGradient.Parent = slotVisual
+	local setTileImage = getEquipmentSetTileImage(item)
+	if setTileImage ~= "" then
+		local setTile = Instance.new("ImageLabel")
+		setTile.Size = UDim2.fromScale(1, 1)
+		setTile.Position = UDim2.fromScale(0, 0)
+		setTile.BackgroundTransparency = 1
+		setTile.BorderSizePixel = 0
+		setTile.Image = setTileImage
+		setTile.ScaleType = Enum.ScaleType.Crop
+		setTile.ZIndex = z + 1
+		setTile.Parent = slotVisual
 	else
-		local setGradient = Instance.new("Frame")
-		setGradient.Size = UDim2.fromScale(1, 1)
-		setGradient.Position = UDim2.fromScale(0, 0)
-		setGradient.BackgroundColor3 = setAccentColor
-		setGradient.BackgroundTransparency = 0.72
-		setGradient.BorderSizePixel = 0
-		setGradient.ZIndex = z + 3
-		setGradient.Parent = slotVisual
+		local fallback = Instance.new("Frame")
+		fallback.Size = UDim2.fromScale(1, 1)
+		fallback.Position = UDim2.fromScale(0, 0)
+		fallback.BackgroundColor3 = Color3.fromRGB(12, 16, 25)
+		fallback.BorderSizePixel = 0
+		fallback.ZIndex = z + 1
+		fallback.Parent = slotVisual
 
-		local accentGradient = Instance.new("UIGradient")
-		accentGradient.Rotation = 45
-		accentGradient.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 0.12),
-			NumberSequenceKeypoint.new(0.48, 0.58),
-			NumberSequenceKeypoint.new(1, 0.86),
+		local fallbackGradient = Instance.new("UIGradient")
+		fallbackGradient.Rotation = 90
+		fallbackGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(38, 45, 62)),
+			ColorSequenceKeypoint.new(0.52, Color3.fromRGB(10, 13, 21)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(3, 6, 12)),
 		})
-		accentGradient.Parent = setGradient
+		fallbackGradient.Parent = fallback
+
+		local tileBackgroundImage = getEquipmentTileBackgroundImage()
+		if tileBackgroundImage ~= "" then
+			local tileBackground = Instance.new("ImageLabel")
+			tileBackground.Size = UDim2.fromScale(1, 1)
+			tileBackground.Position = UDim2.fromScale(0, 0)
+			tileBackground.BackgroundTransparency = 1
+			tileBackground.BorderSizePixel = 0
+			tileBackground.Image = tileBackgroundImage
+			tileBackground.ImageTransparency = 0.18
+			tileBackground.ScaleType = Enum.ScaleType.Crop
+			tileBackground.ZIndex = z + 2
+			tileBackground.Parent = slotVisual
+		end
+
+		local setGradientImage = getEquipmentSetGradientImage(item)
+		if setGradientImage ~= "" then
+			local setGradient = Instance.new("ImageLabel")
+			setGradient.Size = UDim2.fromScale(1, 1)
+			setGradient.Position = UDim2.fromScale(0, 0)
+			setGradient.BackgroundTransparency = 1
+			setGradient.BorderSizePixel = 0
+			setGradient.Image = setGradientImage
+			setGradient.ImageTransparency = 0.1
+			setGradient.ScaleType = Enum.ScaleType.Crop
+			setGradient.ZIndex = z + 3
+			setGradient.Parent = slotVisual
+		else
+			local setAccentColor = EquipmentConfig.GetSetIconColor(type(item) == "table" and tostring(item.SetName or "") or "")
+			local setAccent = Instance.new("Frame")
+			setAccent.Size = UDim2.fromScale(1, 1)
+			setAccent.Position = UDim2.fromScale(0, 0)
+			setAccent.BackgroundColor3 = setAccentColor
+			setAccent.BackgroundTransparency = 0.78
+			setAccent.BorderSizePixel = 0
+			setAccent.ZIndex = z + 3
+			setAccent.Parent = slotVisual
+
+			local accentGradient = Instance.new("UIGradient")
+			accentGradient.Rotation = 45
+			accentGradient.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.22),
+				NumberSequenceKeypoint.new(0.52, 0.66),
+				NumberSequenceKeypoint.new(1, 0.9),
+			})
+			accentGradient.Parent = setAccent
+		end
 	end
-
-	local innerTint = Instance.new("Frame")
-	innerTint.Size = UDim2.new(1, -6, 1, -6)
-	innerTint.Position = UDim2.fromOffset(3, 3)
-	innerTint.BackgroundColor3 = rarityColor
-	innerTint.BackgroundTransparency = 0.9
-	innerTint.BorderSizePixel = 0
-	innerTint.ZIndex = z + 4
-	innerTint.Parent = slotVisual
-
-	local innerGradient = Instance.new("UIGradient")
-	innerGradient.Rotation = 135
-	innerGradient.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.36),
-		NumberSequenceKeypoint.new(0.5, 0.86),
-		NumberSequenceKeypoint.new(1, 0.98),
-	})
-	innerGradient.Parent = innerTint
 
 	if shouldRenderEquipmentIcon(item) then
 		local icon = Instance.new("ImageLabel")
-		icon.Size = UDim2.new(1, -16, 1, -16)
-		icon.Position = UDim2.fromOffset(8, 8)
+		icon.Size = UDim2.new(1, -20, 1, -20)
+		icon.Position = UDim2.fromScale(0.5, 0.5)
+		icon.AnchorPoint = Vector2.new(0.5, 0.5)
 		icon.BackgroundTransparency = 1
 		icon.Image = getEquipmentIconImage(item)
 		icon.ScaleType = Enum.ScaleType.Fit
 		icon.ZIndex = z + 6
 		icon.Parent = slotVisual
-		return slotVisual
+	else
+		local placeholder = getEquipmentPlaceholderVisual(item and item.Slot)
+		local symbol = tostring(placeholder.PlaceholderSymbol or "")
+		local labelText = tostring(placeholder.PlaceholderLabel or item.Slot or "Gear")
+		if symbol == "" then
+			symbol = string.upper(string.sub(labelText, 1, 5))
+		end
+
+		local symbolLabel = Instance.new("TextLabel")
+		symbolLabel.Size = UDim2.new(1, -12, 0, 48)
+		symbolLabel.Position = UDim2.new(0.5, 0, 0.5, -24)
+		symbolLabel.AnchorPoint = Vector2.new(0.5, 0)
+		symbolLabel.BackgroundTransparency = 1
+		symbolLabel.Font = Enum.Font.ArialBold
+		symbolLabel.TextSize = #symbol > 4 and 16 or 28
+		symbolLabel.TextColor3 = rarityColor
+		symbolLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+		symbolLabel.TextStrokeTransparency = 0.18
+		symbolLabel.Text = symbol
+		symbolLabel.ZIndex = z + 6
+		symbolLabel.Parent = slotVisual
 	end
 
-	local placeholder = getEquipmentPlaceholderVisual(item and item.Slot)
-	local symbol = tostring(placeholder.PlaceholderSymbol or "")
-	local labelText = tostring(placeholder.PlaceholderLabel or item.Slot or "Gear")
-	if symbol == "" then
-		symbol = string.upper(string.sub(labelText, 1, 5))
-	end
-
-	local symbolLabel = Instance.new("TextLabel")
-	symbolLabel.Size = UDim2.new(1, -12, 0, 48)
-	symbolLabel.Position = UDim2.new(0.5, 0, 0.5, -24)
-	symbolLabel.AnchorPoint = Vector2.new(0.5, 0)
-	symbolLabel.BackgroundTransparency = 1
-	symbolLabel.Font = Enum.Font.ArialBold
-	symbolLabel.TextSize = #symbol > 4 and 16 or 28
-	symbolLabel.TextColor3 = rarityColor
-	symbolLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	symbolLabel.TextStrokeTransparency = 0.18
-	symbolLabel.Text = symbol
-	symbolLabel.ZIndex = z + 6
-	symbolLabel.Parent = slotVisual
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = rarityColor
+	stroke.Thickness = 3
+	stroke.Transparency = 0.02
+	stroke.Parent = slotVisual
 
 	return slotVisual
 end
@@ -950,18 +951,6 @@ local function createEquipmentLootCard(parent: Instance, item: any, pos: UDim2, 
 		star.Parent = stars
 	end
 
-	local setIconImage = getEquipmentSetIconImage(item)
-	if setIconImage ~= "" then
-		local setIcon = Instance.new("ImageLabel")
-		setIcon.Size = UDim2.fromOffset(22, 22)
-		setIcon.Position = UDim2.new(0, 5, 1, -27)
-		setIcon.BackgroundTransparency = 1
-		setIcon.BorderSizePixel = 0
-		setIcon.Image = setIconImage
-		setIcon.ScaleType = Enum.ScaleType.Fit
-		setIcon.ZIndex = z + 12
-		setIcon.Parent = tile
-	end
 
 	local itemLevel = getEquipmentItemLevel(item)
 	if itemLevel > 0 then
