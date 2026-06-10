@@ -926,28 +926,31 @@ local function createEquipmentLootCard(parent: Instance, item: any, pos: UDim2, 
 	local tile = renderEquipmentSlotVisual(parent, item, pos, UDim2.fromOffset(88, 88), z, rarityColor)
 
 	local stars = Instance.new("Frame")
-	stars.Size = UDim2.fromOffset(78, 24)
-	stars.Position = UDim2.fromOffset(4, 2)
+	stars.Size = UDim2.fromOffset(84, 28)
+	stars.Position = UDim2.fromOffset(2, 1)
 	stars.BackgroundTransparency = 1
 	stars.BorderSizePixel = 0
-	stars.ZIndex = z + 12
+	stars.ZIndex = z + 13
 	stars.Parent = tile
 
 	local starCount = math.max(1, math.min(6, tonumber(item.Stars) or 1))
+	local starSize = 22
+	local starStep = 11
 	for index = 1, starCount do
 		local star = Instance.new("TextLabel")
-		star.Size = UDim2.fromOffset(16, 22)
-		star.Position = UDim2.fromOffset((index - 1) * 11, 0)
+		star.Size = UDim2.fromOffset(starSize, 26)
+		star.Position = UDim2.fromOffset((index - 1) * starStep, 0)
 		star.BackgroundTransparency = 1
 		star.BorderSizePixel = 0
 		star.Font = Enum.Font.ArialBold
-		star.TextSize = 18
+		star.TextSize = 24
 		star.TextXAlignment = Enum.TextXAlignment.Center
+		star.TextYAlignment = Enum.TextYAlignment.Top
 		star.TextColor3 = Color3.fromRGB(255, 232, 120)
 		star.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-		star.TextStrokeTransparency = 0.1
+		star.TextStrokeTransparency = 0.08
 		star.Text = "★"
-		star.ZIndex = z + 12
+		star.ZIndex = z + 13 + index
 		star.Parent = stars
 	end
 
